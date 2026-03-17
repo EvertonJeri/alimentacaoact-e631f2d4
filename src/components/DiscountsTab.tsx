@@ -1,14 +1,20 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ChevronDown, ChevronRight, Check, Mail, Download } from "lucide-react";
+import * as XLSX from "xlsx";
 import {
   type Person,
   type Job,
   type MealRequest,
   type TimeEntry,
+  type FoodControlEntry,
+  type DiscountConfirmation,
   MEAL_LABELS,
   MEAL_VALUES,
   getDatesInRange,
   calcTotalMinutes,
+  getFirstEntryTime,
 } from "@/lib/types";
 
 interface DiscountsTabProps {
@@ -16,17 +22,25 @@ interface DiscountsTabProps {
   jobs: Job[];
   requests: MealRequest[];
   timeEntries: TimeEntry[];
+  foodControl: FoodControlEntry[];
+  confirmations: DiscountConfirmation[];
+  setConfirmations: React.Dispatch<React.SetStateAction<DiscountConfirmation[]>>;
 }
 
 interface DiscountRow {
   personId: string;
   jobId: string;
   date: string;
-  meals: string[];
-  dailyValue: number;
+  discountCafe: number;
+  discountAlmoco: number;
+  discountJanta: number;
+  total: number;
+  reason: string;
 }
 
-const DiscountsTab = ({ people, jobs, requests, timeEntries }: DiscountsTabProps) => {
+const DiscountsTab = ({ people, jobs, requests, timeEntries, foodControl, confirmations, setConfirmations }: DiscountsTabProps) => {
+  const [expandedPersons, setExpandedPersons] = useState<Set<string>>(new Set());
+
   const getPersonName = (id: string) => people.find((p) => p.id === id)?.name || "—";
   const getJobName = (id: string) => jobs.find((j) => j.id === id)?.name || "—";
 
@@ -36,90 +50,248 @@ const DiscountsTab = ({ people, jobs, requests, timeEntries }: DiscountsTabProps
     requests.forEach((req) => {
       const dates = getDatesInRange(req.startDate, req.endDate);
       dates.forEach((date) => {
-        // Check if there's a time entry for this person+job+date with actual hours
         const entry = timeEntries.find(
           (e) => e.personId === req.personId && e.jobId === req.jobId && e.date === date
         );
         const hasHours = entry && calcTotalMinutes(entry) > 0;
 
+        // Check food control overrides
+        const fc = foodControl.find(
+          (f) => f.personId === req.personId && f.jobId === req.jobId && f.date === date
+        );
+
+        let discountCafe = 0;
+        let discountAlmoco = 0;
+        let discountJanta = 0;
+        let reason = "";
+
         if (!hasHours) {
-          const dailyValue = req.meals.reduce((s, m) => s + MEAL_VALUES[m], 0);
-          rows.push({
-            personId: req.personId,
-            jobId: req.jobId,
-            date,
-            meals: req.meals.map((m) => MEAL_LABELS[m]),
-            dailyValue,
-          });
+          // Falta total - desconta tudo que foi solicitado
+          if (req.meals.includes("cafe")) discountCafe = MEAL_VALUES.cafe;
+          if (req.meals.includes("almoco")) discountAlmoco = MEAL_VALUES.almoco;
+          if (req.meals.includes("janta")) discountJanta = MEAL_VALUES.janta;
+          reason = "Falta - sem registro de horas";
+        } else if (entry) {
+          // Partial - check time-based rules
+          const firstEntry = getFirstEntryTime(entry);
+          if (firstEntry) {
+            const [eh] = firstEntry.split(":").map(Number);
+            // If entered after 8:00 and cafe was requested, discount cafe
+            if (req.meals.includes("cafe") && eh > 8) {
+              discountCafe = MEAL_VALUES.cafe;
+              reason = `Entrada às ${firstEntry} - café não utilizado`;
+            }
+          }
+        }
+
+        // Apply food control overrides: if fc says "not used", it's a discount
+        if (fc) {
+          if (req.meals.includes("cafe") && !fc.usedCafe) discountCafe = MEAL_VALUES.cafe;
+          else if (req.meals.includes("cafe") && fc.usedCafe) discountCafe = 0;
+
+          if (req.meals.includes("almoco") && !fc.usedAlmoco) discountAlmoco = MEAL_VALUES.almoco;
+          else if (req.meals.includes("almoco") && fc.usedAlmoco) discountAlmoco = 0;
+
+          if (req.meals.includes("janta") && !fc.usedJanta) discountJanta = MEAL_VALUES.janta;
+          else if (req.meals.includes("janta") && fc.usedJanta) discountJanta = 0;
+
+          if (!reason) reason = "Ajuste via controle de alimentação";
+        }
+
+        const total = discountCafe + discountAlmoco + discountJanta;
+        if (total > 0) {
+          rows.push({ personId: req.personId, jobId: req.jobId, date, discountCafe, discountAlmoco, discountJanta, total, reason });
         }
       });
     });
 
     return rows;
-  }, [requests, timeEntries]);
+  }, [requests, timeEntries, foodControl]);
 
-  const totalDiscount = discounts.reduce((s, d) => s + d.dailyValue, 0);
+  // Group by person
+  const groupedByPerson = useMemo(() => {
+    const map = new Map<string, DiscountRow[]>();
+    discounts.forEach((d) => {
+      const arr = map.get(d.personId) || [];
+      arr.push(d);
+      map.set(d.personId, arr);
+    });
+    return map;
+  }, [discounts]);
+
+  const totalDiscount = discounts.reduce((s, d) => s + d.total, 0);
+
+  const togglePerson = (personId: string) => {
+    setExpandedPersons((prev) => {
+      const next = new Set(prev);
+      if (next.has(personId)) next.delete(personId);
+      else next.add(personId);
+      return next;
+    });
+  };
+
+  const isConfirmed = (personId: string) => confirmations.find((c) => c.personId === personId)?.confirmed || false;
+
+  const toggleConfirm = (personId: string) => {
+    setConfirmations((prev) => {
+      const idx = prev.findIndex((c) => c.personId === personId);
+      if (idx >= 0) {
+        const copy = [...prev];
+        copy[idx] = { ...copy[idx], confirmed: !copy[idx].confirmed };
+        return copy;
+      }
+      return [...prev, { personId, confirmed: true }];
+    });
+  };
+
+  const exportDiscountsXlsx = () => {
+    const wb = XLSX.utils.book_new();
+    const rows: (string | number)[][] = [
+      ["RELATÓRIO DE DESCONTOS"],
+      [],
+      ["Pessoa", "Job", "Data", "Café (R$)", "Almoço (R$)", "Janta (R$)", "Total (R$)", "Motivo", "Confirmado"],
+    ];
+
+    discounts.forEach((d) => {
+      rows.push([
+        getPersonName(d.personId), getJobName(d.jobId),
+        d.date.split("-").reverse().join("/"),
+        d.discountCafe > 0 ? -d.discountCafe : 0,
+        d.discountAlmoco > 0 ? -d.discountAlmoco : 0,
+        d.discountJanta > 0 ? -d.discountJanta : 0,
+        -d.total, d.reason,
+        isConfirmed(d.personId) ? "Sim" : "Pendente",
+      ]);
+    });
+
+    rows.push([]);
+    rows.push(["", "", "", "", "", "TOTAL", -totalDiscount, "", ""]);
+
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws["!cols"] = [{ wch: 22 }, { wch: 24 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 30 }, { wch: 12 }];
+    XLSX.utils.book_append_sheet(wb, ws, "Descontos");
+    XLSX.writeFile(wb, "Relatorio_Descontos.xlsx");
+  };
+
+  const sendDiscountsEmail = () => {
+    const subject = encodeURIComponent("Relatório de Descontos");
+    const body = encodeURIComponent(
+      `Segue o relatório de descontos.\n\nTotal: R$ ${totalDiscount.toFixed(2)}\n\nPor favor, exportar o relatório .xlsx e anexar ao e-mail manualmente.`
+    );
+    window.open(`mailto:?subject=${subject}&body=${body}`, "_self");
+  };
 
   return (
     <div className="space-y-4">
       <p className="text-xs text-muted-foreground">
-        Dias em que a pessoa tinha refeição solicitada mas não registrou horas (falta). O valor não utilizado será descontado.
+        Descontos por refeição não utilizada. Baseado no horário de entrada e no controle de alimentação. Clique no nome para expandir os detalhes.
       </p>
 
-      <div className="rounded-xl border border-border overflow-x-auto shadow-card">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-muted/50">
-              <th className="text-left px-3 py-2.5 text-2xs uppercase tracking-wider font-medium text-muted-foreground">Pessoa</th>
-              <th className="text-left px-3 py-2.5 text-2xs uppercase tracking-wider font-medium text-muted-foreground">Job</th>
-              <th className="text-left px-3 py-2.5 text-2xs uppercase tracking-wider font-medium text-muted-foreground">Data</th>
-              <th className="text-left px-3 py-2.5 text-2xs uppercase tracking-wider font-medium text-muted-foreground">Refeições</th>
-              <th className="text-right px-3 py-2.5 text-2xs uppercase tracking-wider font-medium text-destructive">Desconto (R$)</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {discounts.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="text-center py-10 text-sm text-muted-foreground">
-                  Nenhum desconto pendente. Todas as pessoas com refeição solicitada registraram horas.
-                </td>
-              </tr>
-            ) : (
-              discounts.map((d, i) => (
-                <tr key={`${d.personId}-${d.date}-${i}`} className="hover:bg-muted/30 transition-colors">
-                  <td className="px-3 py-2 font-medium text-foreground">{getPersonName(d.personId)}</td>
-                  <td className="px-3 py-2 text-xs text-muted-foreground">{getJobName(d.jobId)}</td>
-                  <td className="px-3 py-2 tabular-nums text-muted-foreground">
-                    {d.date.split("-").reverse().join("/")}
-                  </td>
-                  <td className="px-3 py-2">
-                    <div className="flex gap-1">
-                      {d.meals.map((m) => (
-                        <Badge key={m} variant="secondary" className="text-2xs">{m}</Badge>
-                      ))}
+      <div className="rounded-xl border border-border overflow-hidden shadow-card">
+        {groupedByPerson.size === 0 ? (
+          <div className="text-center py-10 text-sm text-muted-foreground">
+            Nenhum desconto pendente. Todas as refeições solicitadas foram utilizadas.
+          </div>
+        ) : (
+          <div className="divide-y divide-border">
+            {Array.from(groupedByPerson.entries()).map(([personId, personDiscounts]) => {
+              const personTotal = personDiscounts.reduce((s, d) => s + d.total, 0);
+              const expanded = expandedPersons.has(personId);
+              const confirmed = isConfirmed(personId);
+
+              return (
+                <div key={personId}>
+                  {/* Person header - collapsible */}
+                  <div
+                    className={`flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-muted/30 transition-colors ${confirmed ? "bg-muted/20" : ""}`}
+                    onClick={() => togglePerson(personId)}
+                  >
+                    <div className="flex items-center gap-3">
+                      {expanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                      <span className="font-medium text-foreground">{getPersonName(personId)}</span>
+                      <Badge variant={confirmed ? "secondary" : "destructive"} className="text-2xs">
+                        {confirmed ? "Descontado" : "Pendente"}
+                      </Badge>
                     </div>
-                  </td>
-                  <td className="px-3 py-2 text-right tabular-nums font-semibold text-destructive">
-                    -{d.dailyValue.toFixed(2)}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-          {discounts.length > 0 && (
-            <tfoot>
-              <tr className="bg-muted/30 border-t border-border">
-                <td colSpan={4} className="px-3 py-2.5 text-right text-xs font-semibold uppercase text-muted-foreground">
-                  Total Descontos
-                </td>
-                <td className="px-3 py-2.5 text-right tabular-nums font-bold text-destructive">
-                  -{totalDiscount.toFixed(2)}
-                </td>
-              </tr>
-            </tfoot>
-          )}
-        </table>
+                    <div className="flex items-center gap-3">
+                      <span className="tabular-nums font-bold text-destructive">-{personTotal.toFixed(2)}</span>
+                      <Button
+                        size="sm"
+                        variant={confirmed ? "secondary" : "outline"}
+                        className="h-7 text-xs gap-1"
+                        onClick={(e) => { e.stopPropagation(); toggleConfirm(personId); }}
+                      >
+                        <Check className="h-3 w-3" />
+                        {confirmed ? "Confirmado" : "Confirmar"}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Expanded details */}
+                  {expanded && (
+                    <div className="bg-muted/10 px-4 pb-3">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr>
+                            <th className="text-left px-2 py-1.5 text-2xs uppercase tracking-wider font-medium text-muted-foreground">Data</th>
+                            <th className="text-left px-2 py-1.5 text-2xs uppercase tracking-wider font-medium text-muted-foreground">Job</th>
+                            <th className="text-right px-2 py-1.5 text-2xs uppercase tracking-wider font-medium text-destructive">Café (R$)</th>
+                            <th className="text-right px-2 py-1.5 text-2xs uppercase tracking-wider font-medium text-destructive">Almoço (R$)</th>
+                            <th className="text-right px-2 py-1.5 text-2xs uppercase tracking-wider font-medium text-destructive">Janta (R$)</th>
+                            <th className="text-right px-2 py-1.5 text-2xs uppercase tracking-wider font-medium text-destructive">Total (R$)</th>
+                            <th className="text-left px-2 py-1.5 text-2xs uppercase tracking-wider font-medium text-muted-foreground">Motivo</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border/50">
+                          {personDiscounts.map((d, i) => (
+                            <tr key={`${d.date}-${i}`} className="hover:bg-muted/20">
+                              <td className="px-2 py-1.5 tabular-nums text-muted-foreground">{d.date.split("-").reverse().join("/")}</td>
+                              <td className="px-2 py-1.5 text-xs text-muted-foreground">{getJobName(d.jobId)}</td>
+                              <td className="px-2 py-1.5 text-right tabular-nums text-destructive">
+                                {d.discountCafe > 0 ? `-${d.discountCafe.toFixed(2)}` : "—"}
+                              </td>
+                              <td className="px-2 py-1.5 text-right tabular-nums text-destructive">
+                                {d.discountAlmoco > 0 ? `-${d.discountAlmoco.toFixed(2)}` : "—"}
+                              </td>
+                              <td className="px-2 py-1.5 text-right tabular-nums text-destructive">
+                                {d.discountJanta > 0 ? `-${d.discountJanta.toFixed(2)}` : "—"}
+                              </td>
+                              <td className="px-2 py-1.5 text-right tabular-nums font-semibold text-destructive">
+                                -{d.total.toFixed(2)}
+                              </td>
+                              <td className="px-2 py-1.5 text-xs text-muted-foreground">{d.reason}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
+
+      {/* Totals & actions */}
+      {groupedByPerson.size > 0 && (
+        <>
+          <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-4 py-3">
+            <span className="text-sm font-semibold uppercase text-muted-foreground">Total Descontos</span>
+            <span className="tabular-nums text-lg font-bold text-destructive">-{totalDiscount.toFixed(2)}</span>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Button onClick={exportDiscountsXlsx} variant="outline" className="gap-2">
+              <Download className="h-4 w-4" />
+              Exportar Descontos .xlsx
+            </Button>
+            <Button onClick={sendDiscountsEmail} variant="outline" className="gap-2">
+              <Mail className="h-4 w-4" />
+              Enviar Descontos por E-mail
+            </Button>
+          </div>
+        </>
+      )}
     </div>
   );
 };
