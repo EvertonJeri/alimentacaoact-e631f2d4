@@ -48,6 +48,9 @@ const Index = () => {
               people={SAMPLE_PEOPLE}
               jobs={SAMPLE_JOBS}
               timeEntries={timeEntries}
+              onGenerateEntries={(newEntries) =>
+                setTimeEntries((prev) => [...prev, ...newEntries])
+              }
             />
           </TabsContent>
         </Tabs>
