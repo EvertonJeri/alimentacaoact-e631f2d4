@@ -21,6 +21,7 @@ export type MealType = "almoco" | "janta";
 export interface MealRequest {
   id: string;
   personId: string;
+  jobId: string;
   meals: MealType[];
   startDate: string;
   endDate: string;
