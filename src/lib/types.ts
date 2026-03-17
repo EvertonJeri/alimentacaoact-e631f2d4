@@ -47,11 +47,13 @@ export const SAMPLE_JOBS: Job[] = [
 ];
 
 export const MEAL_LABELS: Record<MealType, string> = {
+  cafe: "Café da Manhã",
   almoco: "Almoço",
   janta: "Janta",
 };
 
 export const MEAL_VALUES: Record<MealType, number> = {
+  cafe: 15.0,
   almoco: 35.0,
   janta: 35.0,
 };
