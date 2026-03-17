@@ -2,18 +2,19 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Filter } from "lucide-react";
 import {
   type Person,
+  type Job,
   type TimeEntry,
-  SAMPLE_PEOPLE,
   calcTotalMinutes,
   formatMinutes,
 } from "@/lib/types";
 
-const emptyEntry = (personId: string, date: string): TimeEntry => ({
+const emptyEntry = (personId: string, jobId: string, date: string): TimeEntry => ({
   id: crypto.randomUUID(),
   personId,
+  jobId,
   date,
   entry1: "",
   exit1: "",
@@ -27,17 +28,23 @@ interface TimeRegistrationTabProps {
   entries: TimeEntry[];
   setEntries: React.Dispatch<React.SetStateAction<TimeEntry[]>>;
   people: Person[];
+  jobs: Job[];
 }
 
-const TimeRegistrationTab = ({ entries, setEntries, people }: TimeRegistrationTabProps) => {
+const TimeRegistrationTab = ({ entries, setEntries, people, jobs }: TimeRegistrationTabProps) => {
   const [selectedPerson, setSelectedPerson] = useState("");
+  const [selectedJob, setSelectedJob] = useState("");
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().split("T")[0]
   );
 
+  // Filters
+  const [filterPerson, setFilterPerson] = useState("all");
+  const [filterJob, setFilterJob] = useState("all");
+
   const addEntry = () => {
-    if (!selectedPerson) return;
-    setEntries((prev) => [...prev, emptyEntry(selectedPerson, selectedDate)]);
+    if (!selectedPerson || !selectedJob) return;
+    setEntries((prev) => [...prev, emptyEntry(selectedPerson, selectedJob, selectedDate)]);
   };
 
   const updateField = (id: string, field: keyof TimeEntry, value: string) => {
@@ -52,6 +59,15 @@ const TimeRegistrationTab = ({ entries, setEntries, people }: TimeRegistrationTa
 
   const getPersonName = (id: string) =>
     people.find((p) => p.id === id)?.name || "—";
+
+  const getJobName = (id: string) =>
+    jobs.find((j) => j.id === id)?.name || "—";
+
+  const filteredEntries = entries.filter((e) => {
+    if (filterPerson !== "all" && e.personId !== filterPerson) return false;
+    if (filterJob !== "all" && e.jobId !== filterJob) return false;
+    return true;
+  });
 
   return (
     <div className="space-y-4">
@@ -74,6 +90,23 @@ const TimeRegistrationTab = ({ entries, setEntries, people }: TimeRegistrationTa
             </SelectContent>
           </Select>
         </div>
+        <div className="flex-1 min-w-[200px]">
+          <label className="text-2xs uppercase tracking-wider font-medium text-muted-foreground block mb-1.5">
+            Job
+          </label>
+          <Select value={selectedJob} onValueChange={setSelectedJob}>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione o JOB..." />
+            </SelectTrigger>
+            <SelectContent>
+              {jobs.map((j) => (
+                <SelectItem key={j.id} value={j.id}>
+                  {j.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <div className="min-w-[160px]">
           <label className="text-2xs uppercase tracking-wider font-medium text-muted-foreground block mb-1.5">
             Data
@@ -85,10 +118,47 @@ const TimeRegistrationTab = ({ entries, setEntries, people }: TimeRegistrationTa
             className="tabular-nums"
           />
         </div>
-        <Button onClick={addEntry} disabled={!selectedPerson} className="gap-1.5 bg-foreground text-background hover:bg-foreground/90">
+        <Button onClick={addEntry} disabled={!selectedPerson || !selectedJob} className="gap-1.5 bg-foreground text-background hover:bg-foreground/90">
           <Plus className="h-3.5 w-3.5" />
           Adicionar
         </Button>
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3 items-end p-3 rounded-lg border border-border bg-muted/30">
+        <Filter className="h-4 w-4 text-muted-foreground mt-1" />
+        <div className="min-w-[160px]">
+          <label className="text-2xs uppercase tracking-wider font-medium text-muted-foreground block mb-1.5">
+            Filtrar Pessoa
+          </label>
+          <Select value={filterPerson} onValueChange={setFilterPerson}>
+            <SelectTrigger className="h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas</SelectItem>
+              {people.map((p) => (
+                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="min-w-[200px]">
+          <label className="text-2xs uppercase tracking-wider font-medium text-muted-foreground block mb-1.5">
+            Filtrar Job
+          </label>
+          <Select value={filterJob} onValueChange={setFilterJob}>
+            <SelectTrigger className="h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              {jobs.map((j) => (
+                <SelectItem key={j.id} value={j.id}>{j.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Table */}
@@ -97,6 +167,7 @@ const TimeRegistrationTab = ({ entries, setEntries, people }: TimeRegistrationTa
           <thead>
             <tr className="bg-muted/50">
               <th className="text-left px-3 py-2.5 text-2xs uppercase tracking-wider font-medium text-muted-foreground">Pessoa</th>
+              <th className="text-left px-3 py-2.5 text-2xs uppercase tracking-wider font-medium text-muted-foreground">Job</th>
               <th className="text-left px-3 py-2.5 text-2xs uppercase tracking-wider font-medium text-muted-foreground">Data</th>
               <th className="text-center px-2 py-2.5 text-2xs uppercase tracking-wider font-medium text-muted-foreground">Entrada 1</th>
               <th className="text-center px-2 py-2.5 text-2xs uppercase tracking-wider font-medium text-muted-foreground">Saída 1</th>
@@ -109,20 +180,23 @@ const TimeRegistrationTab = ({ entries, setEntries, people }: TimeRegistrationTa
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {entries.length === 0 ? (
+            {filteredEntries.length === 0 ? (
               <tr>
-                <td colSpan={10} className="text-center py-10 text-sm text-muted-foreground">
-                  Nenhum registro. Adicione uma pessoa e data acima.
+                <td colSpan={11} className="text-center py-10 text-sm text-muted-foreground">
+                  Nenhum registro. Adicione uma pessoa, job e data acima.
                 </td>
               </tr>
             ) : (
-              entries.map((entry) => {
+              filteredEntries.map((entry) => {
                 const total = calcTotalMinutes(entry);
                 const has6 = !!(entry.entry3 || entry.exit3);
                 return (
                   <tr key={entry.id} className="hover:bg-muted/30 transition-colors">
                     <td className="px-3 py-2 font-medium text-foreground whitespace-nowrap">
                       {getPersonName(entry.personId)}
+                    </td>
+                    <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap max-w-[180px] truncate">
+                      {getJobName(entry.jobId)}
                     </td>
                     <td className="px-3 py-2 tabular-nums text-muted-foreground whitespace-nowrap">
                       {entry.date.split("-").reverse().join("/")}
