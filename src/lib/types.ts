@@ -6,6 +6,7 @@ export interface Person {
 export interface TimeEntry {
   id: string;
   personId: string;
+  jobId: string;
   date: string; // YYYY-MM-DD
   entry1: string; // HH:mm
   exit1: string;
@@ -20,6 +21,7 @@ export type MealType = "almoco" | "janta";
 export interface MealRequest {
   id: string;
   personId: string;
+  jobId: string;
   meals: MealType[];
   startDate: string;
   endDate: string;

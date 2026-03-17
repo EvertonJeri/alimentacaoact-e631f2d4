@@ -1,10 +1,8 @@
 import { useState } from "react";
 import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { CalendarIcon, Download, Plus, X } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
@@ -18,7 +16,6 @@ import {
   type MealType,
   type MealRequest,
   type TimeEntry,
-  SAMPLE_JOBS,
   MEAL_LABELS,
   MEAL_VALUES,
   getDatesInRange,
@@ -30,12 +27,13 @@ interface MealRequestTabProps {
   people: Person[];
   jobs: Job[];
   timeEntries: TimeEntry[];
+  requests: MealRequest[];
+  setRequests: React.Dispatch<React.SetStateAction<MealRequest[]>>;
   onGenerateEntries: (entries: TimeEntry[]) => void;
 }
 
-const MealRequestTab = ({ people, jobs, timeEntries, onGenerateEntries }: MealRequestTabProps) => {
+const MealRequestTab = ({ people, jobs, timeEntries, requests, setRequests, onGenerateEntries }: MealRequestTabProps) => {
   const [selectedJob, setSelectedJob] = useState("");
-  const [requests, setRequests] = useState<MealRequest[]>([]);
   const [currentPerson, setCurrentPerson] = useState("");
   const [currentMeals, setCurrentMeals] = useState<MealType[]>([]);
   const [startDate, setStartDate] = useState<Date>();
@@ -48,12 +46,13 @@ const MealRequestTab = ({ people, jobs, timeEntries, onGenerateEntries }: MealRe
   };
 
   const addRequest = () => {
-    if (!currentPerson || currentMeals.length === 0 || !startDate || !endDate) return;
+    if (!currentPerson || !selectedJob || currentMeals.length === 0 || !startDate || !endDate) return;
     setRequests((prev) => [
       ...prev,
       {
         id: crypto.randomUUID(),
         personId: currentPerson,
+        jobId: selectedJob,
         meals: [...currentMeals],
         startDate: startDate.toISOString().split("T")[0],
         endDate: endDate.toISOString().split("T")[0],
@@ -68,15 +67,17 @@ const MealRequestTab = ({ people, jobs, timeEntries, onGenerateEntries }: MealRe
   };
 
   const getPersonName = (id: string) => people.find((p) => p.id === id)?.name || "—";
-  const getJobName = () => jobs.find((j) => j.id === selectedJob)?.name || "Relatório";
+  const getJobName = (id?: string) => jobs.find((j) => j.id === (id || selectedJob))?.name || "Relatório";
 
   const exportXlsx = () => {
     if (!selectedJob || requests.length === 0) return;
 
+    const jobRequests = requests.filter((r) => r.jobId === selectedJob);
+    if (jobRequests.length === 0) return;
+
     const wb = XLSX.utils.book_new();
     const jobName = getJobName();
 
-    // Sheet 1: Meal request summary
     const mealRows: (string | number)[][] = [
       ["SOLICITAÇÃO DE REFEIÇÕES"],
       ["JOB:", jobName],
@@ -86,7 +87,7 @@ const MealRequestTab = ({ people, jobs, timeEntries, onGenerateEntries }: MealRe
 
     let grandTotal = 0;
 
-    requests.forEach((req) => {
+    jobRequests.forEach((req) => {
       const person = getPersonName(req.personId);
       const meals = req.meals.map((m) => MEAL_LABELS[m]).join(", ");
       const days = getDatesInRange(req.startDate, req.endDate).length;
@@ -94,98 +95,56 @@ const MealRequestTab = ({ people, jobs, timeEntries, onGenerateEntries }: MealRe
       const total = dailyValue * days;
       grandTotal += total;
 
-      mealRows.push([
-        person,
-        meals,
-        req.startDate.split("-").reverse().join("/"),
-        req.endDate.split("-").reverse().join("/"),
-        days,
-        dailyValue,
-        total,
-      ]);
+      mealRows.push([person, meals, req.startDate.split("-").reverse().join("/"), req.endDate.split("-").reverse().join("/"), days, dailyValue, total]);
     });
 
     mealRows.push([]);
     mealRows.push(["", "", "", "", "", "TOTAL GERAL", grandTotal]);
 
     const ws1 = XLSX.utils.aoa_to_sheet(mealRows);
-
-    // Column widths
-    ws1["!cols"] = [
-      { wch: 22 }, { wch: 18 }, { wch: 14 }, { wch: 14 },
-      { wch: 8 }, { wch: 18 }, { wch: 16 },
-    ];
-
+    ws1["!cols"] = [{ wch: 22 }, { wch: 18 }, { wch: 14 }, { wch: 14 }, { wch: 8 }, { wch: 18 }, { wch: 16 }];
     XLSX.utils.book_append_sheet(wb, ws1, "Solicitação Refeições");
 
-    // Sheet 2: Time registration template
     const timeRows: (string | number)[][] = [
       ["REGISTRO DE HORAS"],
       ["JOB:", jobName],
       [],
-      [
-        "Pessoa", "Data",
-        "Entrada 1", "Saída 1",
-        "Entrada 2", "Saída 2",
-        "Entrada 3", "Saída 3",
-        "Total Horas",
-      ],
+      ["Pessoa", "Data", "Entrada 1", "Saída 1", "Entrada 2", "Saída 2", "Entrada 3", "Saída 3", "Total Horas"],
     ];
 
-    // Add existing time entries for these people
-    const requestPersonIds = new Set(requests.map((r) => r.personId));
-    const relevantEntries = timeEntries.filter((e) => requestPersonIds.has(e.personId));
+    const requestPersonIds = new Set(jobRequests.map((r) => r.personId));
+    const relevantEntries = timeEntries.filter((e) => requestPersonIds.has(e.personId) && e.jobId === selectedJob);
 
     relevantEntries.forEach((entry) => {
       const total = calcTotalMinutes(entry);
-      timeRows.push([
-        getPersonName(entry.personId),
-        entry.date.split("-").reverse().join("/"),
-        entry.entry1, entry.exit1,
-        entry.entry2, entry.exit2,
-        entry.entry3, entry.exit3,
-        formatMinutes(total),
-      ]);
+      timeRows.push([getPersonName(entry.personId), entry.date.split("-").reverse().join("/"), entry.entry1, entry.exit1, entry.entry2, entry.exit2, entry.entry3, entry.exit3, formatMinutes(total)]);
     });
 
-    // Add blank rows for each person x date from requests
-    requests.forEach((req) => {
+    jobRequests.forEach((req) => {
       const dates = getDatesInRange(req.startDate, req.endDate);
       dates.forEach((date) => {
-        const alreadyExists = relevantEntries.some(
-          (e) => e.personId === req.personId && e.date === date
-        );
+        const alreadyExists = relevantEntries.some((e) => e.personId === req.personId && e.date === date);
         if (!alreadyExists) {
-          timeRows.push([
-            getPersonName(req.personId),
-            date.split("-").reverse().join("/"),
-            "", "", "", "", "", "", "",
-          ]);
+          timeRows.push([getPersonName(req.personId), date.split("-").reverse().join("/"), "", "", "", "", "", "", ""]);
         }
       });
     });
 
     const ws2 = XLSX.utils.aoa_to_sheet(timeRows);
-    ws2["!cols"] = [
-      { wch: 22 }, { wch: 12 },
-      { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 },
-      { wch: 10 }, { wch: 10 }, { wch: 12 },
-    ];
-
+    ws2["!cols"] = [{ wch: 22 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 12 }];
     XLSX.utils.book_append_sheet(wb, ws2, "Registro de Horas");
 
     // Generate time entries in the app
     const newEntries: TimeEntry[] = [];
-    requests.forEach((req) => {
+    jobRequests.forEach((req) => {
       const dates = getDatesInRange(req.startDate, req.endDate);
       dates.forEach((date) => {
-        const exists = timeEntries.some(
-          (e) => e.personId === req.personId && e.date === date
-        );
+        const exists = timeEntries.some((e) => e.personId === req.personId && e.date === date && e.jobId === selectedJob);
         if (!exists) {
           newEntries.push({
             id: crypto.randomUUID(),
             personId: req.personId,
+            jobId: selectedJob,
             date,
             entry1: "", exit1: "",
             entry2: "", exit2: "",
@@ -196,10 +155,11 @@ const MealRequestTab = ({ people, jobs, timeEntries, onGenerateEntries }: MealRe
     });
     if (newEntries.length > 0) onGenerateEntries(newEntries);
 
-    // Download
     const safeName = jobName.replace(/[^a-zA-Z0-9\-_ ]/g, "").trim();
     XLSX.writeFile(wb, `${safeName}.xlsx`);
   };
+
+  const jobRequests = selectedJob ? requests.filter((r) => r.jobId === selectedJob) : requests;
 
   return (
     <div className="space-y-6">
@@ -299,7 +259,7 @@ const MealRequestTab = ({ people, jobs, timeEntries, onGenerateEntries }: MealRe
 
         <Button
           onClick={addRequest}
-          disabled={!currentPerson || currentMeals.length === 0 || !startDate || !endDate}
+          disabled={!currentPerson || !selectedJob || currentMeals.length === 0 || !startDate || !endDate}
           className="gap-1.5 bg-foreground text-background hover:bg-foreground/90"
         >
           <Plus className="h-3.5 w-3.5" />
@@ -308,12 +268,13 @@ const MealRequestTab = ({ people, jobs, timeEntries, onGenerateEntries }: MealRe
       </div>
 
       {/* Requests list */}
-      {requests.length > 0 && (
+      {jobRequests.length > 0 && (
         <div className="rounded-xl border border-border overflow-hidden shadow-card">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-muted/50">
                 <th className="text-left px-3 py-2.5 text-2xs uppercase tracking-wider font-medium text-muted-foreground">Pessoa</th>
+                <th className="text-left px-3 py-2.5 text-2xs uppercase tracking-wider font-medium text-muted-foreground">Job</th>
                 <th className="text-left px-3 py-2.5 text-2xs uppercase tracking-wider font-medium text-muted-foreground">Refeições</th>
                 <th className="text-left px-3 py-2.5 text-2xs uppercase tracking-wider font-medium text-muted-foreground">Período</th>
                 <th className="text-right px-3 py-2.5 text-2xs uppercase tracking-wider font-medium text-muted-foreground">Dias</th>
@@ -322,13 +283,14 @@ const MealRequestTab = ({ people, jobs, timeEntries, onGenerateEntries }: MealRe
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {requests.map((req) => {
+              {jobRequests.map((req) => {
                 const days = getDatesInRange(req.startDate, req.endDate).length;
                 const dailyValue = req.meals.reduce((s, m) => s + MEAL_VALUES[m], 0);
                 const total = dailyValue * days;
                 return (
                   <tr key={req.id} className="hover:bg-muted/30 transition-colors">
                     <td className="px-3 py-2 font-medium text-foreground">{getPersonName(req.personId)}</td>
+                    <td className="px-3 py-2 text-xs text-muted-foreground">{getJobName(req.jobId)}</td>
                     <td className="px-3 py-2">
                       <div className="flex gap-1">
                         {req.meals.map((m) => (
@@ -359,7 +321,7 @@ const MealRequestTab = ({ people, jobs, timeEntries, onGenerateEntries }: MealRe
       {/* Export */}
       <Button
         onClick={exportXlsx}
-        disabled={!selectedJob || requests.length === 0}
+        disabled={!selectedJob || jobRequests.length === 0}
         className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
       >
         <Download className="h-4 w-4" />
