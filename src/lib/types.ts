@@ -16,7 +16,7 @@ export interface TimeEntry {
   exit3: string;
 }
 
-export type MealType = "almoco" | "janta";
+export type MealType = "cafe" | "almoco" | "janta";
 
 export interface MealRequest {
   id: string;
