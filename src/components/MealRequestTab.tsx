@@ -206,7 +206,7 @@ const MealRequestTab = ({ people, jobs, timeEntries, requests, setRequests, onGe
               Refeições
             </label>
             <div className="flex gap-4">
-              {(["almoco", "janta"] as MealType[]).map((meal) => (
+              {(["cafe", "almoco", "janta"] as MealType[]).map((meal) => (
                 <div key={meal} className="flex items-center gap-2">
                   <Checkbox
                     id={meal}
