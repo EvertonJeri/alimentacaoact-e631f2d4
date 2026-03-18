@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronRight, Check, Mail, Download } from "lucide-react";
 import * as XLSX from "xlsx";
-import { BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+
 import {
   type Person,
   type Job,
@@ -30,7 +30,6 @@ interface DiscountsTabProps {
 }
 
 interface DiscountRow {
-  id: string;
   personId: string;
   jobId: string;
   date: string;
@@ -39,7 +38,6 @@ interface DiscountRow {
   discountJanta: number;
   total: number;
   reason: string;
-  isFuture: boolean;
 }
 
 const DiscountsTab = ({ people, jobs, requests, timeEntries, foodControl, confirmations, setConfirmations }: DiscountsTabProps) => {
@@ -109,9 +107,7 @@ const DiscountsTab = ({ people, jobs, requests, timeEntries, foodControl, confir
 
         const total = discountCafe + discountAlmoco + discountJanta;
         if (total > 0) {
-          const id = `${req.personId}-${req.jobId}-${date}`;
-          const isFuture = date >= new Date().toISOString().split("T")[0];
-          rows.push({ id, personId: req.personId, jobId: req.jobId, date, discountCafe, discountAlmoco, discountJanta, total, reason, isFuture });
+          rows.push({ personId: req.personId, jobId: req.jobId, date, discountCafe, discountAlmoco, discountJanta, total, reason });
         }
       });
     });
@@ -130,25 +126,8 @@ const DiscountsTab = ({ people, jobs, requests, timeEntries, foodControl, confir
     return map;
   }, [discounts]);
 
-  const isConfirmed = (id: string) => confirmations.some((c) => c.id === id && c.confirmed);
+  const totalDiscount = discounts.reduce((s, d) => s + d.total, 0);
 
-  const getEffectiveTotal = (d: DiscountRow) => {
-    if (d.isFuture && !isConfirmed(d.id)) return 0;
-    return d.total;
-  };
-
-  const totalDiscount = discounts.reduce((s, d) => s + getEffectiveTotal(d), 0);
-
-  const chartData = useMemo(() => {
-    const data = Array.from(groupedByPerson.entries()).map(([personId, personDiscounts]) => {
-      const personTotal = personDiscounts.reduce((s, d) => s + getEffectiveTotal(d), 0);
-      return {
-        name: getPersonName(personId),
-        total: personTotal
-      };
-    });
-    return data.sort((a, b) => b.total - a.total);
-  }, [groupedByPerson, people, confirmations]);
 
   const togglePerson = (personId: string) => {
     setExpandedPersons((prev) => {
@@ -159,31 +138,17 @@ const DiscountsTab = ({ people, jobs, requests, timeEntries, foodControl, confir
     });
   };
 
-  const toggleConfirmDay = (d: DiscountRow) => {
-    setConfirmations((prev) => {
-      const exists = prev.find(c => c.id === d.id);
-      if (exists) return prev.filter(c => c.id !== d.id);
-      return [...prev, { id: d.id, personId: d.personId, jobId: d.jobId, date: d.date, confirmed: true }];
-    });
-  };
+  const isConfirmed = (personId: string) => confirmations.find((c) => c.personId === personId)?.confirmed || false;
 
-  const togglePersonConfirmAll = (personId: string, personDiscounts: DiscountRow[]) => {
-    const eligibleDays = personDiscounts.filter(d => !d.isFuture);
-    const allEligibleConfirmed = eligibleDays.length > 0 && eligibleDays.every(d => isConfirmed(d.id));
-    
-    setConfirmations(prev => {
-      let next = [...prev];
-      if (allEligibleConfirmed) {
-        const eligibleIds = eligibleDays.map(d => d.id);
-        next = next.filter(c => !eligibleIds.includes(c.id));
-      } else {
-        eligibleDays.forEach(d => {
-          if (!next.some(c => c.id === d.id)) {
-            next.push({ id: d.id, personId: d.personId, jobId: d.jobId, date: d.date, confirmed: true });
-          }
-        });
+  const toggleConfirm = (personId: string) => {
+    setConfirmations((prev) => {
+      const idx = prev.findIndex((c) => c.personId === personId);
+      if (idx >= 0) {
+        const copy = [...prev];
+        copy[idx] = { ...copy[idx], confirmed: !copy[idx].confirmed };
+        return copy;
       }
-      return next;
+      return [...prev, { personId, confirmed: true }];
     });
   };
 
@@ -202,8 +167,8 @@ const DiscountsTab = ({ people, jobs, requests, timeEntries, foodControl, confir
         d.discountCafe > 0 ? -d.discountCafe : 0,
         d.discountAlmoco > 0 ? -d.discountAlmoco : 0,
         d.discountJanta > 0 ? -d.discountJanta : 0,
-        -getEffectiveTotal(d), d.reason,
-        isConfirmed(d.id) ? "Sim" : "Pendente",
+        -d.total, d.reason,
+        isConfirmed(d.personId) ? "Sim" : "Pendente",
       ]);
     });
 
@@ -230,41 +195,6 @@ const DiscountsTab = ({ people, jobs, requests, timeEntries, foodControl, confir
         Descontos por refeição não utilizada. Baseado no horário de entrada e no controle de alimentação. Clique no nome para expandir os detalhes.
       </p>
 
-      <div className="rounded-xl border border-border p-4 shadow-card bg-card mb-6">
-        <h3 className="text-sm font-semibold mb-4 text-muted-foreground">Descontos por Pessoa</h3>
-        {chartData.length === 0 ? (
-          <div className="h-[250px] w-full flex items-center justify-center text-sm text-muted-foreground bg-muted/10 rounded-lg border border-dashed border-border/50">
-            Nenhum desconto registrado no momento para exibir no gráfico.
-          </div>
-        ) : (
-          <div className="h-[250px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData.slice(0, 10)} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" strokeOpacity={0.1} />
-                <XAxis 
-                  dataKey="name" 
-                  tick={{ fontSize: 12, fill: "currentColor", opacity: 0.7 }} 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tickFormatter={(val) => val.split(' ')[0]} 
-                />
-                <YAxis 
-                  tick={{ fontSize: 12, fill: "currentColor", opacity: 0.7 }} 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tickFormatter={(val) => `R$${val}`}
-                />
-                <RechartsTooltip 
-                  formatter={(value: number) => [`R$ ${value.toFixed(2)}`, "Total Desconto"]}
-                  cursor={{ fill: 'currentColor', opacity: 0.05 }}
-                  contentStyle={{ borderRadius: '8px', border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: 'var(--foreground)' }}
-                />
-                <Bar dataKey="total" fill="#ef4444" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-      </div>
 
       <div className="rounded-xl border border-border overflow-hidden shadow-card">
         {groupedByPerson.size === 0 ? (
@@ -274,35 +204,34 @@ const DiscountsTab = ({ people, jobs, requests, timeEntries, foodControl, confir
         ) : (
           <div className="divide-y divide-border">
             {Array.from(groupedByPerson.entries()).map(([personId, personDiscounts]) => {
-              const personTotal = personDiscounts.reduce((s, d) => s + getEffectiveTotal(d), 0);
+              const personTotal = personDiscounts.reduce((s, d) => s + d.total, 0);
               const expanded = expandedPersons.has(personId);
-              const eligibleDays = personDiscounts.filter(d => !d.isFuture);
-              const allConfirmed = eligibleDays.length > 0 && eligibleDays.every(d => isConfirmed(d.id));
+              const confirmed = isConfirmed(personId);
 
               return (
                 <div key={personId}>
                   {/* Person header - collapsible */}
                   <div
-                    className={`flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-muted/30 transition-colors ${allConfirmed ? "bg-muted/20" : ""}`}
+                    className={`flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-muted/30 transition-colors ${confirmed ? "bg-muted/20" : ""}`}
                     onClick={() => togglePerson(personId)}
                   >
                     <div className="flex items-center gap-3">
                       {expanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
                       <span className="font-medium text-foreground">{getPersonName(personId)}</span>
-                      <Badge variant={allConfirmed ? "secondary" : "destructive"} className="text-2xs">
-                        {allConfirmed ? "Descontado" : "Pendente"}
+                      <Badge variant={confirmed ? "secondary" : "destructive"} className="text-2xs">
+                        {confirmed ? "Descontado" : "Pendente"}
                       </Badge>
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="tabular-nums font-bold text-destructive">-{personTotal.toFixed(2)}</span>
                       <Button
                         size="sm"
-                        variant={allConfirmed ? "secondary" : "outline"}
+                        variant={confirmed ? "secondary" : "outline"}
                         className="h-7 text-xs gap-1"
-                        onClick={(e) => { e.stopPropagation(); togglePersonConfirmAll(personId, personDiscounts); }}
+                        onClick={(e) => { e.stopPropagation(); toggleConfirm(personId); }}
                       >
                         <Check className="h-3 w-3" />
-                        {allConfirmed ? "Confirmado Geral" : "Confirmar Geral"}
+                        {confirmed ? "Confirmado" : "Confirmar"}
                       </Button>
                     </div>
                   </div>
@@ -320,19 +249,12 @@ const DiscountsTab = ({ people, jobs, requests, timeEntries, foodControl, confir
                             <th className="text-right px-2 py-1.5 text-2xs uppercase tracking-wider font-medium text-destructive">Janta (R$)</th>
                             <th className="text-right px-2 py-1.5 text-2xs uppercase tracking-wider font-medium text-destructive">Total (R$)</th>
                             <th className="text-left px-2 py-1.5 text-2xs uppercase tracking-wider font-medium text-muted-foreground">Motivo</th>
-                            <th className="text-center px-2 py-1.5 text-2xs uppercase tracking-wider font-medium text-muted-foreground">Status</th>
-                            <th className="px-2 py-1.5"></th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border/50">
-                          {personDiscounts.map((d) => {
-                            const conf = isConfirmed(d.id);
-                            return (
-                            <tr key={d.id} className="hover:bg-muted/20">
-                              <td className="px-2 py-1.5 tabular-nums text-muted-foreground flex items-center gap-1.5">
-                                {d.date.split("-").reverse().join("/")}
-                                {d.isFuture && <Badge variant="outline" className="text-[9px] px-1 py-0 h-4">Futuro</Badge>}
-                              </td>
+                          {personDiscounts.map((d, i) => (
+                            <tr key={`${d.date}-${i}`} className="hover:bg-muted/20">
+                              <td className="px-2 py-1.5 tabular-nums text-muted-foreground">{d.date.split("-").reverse().join("/")}</td>
                               <td className="px-2 py-1.5 text-xs text-muted-foreground">{getJobName(d.jobId)}</td>
                               <td className="px-2 py-1.5 text-right tabular-nums text-destructive">
                                 {d.discountCafe > 0 ? `-${d.discountCafe.toFixed(2)}` : "—"}
@@ -344,19 +266,11 @@ const DiscountsTab = ({ people, jobs, requests, timeEntries, foodControl, confir
                                 {d.discountJanta > 0 ? `-${d.discountJanta.toFixed(2)}` : "—"}
                               </td>
                               <td className="px-2 py-1.5 text-right tabular-nums font-semibold text-destructive">
-                                -{getEffectiveTotal(d).toFixed(2)}
+                                -{d.total.toFixed(2)}
                               </td>
                               <td className="px-2 py-1.5 text-xs text-muted-foreground">{d.reason}</td>
-                              <td className="px-2 py-1.5 text-center">
-                                {conf ? <Badge variant="secondary" className="text-[10px] uppercase">Confirmado</Badge> : <span className="text-xs text-muted-foreground">Pendente</span>}
-                              </td>
-                              <td className="px-2 py-1.5 text-right">
-                                <Button size="sm" variant={conf ? "secondary" : "outline"} className="h-6 text-[10px] px-2" onClick={() => toggleConfirmDay(d)}>
-                                  {conf ? "Desfazer" : (d.isFuture ? "Forçar" : "Confirmar")}
-                                </Button>
-                              </td>
                             </tr>
-                          )})}
+                          ))}
                         </tbody>
                       </table>
                     </div>

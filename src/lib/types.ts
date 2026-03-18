@@ -46,10 +46,7 @@ export interface FoodControlEntry {
 }
 
 export interface DiscountConfirmation {
-  id: string; // Unique identifier like personId-jobId-date
   personId: string;
-  jobId: string;
-  date: string;
   confirmed: boolean;
 }
 
