@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronRight, Check, Mail, Download } from "lucide-react";
 import * as XLSX from "xlsx";
+import { BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import {
   type Person,
   type Job,
@@ -121,6 +122,17 @@ const DiscountsTab = ({ people, jobs, requests, timeEntries, foodControl, confir
 
   const totalDiscount = discounts.reduce((s, d) => s + d.total, 0);
 
+  const chartData = useMemo(() => {
+    const data = Array.from(groupedByPerson.entries()).map(([personId, personDiscounts]) => {
+      const personTotal = personDiscounts.reduce((s, d) => s + d.total, 0);
+      return {
+        name: getPersonName(personId),
+        total: personTotal
+      };
+    });
+    return data.sort((a, b) => b.total - a.total);
+  }, [groupedByPerson, people]);
+
   const togglePerson = (personId: string) => {
     setExpandedPersons((prev) => {
       const next = new Set(prev);
@@ -186,6 +198,40 @@ const DiscountsTab = ({ people, jobs, requests, timeEntries, foodControl, confir
       <p className="text-xs text-muted-foreground">
         Descontos por refeição não utilizada. Baseado no horário de entrada e no controle de alimentação. Clique no nome para expandir os detalhes.
       </p>
+
+      {chartData.length > 0 && (
+        <div className="rounded-xl border border-border p-4 shadow-card bg-card">
+          <h3 className="text-sm font-semibold mb-4 text-muted-foreground">Descontos por Pessoa</h3>
+          <div className="h-[250px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData.slice(0, 10)} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" strokeOpacity={0.1} />
+                <XAxis 
+                  dataKey="name" 
+                  tick={{ fontSize: 12, fill: "currentColor" }} 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tickFormatter={(val) => val.split(' ')[0]} 
+                  tickOpacity={0.7}
+                />
+                <YAxis 
+                  tick={{ fontSize: 12, fill: "currentColor" }} 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tickFormatter={(val) => `R$${val}`}
+                  tickOpacity={0.7}
+                />
+                <RechartsTooltip 
+                  formatter={(value: number) => [`R$ ${value.toFixed(2)}`, "Total Desconto"]}
+                  cursor={{ fill: 'currentColor', opacity: 0.05 }}
+                  contentStyle={{ borderRadius: '8px', border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: 'var(--foreground)' }}
+                />
+                <Bar dataKey="total" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
 
       <div className="rounded-xl border border-border overflow-hidden shadow-card">
         {groupedByPerson.size === 0 ? (
