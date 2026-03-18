@@ -128,16 +128,6 @@ const DiscountsTab = ({ people, jobs, requests, timeEntries, foodControl, confir
 
   const totalDiscount = discounts.reduce((s, d) => s + d.total, 0);
 
-  const chartData = useMemo(() => {
-    const data = Array.from(groupedByPerson.entries()).map(([personId, personDiscounts]) => {
-      const personTotal = personDiscounts.reduce((s, d) => s + d.total, 0);
-      return {
-        name: getPersonName(personId),
-        total: personTotal
-      };
-    });
-    return data.sort((a, b) => b.total - a.total);
-  }, [groupedByPerson, people]);
 
   const togglePerson = (personId: string) => {
     setExpandedPersons((prev) => {
