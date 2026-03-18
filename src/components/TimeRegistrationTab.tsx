@@ -41,6 +41,7 @@ const TimeRegistrationTab = ({ entries, setEntries, people, jobs }: TimeRegistra
   // Filters
   const [filterPerson, setFilterPerson] = useState("all");
   const [filterJob, setFilterJob] = useState("all");
+  const [filterDate, setFilterDate] = useState("");
 
   const addEntry = () => {
     if (!selectedPerson || !selectedJob) return;
@@ -66,6 +67,7 @@ const TimeRegistrationTab = ({ entries, setEntries, people, jobs }: TimeRegistra
   const filteredEntries = entries.filter((e) => {
     if (filterPerson !== "all" && e.personId !== filterPerson) return false;
     if (filterJob !== "all" && e.jobId !== filterJob) return false;
+    if (filterDate && e.date !== filterDate) return false;
     return true;
   });
 
@@ -158,6 +160,17 @@ const TimeRegistrationTab = ({ entries, setEntries, people, jobs }: TimeRegistra
               ))}
             </SelectContent>
           </Select>
+        </div>
+        <div className="min-w-[160px]">
+          <label className="text-2xs uppercase tracking-wider font-medium text-muted-foreground block mb-1.5">
+            Filtrar Data
+          </label>
+          <Input
+            type="date"
+            value={filterDate}
+            onChange={(e) => setFilterDate(e.target.value)}
+            className="h-8 text-xs tabular-nums"
+          />
         </div>
       </div>
 

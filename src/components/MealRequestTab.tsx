@@ -16,14 +16,14 @@ import {
   type MealType,
   type MealRequest,
   type TimeEntry,
-  type BrazilState,
-  type SPRegion,
+  type LocationType,
   MEAL_LABELS,
   MEAL_VALUES,
-  BRAZIL_STATES,
+  LOCATIONS,
   getDatesInRange,
   formatMinutes,
   calcTotalMinutes,
+  getMealValue,
 } from "@/lib/types";
 
 interface MealRequestTabProps {
@@ -41,8 +41,7 @@ const MealRequestTab = ({ people, jobs, timeEntries, requests, setRequests, onGe
   const [currentMeals, setCurrentMeals] = useState<MealType[]>([]);
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
-  const [selectedState, setSelectedState] = useState<BrazilState | "">("");
-  const [spRegion, setSpRegion] = useState<SPRegion | "">("");
+  const [selectedLocation, setSelectedLocation] = useState<LocationType | "">("");
 
   const toggleMeal = (meal: MealType) => {
     setCurrentMeals((prev) =>
@@ -51,8 +50,7 @@ const MealRequestTab = ({ people, jobs, timeEntries, requests, setRequests, onGe
   };
 
   const addRequest = () => {
-    if (!currentPerson || !selectedJob || currentMeals.length === 0 || !startDate || !endDate || !selectedState) return;
-    if (selectedState === "SP" && !spRegion) return;
+    if (!currentPerson || !selectedJob || currentMeals.length === 0 || !startDate || !endDate || !selectedLocation) return;
     setRequests((prev) => [
       ...prev,
       {
@@ -62,8 +60,7 @@ const MealRequestTab = ({ people, jobs, timeEntries, requests, setRequests, onGe
         meals: [...currentMeals],
         startDate: startDate.toISOString().split("T")[0],
         endDate: endDate.toISOString().split("T")[0],
-        state: selectedState as BrazilState,
-        spRegion: selectedState === "SP" ? (spRegion as SPRegion) : undefined,
+        location: selectedLocation as LocationType,
       },
     ]);
     setCurrentPerson("");
@@ -114,14 +111,24 @@ const MealRequestTab = ({ people, jobs, timeEntries, requests, setRequests, onGe
 
     let grandTotal = 0;
     jobRequests2.forEach((req) => {
-      const person = getPersonName(req.personId);
-      const meals = req.meals.map((m) => MEAL_LABELS[m]).join(", ");
-      const days = getDatesInRange(req.startDate, req.endDate).length;
-      const dailyValue = req.meals.reduce((s, m) => s + MEAL_VALUES[m], 0);
-      const total = dailyValue * days;
+      let total = 0;
+      const person = people.find((p) => p.id === req.personId);
+      const personName = person?.name || "—";
+      const dates = getDatesInRange(req.startDate, req.endDate);
+      const days = dates.length;
+      
+      dates.forEach(date => {
+        req.meals.forEach(m => {
+          total += getMealValue(m, date, person);
+        });
+      });
+
       grandTotal += total;
-      const stateLabel = req.state === "SP" && req.spRegion ? `SP - ${req.spRegion === "capital" ? "Capital" : "Interior"}` : (req.state || "");
-      mealRows.push([person, stateLabel, meals, req.startDate.split("-").reverse().join("/"), req.endDate.split("-").reverse().join("/"), days, dailyValue, total]);
+      const meals = req.meals.map((m) => MEAL_LABELS[m]).join(", ");
+      const stateLabel = req.location || "";
+      // we show average daily value in exported report or omit it to keep it simple, let's omit the generic dailyValue 
+      // since it varies by day
+      mealRows.push([personName, stateLabel, meals, req.startDate.split("-").reverse().join("/"), req.endDate.split("-").reverse().join("/"), days, (total/days).toFixed(2), total.toFixed(2)]);
     });
 
     mealRows.push([]);
@@ -173,35 +180,19 @@ const MealRequestTab = ({ people, jobs, timeEntries, requests, setRequests, onGe
         </div>
         <div>
           <label className="text-2xs uppercase tracking-wider font-medium text-muted-foreground block mb-1.5">
-            Estado da Montagem
+            Localização da Montagem
           </label>
-          <Select value={selectedState} onValueChange={(v) => { setSelectedState(v as BrazilState); if (v !== "SP") setSpRegion(""); }}>
+          <Select value={selectedLocation} onValueChange={(v) => setSelectedLocation(v as LocationType)}>
             <SelectTrigger>
-              <SelectValue placeholder="Selecione o estado..." />
+              <SelectValue placeholder="Selecione a localização..." />
             </SelectTrigger>
             <SelectContent>
-              {BRAZIL_STATES.map((s) => (
-                <SelectItem key={s.value} value={s.value}>{s.value} - {s.label}</SelectItem>
+              {LOCATIONS.map((s) => (
+                <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
-        {selectedState === "SP" && (
-          <div>
-            <label className="text-2xs uppercase tracking-wider font-medium text-muted-foreground block mb-1.5">
-              Região SP
-            </label>
-            <Select value={spRegion} onValueChange={(v) => setSpRegion(v as SPRegion)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Capital ou Interior?" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="capital">Capital</SelectItem>
-                <SelectItem value="interior">Interior</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        )}
       </div>
 
       {/* Add person form */}
@@ -285,7 +276,7 @@ const MealRequestTab = ({ people, jobs, timeEntries, requests, setRequests, onGe
 
         <Button
           onClick={addRequest}
-          disabled={!currentPerson || !selectedJob || currentMeals.length === 0 || !startDate || !endDate || !selectedState || (selectedState === "SP" && !spRegion)}
+          disabled={!currentPerson || !selectedJob || currentMeals.length === 0 || !startDate || !endDate || !selectedLocation}
           className="gap-1.5 bg-foreground text-background hover:bg-foreground/90"
         >
           <Plus className="h-3.5 w-3.5" />
@@ -311,12 +302,17 @@ const MealRequestTab = ({ people, jobs, timeEntries, requests, setRequests, onGe
             </thead>
             <tbody className="divide-y divide-border">
               {jobRequests.map((req) => {
-                const days = getDatesInRange(req.startDate, req.endDate).length;
-                const dailyValue = req.meals.reduce((s, m) => s + MEAL_VALUES[m], 0);
-                const total = dailyValue * days;
-                const stateLabel = req.state === "SP" && req.spRegion
-                  ? `SP ${req.spRegion === "capital" ? "Capital" : "Interior"}`
-                  : (req.state || "—");
+                const person = people.find((p) => p.id === req.personId);
+                const dates = getDatesInRange(req.startDate, req.endDate);
+                const days = dates.length;
+                let total = 0;
+                dates.forEach(date => {
+                  req.meals.forEach(m => {
+                    total += getMealValue(m, date, person);
+                  });
+                });
+                
+                const stateLabel = req.location || "—";
                 return (
                   <tr key={req.id} className="hover:bg-muted/30 transition-colors">
                     <td className="px-3 py-2 font-medium text-foreground">{getPersonName(req.personId)}</td>

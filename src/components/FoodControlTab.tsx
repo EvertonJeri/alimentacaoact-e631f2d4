@@ -1,6 +1,9 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Filter } from "lucide-react";
 import {
   type Person,
   type Job,
@@ -11,6 +14,7 @@ import {
   MEAL_VALUES,
   getDatesInRange,
   determineMealsUsed,
+  getMealValue,
 } from "@/lib/types";
 
 interface FoodControlTabProps {
@@ -23,6 +27,9 @@ interface FoodControlTabProps {
 }
 
 const FoodControlTab = ({ people, jobs, requests, timeEntries, foodControl, setFoodControl }: FoodControlTabProps) => {
+  const [filterJob, setFilterJob] = useState("all");
+  const [filterDate, setFilterDate] = useState("");
+
   const getPersonName = (id: string) => people.find((p) => p.id === id)?.name || "—";
   const getJobName = (id: string) => jobs.find((j) => j.id === id)?.name || "—";
 
@@ -94,20 +101,58 @@ const FoodControlTab = ({ people, jobs, requests, timeEntries, foodControl, setF
   // Calculate balance per row
   const getBalance = (row: FoodControlEntry & { key: string }) => {
     let balance = 0;
-    // Used but not requested = saldo a pagar
-    if (row.usedCafe && !row.requestedCafe) balance += MEAL_VALUES.cafe;
-    if (row.usedAlmoco && !row.requestedAlmoco) balance += MEAL_VALUES.almoco;
-    if (row.usedJanta && !row.requestedJanta) balance += MEAL_VALUES.janta;
+    const person = people.find((p) => p.id === row.personId);
+    if (row.usedCafe && !row.requestedCafe) balance += getMealValue("cafe", row.date, person);
+    if (row.usedAlmoco && !row.requestedAlmoco) balance += getMealValue("almoco", row.date, person);
+    if (row.usedJanta && !row.requestedJanta) balance += getMealValue("janta", row.date, person);
     return balance;
   };
 
-  const totalBalance = rows.reduce((sum, r) => sum + getBalance(r), 0);
+  const filteredRows = rows.filter((r) => {
+    if (filterJob !== "all" && r.jobId !== filterJob) return false;
+    if (filterDate && r.date !== filterDate) return false;
+    return true;
+  });
+
+  const totalBalance = filteredRows.reduce((sum, r) => sum + getBalance(r), 0);
 
   return (
     <div className="space-y-4">
       <p className="text-xs text-muted-foreground">
         Controle de alimentação: compare o que foi solicitado com o que foi efetivamente utilizado. Edite a coluna "Utilizado" conforme necessário. O saldo mostra valores adicionais a depositar.
       </p>
+
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3 items-end p-3 rounded-lg border border-border bg-muted/30">
+        <Filter className="h-4 w-4 text-muted-foreground mt-1" />
+        <div className="min-w-[200px]">
+          <label className="text-2xs uppercase tracking-wider font-medium text-muted-foreground block mb-1.5">
+            Filtrar Job
+          </label>
+          <Select value={filterJob} onValueChange={setFilterJob}>
+            <SelectTrigger className="h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              {jobs.map((j) => (
+                <SelectItem key={j.id} value={j.id}>{j.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="min-w-[160px]">
+          <label className="text-2xs uppercase tracking-wider font-medium text-muted-foreground block mb-1.5">
+            Filtrar Data
+          </label>
+          <Input
+            type="date"
+            value={filterDate}
+            onChange={(e) => setFilterDate(e.target.value)}
+            className="h-8 text-xs tabular-nums"
+          />
+        </div>
+      </div>
 
       <div className="rounded-xl border border-border overflow-x-auto shadow-card">
         <table className="w-full text-sm">
@@ -132,14 +177,14 @@ const FoodControlTab = ({ people, jobs, requests, timeEntries, foodControl, setF
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {rows.length === 0 ? (
+            {filteredRows.length === 0 ? (
               <tr>
                 <td colSpan={10} className="text-center py-10 text-sm text-muted-foreground">
-                  Nenhuma solicitação de refeição cadastrada.
+                  Nenhuma solicitação de refeição encontrada.
                 </td>
               </tr>
             ) : (
-              rows.map((row) => {
+              filteredRows.map((row) => {
                 const balance = getBalance(row);
                 return (
                   <tr key={row.key} className="hover:bg-muted/30 transition-colors">
@@ -178,7 +223,7 @@ const FoodControlTab = ({ people, jobs, requests, timeEntries, foodControl, setF
               })
             )}
           </tbody>
-          {rows.length > 0 && totalBalance > 0 && (
+          {filteredRows.length > 0 && totalBalance > 0 && (
             <tfoot>
               <tr className="bg-muted/30 border-t border-border">
                 <td colSpan={9} className="px-3 py-2.5 text-right text-xs font-semibold uppercase text-muted-foreground">

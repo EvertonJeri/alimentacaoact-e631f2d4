@@ -16,6 +16,7 @@ import {
   getDatesInRange,
   calcTotalMinutes,
   getFirstEntryTime,
+  getMealValue,
 } from "@/lib/types";
 
 interface DiscountsTabProps {
@@ -66,11 +67,16 @@ const DiscountsTab = ({ people, jobs, requests, timeEntries, foodControl, confir
         let discountJanta = 0;
         let reason = "";
 
+        const person = people.find((p) => p.id === req.personId);
+        const refCafe = getMealValue("cafe", date, person);
+        const refAlmoco = getMealValue("almoco", date, person);
+        const refJanta = getMealValue("janta", date, person);
+
         if (!hasHours) {
           // Falta total - desconta tudo que foi solicitado
-          if (req.meals.includes("cafe")) discountCafe = MEAL_VALUES.cafe;
-          if (req.meals.includes("almoco")) discountAlmoco = MEAL_VALUES.almoco;
-          if (req.meals.includes("janta")) discountJanta = MEAL_VALUES.janta;
+          if (req.meals.includes("cafe")) discountCafe = refCafe;
+          if (req.meals.includes("almoco")) discountAlmoco = refAlmoco;
+          if (req.meals.includes("janta")) discountJanta = refJanta;
           reason = "Falta - sem registro de horas";
         } else if (entry) {
           // Partial - check time-based rules
@@ -79,7 +85,7 @@ const DiscountsTab = ({ people, jobs, requests, timeEntries, foodControl, confir
             const [eh] = firstEntry.split(":").map(Number);
             // If entered after 8:00 and cafe was requested, discount cafe
             if (req.meals.includes("cafe") && eh > 8) {
-              discountCafe = MEAL_VALUES.cafe;
+              discountCafe = refCafe;
               reason = `Entrada às ${firstEntry} - café não utilizado`;
             }
           }
@@ -87,13 +93,13 @@ const DiscountsTab = ({ people, jobs, requests, timeEntries, foodControl, confir
 
         // Apply food control overrides: if fc says "not used", it's a discount
         if (fc) {
-          if (req.meals.includes("cafe") && !fc.usedCafe) discountCafe = MEAL_VALUES.cafe;
+          if (req.meals.includes("cafe") && !fc.usedCafe) discountCafe = refCafe;
           else if (req.meals.includes("cafe") && fc.usedCafe) discountCafe = 0;
 
-          if (req.meals.includes("almoco") && !fc.usedAlmoco) discountAlmoco = MEAL_VALUES.almoco;
+          if (req.meals.includes("almoco") && !fc.usedAlmoco) discountAlmoco = refAlmoco;
           else if (req.meals.includes("almoco") && fc.usedAlmoco) discountAlmoco = 0;
 
-          if (req.meals.includes("janta") && !fc.usedJanta) discountJanta = MEAL_VALUES.janta;
+          if (req.meals.includes("janta") && !fc.usedJanta) discountJanta = refJanta;
           else if (req.meals.includes("janta") && fc.usedJanta) discountJanta = 0;
 
           if (!reason) reason = "Ajuste via controle de alimentação";

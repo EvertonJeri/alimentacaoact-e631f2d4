@@ -19,12 +19,7 @@ export interface TimeEntry {
 
 export type MealType = "cafe" | "almoco" | "janta";
 
-export type BrazilState =
-  | "AC" | "AL" | "AP" | "AM" | "BA" | "CE" | "DF" | "ES" | "GO"
-  | "MA" | "MG" | "MS" | "MT" | "PA" | "PB" | "PE" | "PI" | "PR"
-  | "RJ" | "RN" | "RO" | "RR" | "RS" | "SC" | "SE" | "SP" | "TO";
-
-export type SPRegion = "capital" | "interior";
+export type LocationType = "Dentro SP" | "Fora SP";
 
 export interface MealRequest {
   id: string;
@@ -33,8 +28,9 @@ export interface MealRequest {
   meals: MealType[];
   startDate: string;
   endDate: string;
-  state?: BrazilState;
-  spRegion?: SPRegion;
+  location?: LocationType;
+  transportType?: "onibus" | "aviao";
+  travelTime?: string; // HH:mm
 }
 
 export interface FoodControlEntry {
@@ -59,21 +55,9 @@ export interface Job {
   name: string;
 }
 
-export const BRAZIL_STATES: { value: BrazilState; label: string }[] = [
-  { value: "AC", label: "Acre" }, { value: "AL", label: "Alagoas" },
-  { value: "AP", label: "Amapá" }, { value: "AM", label: "Amazonas" },
-  { value: "BA", label: "Bahia" }, { value: "CE", label: "Ceará" },
-  { value: "DF", label: "Distrito Federal" }, { value: "ES", label: "Espírito Santo" },
-  { value: "GO", label: "Goiás" }, { value: "MA", label: "Maranhão" },
-  { value: "MG", label: "Minas Gerais" }, { value: "MS", label: "Mato Grosso do Sul" },
-  { value: "MT", label: "Mato Grosso" }, { value: "PA", label: "Pará" },
-  { value: "PB", label: "Paraíba" }, { value: "PE", label: "Pernambuco" },
-  { value: "PI", label: "Piauí" }, { value: "PR", label: "Paraná" },
-  { value: "RJ", label: "Rio de Janeiro" }, { value: "RN", label: "Rio Grande do Norte" },
-  { value: "RO", label: "Rondônia" }, { value: "RR", label: "Roraima" },
-  { value: "RS", label: "Rio Grande do Sul" }, { value: "SC", label: "Santa Catarina" },
-  { value: "SE", label: "Sergipe" }, { value: "SP", label: "São Paulo" },
-  { value: "TO", label: "Tocantins" },
+export const LOCATIONS: { value: LocationType; label: string }[] = [
+  { value: "Dentro SP", label: "Dentro de SP (e cidades próximas)" },
+  { value: "Fora SP", label: "Fora de SP" },
 ];
 
 export const SAMPLE_PEOPLE: Person[] = [
@@ -135,7 +119,14 @@ export function getDatesInRange(start: string, end: string): string[] {
 
 export function isWeekend(dateStr: string): boolean {
   const d = new Date(dateStr + "T12:00:00");
-  return d.getDay() === 0 || d.getDay() === 6;
+  return d.getDay() === 0 || d.getDay() === 6; // 0 is Sunday, 6 is Saturday
+}
+
+export function getMealValue(meal: MealType, dateStr: string, person?: Person): number {
+  if (meal === "almoco" && person?.isRegistered && !isWeekend(dateStr)) {
+    return 0; // Almoço grátis para registrados de Seg a Sex
+  }
+  return MEAL_VALUES[meal];
 }
 
 export function getFirstEntryTime(entry: TimeEntry): string | null {
@@ -152,8 +143,7 @@ export function getLastExitTime(entry: TimeEntry): string | null {
   return null;
 }
 
-// Determine used meals based on work hours
-export function determineMealsUsed(entry: TimeEntry): { cafe: boolean; almoco: boolean; janta: boolean } {
+export function determineMealsUsed(entry: TimeEntry, timeRanges = { breakfast: 8, lunch: 12, dinner: 19 }): { cafe: boolean; almoco: boolean; janta: boolean } {
   const firstEntry = getFirstEntryTime(entry);
   const lastExit = getLastExitTime(entry);
   if (!firstEntry || !lastExit) return { cafe: false, almoco: false, janta: false };
@@ -163,8 +153,8 @@ export function determineMealsUsed(entry: TimeEntry): { cafe: boolean; almoco: b
   const lastExitMinutes = lh * 60 + lm;
 
   return {
-    cafe: eh <= 8, // entered at or before 8am = used breakfast
-    almoco: lastExitMinutes > 12 * 60, // left after 12:00 = used lunch
-    janta: lastExitMinutes > 19 * 60, // left after 19:00 = used dinner
+    cafe: eh <= timeRanges.breakfast,
+    almoco: lastExitMinutes >= timeRanges.lunch * 60,
+    janta: lastExitMinutes >= timeRanges.dinner * 60,
   };
 }
