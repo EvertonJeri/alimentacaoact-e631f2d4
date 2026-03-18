@@ -199,9 +199,13 @@ const DiscountsTab = ({ people, jobs, requests, timeEntries, foodControl, confir
         Descontos por refeição não utilizada. Baseado no horário de entrada e no controle de alimentação. Clique no nome para expandir os detalhes.
       </p>
 
-      {chartData.length > 0 && (
-        <div className="rounded-xl border border-border p-4 shadow-card bg-card">
-          <h3 className="text-sm font-semibold mb-4 text-muted-foreground">Descontos por Pessoa</h3>
+      <div className="rounded-xl border border-border p-4 shadow-card bg-card mb-6">
+        <h3 className="text-sm font-semibold mb-4 text-muted-foreground">Descontos por Pessoa</h3>
+        {chartData.length === 0 ? (
+          <div className="h-[250px] w-full flex items-center justify-center text-sm text-muted-foreground bg-muted/10 rounded-lg border border-dashed border-border/50">
+            Nenhum desconto registrado no momento para exibir no gráfico.
+          </div>
+        ) : (
           <div className="h-[250px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData.slice(0, 10)} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -226,12 +230,12 @@ const DiscountsTab = ({ people, jobs, requests, timeEntries, foodControl, confir
                   cursor={{ fill: 'currentColor', opacity: 0.05 }}
                   contentStyle={{ borderRadius: '8px', border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: 'var(--foreground)' }}
                 />
-                <Bar dataKey="total" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="total" fill="#ef4444" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       <div className="rounded-xl border border-border overflow-hidden shadow-card">
         {groupedByPerson.size === 0 ? (
