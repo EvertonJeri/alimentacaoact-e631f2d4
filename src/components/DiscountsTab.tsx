@@ -243,18 +243,16 @@ const DiscountsTab = ({ people, jobs, requests, timeEntries, foodControl, confir
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" strokeOpacity={0.1} />
                 <XAxis 
                   dataKey="name" 
-                  tick={{ fontSize: 12, fill: "currentColor" }} 
+                  tick={{ fontSize: 12, fill: "currentColor", opacity: 0.7 }} 
                   axisLine={false} 
                   tickLine={false} 
                   tickFormatter={(val) => val.split(' ')[0]} 
-                  tickOpacity={0.7}
                 />
                 <YAxis 
-                  tick={{ fontSize: 12, fill: "currentColor" }} 
+                  tick={{ fontSize: 12, fill: "currentColor", opacity: 0.7 }} 
                   axisLine={false} 
                   tickLine={false} 
                   tickFormatter={(val) => `R$${val}`}
-                  tickOpacity={0.7}
                 />
                 <RechartsTooltip 
                   formatter={(value: number) => [`R$ ${value.toFixed(2)}`, "Total Desconto"]}
