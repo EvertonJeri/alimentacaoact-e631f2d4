@@ -386,26 +386,32 @@ const MealRequestTab = ({ people, jobs, timeEntries, requests, setRequests, onGe
                             {dates.map((date) => {
                               const dayMeals = req.dailyOverrides && req.dailyOverrides[date] !== undefined ? req.dailyOverrides[date] : req.meals;
                               const isWeekend = new Date(date + "T00:00:00").getDay() === 0 || new Date(date + "T00:00:00").getDay() === 6;
+                              const dayTotal = dayMeals.reduce((acc, m) => acc + getMealValue(m, date, person), 0);
                               return (
-                                <div key={date} className="bg-card p-3 rounded-md border border-border flex flex-col gap-2">
-                                  <span className="font-semibold text-xs tabular-nums text-foreground">{date.split("-").reverse().join("/")}</span>
-                                  <div className="flex flex-col gap-2 mt-1">
+                                <div key={date} className="bg-card p-3 rounded-md border border-border flex flex-col gap-2 shadow-sm">
+                                  <div className="flex justify-between items-center border-b border-border/50 pb-2 mb-1">
+                                    <span className="font-semibold text-xs tabular-nums text-foreground">{date.split("-").reverse().join("/")}</span>
+                                    <span className="text-xs font-semibold text-primary tabular-nums">R$ {dayTotal.toFixed(2)}</span>
+                                  </div>
+                                  <div className="flex flex-col gap-2.5">
                                     {(["cafe", "almoco", "janta"] as MealType[]).map((meal) => {
                                       const isBlockedAlmoco = meal === "almoco" && person?.isRegistered && !isWeekend;
+                                      const mealValue = getMealValue(meal, date, person);
                                       return (
-                                        <div key={meal} className="flex items-center gap-2">
+                                        <div key={meal} className="flex items-center gap-2.5">
                                           <Checkbox
                                             id={`req-${req.id}-${date}-${meal}`}
                                             checked={isBlockedAlmoco ? false : dayMeals.includes(meal)}
                                             disabled={isBlockedAlmoco}
                                             onCheckedChange={(checked) => setDailyOverride(req.id, date, meal, checked as boolean)}
-                                            className="h-3 w-3"
+                                            className="h-3.5 w-3.5"
                                           />
                                           <Label 
                                             htmlFor={`req-${req.id}-${date}-${meal}`} 
-                                            className={`text-2xs cursor-pointer ${isBlockedAlmoco ? "text-muted-foreground/50" : ""}`}
+                                            className={`text-xs cursor-pointer flex-1 flex justify-between items-center ${isBlockedAlmoco ? "text-muted-foreground/50" : ""}`}
                                           >
-                                            {MEAL_LABELS[meal]} {isBlockedAlmoco && "(Não Custa)"}
+                                            <span>{MEAL_LABELS[meal]}</span>
+                                            <span className="text-muted-foreground tabular-nums text-2xs">{isBlockedAlmoco ? "(Não Custa)" : `R$ ${mealValue.toFixed(2)}`}</span>
                                           </Label>
                                         </div>
                                       );
