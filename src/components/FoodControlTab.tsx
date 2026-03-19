@@ -24,9 +24,19 @@ interface FoodControlTabProps {
   timeEntries: TimeEntry[];
   foodControl: FoodControlEntry[];
   setFoodControl: React.Dispatch<React.SetStateAction<FoodControlEntry[]>>;
+  onUpdateEntry?: (entry: FoodControlEntry) => void;
 }
 
-const FoodControlTab = ({ people, jobs, requests, timeEntries, foodControl, setFoodControl }: FoodControlTabProps) => {
+const FoodControlTab = ({
+  people,
+  jobs,
+  requests,
+  timeEntries,
+  foodControl,
+  setFoodControl,
+  onUpdateEntry,
+}: FoodControlTabProps) => {
+
   const [filterJob, setFilterJob] = useState("all");
   const [filterDate, setFilterDate] = useState("");
 
@@ -74,21 +84,23 @@ const FoodControlTab = ({ people, jobs, requests, timeEntries, foodControl, setF
   }, [requests, timeEntries, foodControl]);
 
   const updateUsed = (personId: string, jobId: string, date: string, field: "usedCafe" | "usedAlmoco" | "usedJanta", value: boolean) => {
+    const row = rows.find((r) => r.personId === personId && r.jobId === jobId && r.date === date);
+    if (!row) return;
+
+    const updated: FoodControlEntry = {
+      personId, jobId, date,
+      requestedCafe: row.requestedCafe,
+      requestedAlmoco: row.requestedAlmoco,
+      requestedJanta: row.requestedJanta,
+      usedCafe: field === "usedCafe" ? value : row.usedCafe,
+      usedAlmoco: field === "usedAlmoco" ? value : row.usedAlmoco,
+      usedJanta: field === "usedJanta" ? value : row.usedJanta,
+    };
+
+    onUpdateEntry?.(updated);
+
     setFoodControl((prev) => {
       const idx = prev.findIndex((fc) => fc.personId === personId && fc.jobId === jobId && fc.date === date);
-      const row = rows.find((r) => r.personId === personId && r.jobId === jobId && r.date === date);
-      if (!row) return prev;
-
-      const updated: FoodControlEntry = {
-        personId, jobId, date,
-        requestedCafe: row.requestedCafe,
-        requestedAlmoco: row.requestedAlmoco,
-        requestedJanta: row.requestedJanta,
-        usedCafe: field === "usedCafe" ? value : row.usedCafe,
-        usedAlmoco: field === "usedAlmoco" ? value : row.usedAlmoco,
-        usedJanta: field === "usedJanta" ? value : row.usedJanta,
-      };
-
       if (idx >= 0) {
         const copy = [...prev];
         copy[idx] = updated;
@@ -98,15 +110,25 @@ const FoodControlTab = ({ people, jobs, requests, timeEntries, foodControl, setF
     });
   };
 
+
   // Calculate balance per row
   const getBalance = (row: FoodControlEntry & { key: string }) => {
     let balance = 0;
     const person = people.find((p) => p.id === row.personId);
+    
+    // Se foi solicitado mas NÃO foi utilizado -> Saldo Negativo (Desconto)
+    if (row.requestedCafe && !row.usedCafe) balance -= getMealValue("cafe", row.date, person);
+    if (row.requestedAlmoco && !row.usedAlmoco) balance -= getMealValue("almoco", row.date, person);
+    if (row.requestedJanta && !row.usedJanta) balance -= getMealValue("janta", row.date, person);
+
+    // Se NÃO foi solicitado mas FOI utilizado -> Saldo Positivo (Cobrança extra)
     if (row.usedCafe && !row.requestedCafe) balance += getMealValue("cafe", row.date, person);
     if (row.usedAlmoco && !row.requestedAlmoco) balance += getMealValue("almoco", row.date, person);
     if (row.usedJanta && !row.requestedJanta) balance += getMealValue("janta", row.date, person);
+    
     return balance;
   };
+
 
   const filteredRows = rows.filter((r) => {
     if (filterJob !== "all" && r.jobId !== filterJob) return false;
@@ -214,27 +236,31 @@ const FoodControlTab = ({ people, jobs, requests, timeEntries, foodControl, setF
                     <td className="px-3 py-2 text-right tabular-nums font-semibold">
                       {balance > 0 ? (
                         <span className="text-primary">+{balance.toFixed(2)}</span>
+                      ) : balance < 0 ? (
+                        <span className="text-destructive">{balance.toFixed(2)}</span>
                       ) : (
                         <span className="text-muted-foreground">0,00</span>
                       )}
                     </td>
+
                   </tr>
                 );
               })
             )}
           </tbody>
-          {filteredRows.length > 0 && totalBalance > 0 && (
+          {filteredRows.length > 0 && totalBalance !== 0 && (
             <tfoot>
               <tr className="bg-muted/30 border-t border-border">
                 <td colSpan={9} className="px-3 py-2.5 text-right text-xs font-semibold uppercase text-muted-foreground">
-                  Total Saldo a Depositar
+                  {totalBalance > 0 ? "Total Saldo a Depositar" : "Total Saldo a Descontar"}
                 </td>
-                <td className="px-3 py-2.5 text-right tabular-nums font-bold text-primary">
-                  +{totalBalance.toFixed(2)}
+                <td className={`px-3 py-2.5 text-right tabular-nums font-bold ${totalBalance > 0 ? "text-primary" : "text-destructive"}`}>
+                  {totalBalance > 0 ? `+${totalBalance.toFixed(2)}` : totalBalance.toFixed(2)}
                 </td>
               </tr>
             </tfoot>
           )}
+
         </table>
       </div>
     </div>

@@ -34,9 +34,21 @@ interface MealRequestTabProps {
   requests: MealRequest[];
   setRequests: React.Dispatch<React.SetStateAction<MealRequest[]>>;
   onGenerateEntries: (entries: TimeEntry[]) => void;
+  onUpdateRequest?: (req: MealRequest) => void;
+  onRemoveRequest?: (id: string) => void;
 }
 
-const MealRequestTab = ({ people, jobs, timeEntries, requests, setRequests, onGenerateEntries }: MealRequestTabProps) => {
+const MealRequestTab = ({
+  people,
+  jobs,
+  timeEntries,
+  requests,
+  setRequests,
+  onGenerateEntries,
+  onUpdateRequest,
+  onRemoveRequest,
+}: MealRequestTabProps) => {
+
   const { toast } = useToast();
   const [selectedJob, setSelectedJob] = useState("");
   const [currentPerson, setCurrentPerson] = useState("");
@@ -56,24 +68,27 @@ const MealRequestTab = ({ people, jobs, timeEntries, requests, setRequests, onGe
   };
 
   const setDailyOverride = (reqId: string, date: string, meal: MealType, checked: boolean) => {
-    setRequests(prev => prev.map(req => {
-      if (req.id !== reqId) return req;
+    const req = requests.find(r => r.id === reqId);
+    if (!req) return;
+
+    const currentOverrides = req.dailyOverrides || {};
+    const dayMeals = currentOverrides[date] !== undefined ? currentOverrides[date] : req.meals;
+    
+    const newDayMeals = checked 
+      ? [...dayMeals, meal]
+      : dayMeals.filter(m => m !== meal);
       
-      const currentOverrides = req.dailyOverrides || {};
-      const dayMeals = currentOverrides[date] !== undefined ? currentOverrides[date] : req.meals;
-      
-      const newDayMeals = checked 
-        ? [...dayMeals, meal]
-        : dayMeals.filter(m => m !== meal);
-        
-      return {
-        ...req,
-        dailyOverrides: {
-          ...currentOverrides,
-          [date]: newDayMeals
-        }
-      };
-    }));
+    const updated = {
+      ...req,
+      dailyOverrides: {
+        ...currentOverrides,
+        [date]: newDayMeals
+      }
+    };
+
+    onUpdateRequest?.(updated);
+
+    setRequests(prev => prev.map(r => r.id === reqId ? updated : r));
   };
 
   const toggleMeal = (meal: MealType) => {
@@ -84,25 +99,28 @@ const MealRequestTab = ({ people, jobs, timeEntries, requests, setRequests, onGe
 
   const addRequest = () => {
     if (!currentPerson || !selectedJob || currentMeals.length === 0 || !startDate || !endDate || !selectedLocation) return;
-    setRequests((prev) => [
-      ...prev,
-      {
-        id: crypto.randomUUID(),
-        personId: currentPerson,
-        jobId: selectedJob,
-        meals: [...currentMeals],
-        startDate: startDate.toISOString().split("T")[0],
-        endDate: endDate.toISOString().split("T")[0],
-        location: selectedLocation as LocationType,
-      },
-    ]);
+    const newRequest: MealRequest = {
+      id: crypto.randomUUID(),
+      personId: currentPerson,
+      jobId: selectedJob,
+      meals: [...currentMeals],
+      startDate: startDate.toISOString().split("T")[0],
+      endDate: endDate.toISOString().split("T")[0],
+      location: selectedLocation as LocationType,
+    };
+
+    onUpdateRequest?.(newRequest);
+
+    setRequests((prev) => [...prev, newRequest]);
     setCurrentPerson("");
     setCurrentMeals([]);
   };
 
   const removeRequest = (id: string) => {
+    onRemoveRequest?.(id);
     setRequests((prev) => prev.filter((r) => r.id !== id));
   };
+
 
   const getPersonName = (id: string) => people.find((p) => p.id === id)?.name || "—";
   const getJobName = (id?: string) => jobs.find((j) => j.id === (id || selectedJob))?.name || "Relatório";

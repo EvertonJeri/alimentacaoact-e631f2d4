@@ -49,7 +49,9 @@ export interface FoodControlEntry {
 export interface DiscountConfirmation {
   personId: string;
   confirmed: boolean;
+  paymentDate?: string;
 }
+
 
 export interface Job {
   id: string;

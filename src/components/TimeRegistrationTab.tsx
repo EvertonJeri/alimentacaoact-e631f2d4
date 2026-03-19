@@ -29,9 +29,12 @@ interface TimeRegistrationTabProps {
   setEntries: React.Dispatch<React.SetStateAction<TimeEntry[]>>;
   people: Person[];
   jobs: Job[];
+  onUpdateEntry?: (entry: TimeEntry) => void;
+  onRemoveEntry?: (id: string) => void;
 }
 
-const TimeRegistrationTab = ({ entries, setEntries, people, jobs }: TimeRegistrationTabProps) => {
+const TimeRegistrationTab = ({ entries, setEntries, people, jobs, onUpdateEntry, onRemoveEntry }: TimeRegistrationTabProps) => {
+
   const [selectedPerson, setSelectedPerson] = useState("");
   const [selectedJob, setSelectedJob] = useState("");
   const [selectedDate, setSelectedDate] = useState(
@@ -45,18 +48,26 @@ const TimeRegistrationTab = ({ entries, setEntries, people, jobs }: TimeRegistra
 
   const addEntry = () => {
     if (!selectedPerson || !selectedJob) return;
-    setEntries((prev) => [...prev, emptyEntry(selectedPerson, selectedJob, selectedDate)]);
+    const entry = emptyEntry(selectedPerson, selectedJob, selectedDate);
+    onUpdateEntry?.(entry);
+    setEntries((prev) => [...prev, entry]);
   };
 
   const updateField = (id: string, field: keyof TimeEntry, value: string) => {
+    const entry = entries.find(e => e.id === id);
+    if (!entry) return;
+    const updated = { ...entry, [field]: value };
+    onUpdateEntry?.(updated);
     setEntries((prev) =>
-      prev.map((e) => (e.id === id ? { ...e, [field]: value } : e))
+      prev.map((e) => (e.id === id ? updated : e))
     );
   };
 
   const removeEntry = (id: string) => {
+    onRemoveEntry?.(id);
     setEntries((prev) => prev.filter((e) => e.id !== id));
   };
+
 
   const getPersonName = (id: string) =>
     people.find((p) => p.id === id)?.name || "—";

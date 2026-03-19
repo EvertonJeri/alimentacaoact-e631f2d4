@@ -3,6 +3,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronRight, Check, Mail, Download } from "lucide-react";
 import * as XLSX from "xlsx";
+import { Input } from "@/components/ui/input";
+
 
 import {
   type Person,
@@ -27,6 +29,7 @@ interface DiscountsTabProps {
   foodControl: FoodControlEntry[];
   confirmations: DiscountConfirmation[];
   setConfirmations: React.Dispatch<React.SetStateAction<DiscountConfirmation[]>>;
+  onUpdateConfirmation?: (conf: DiscountConfirmation) => void;
 }
 
 interface DiscountRow {
@@ -40,7 +43,16 @@ interface DiscountRow {
   reason: string;
 }
 
-const DiscountsTab = ({ people, jobs, requests, timeEntries, foodControl, confirmations, setConfirmations }: DiscountsTabProps) => {
+const DiscountsTab = ({
+  people,
+  jobs,
+  requests,
+  timeEntries,
+  foodControl,
+  confirmations,
+  setConfirmations,
+  onUpdateConfirmation,
+}: DiscountsTabProps) => {
   const [expandedPersons, setExpandedPersons] = useState<Set<string>>(new Set());
 
   const getPersonName = (id: string) => people.find((p) => p.id === id)?.name || "—";
@@ -140,17 +152,22 @@ const DiscountsTab = ({ people, jobs, requests, timeEntries, foodControl, confir
 
   const isConfirmed = (personId: string) => confirmations.find((c) => c.personId === personId)?.confirmed || false;
 
-  const toggleConfirm = (personId: string) => {
+  const updatePaymentDate = (personId: string, date: string) => {
+    const updated: DiscountConfirmation = { personId, paymentDate: date, confirmed: !!date };
+    onUpdateConfirmation?.(updated);
+
     setConfirmations((prev) => {
       const idx = prev.findIndex((c) => c.personId === personId);
       if (idx >= 0) {
         const copy = [...prev];
-        copy[idx] = { ...copy[idx], confirmed: !copy[idx].confirmed };
+        copy[idx] = updated;
         return copy;
       }
-      return [...prev, { personId, confirmed: true }];
+      return [...prev, updated];
     });
   };
+
+
 
   const exportDiscountsXlsx = () => {
     const wb = XLSX.utils.book_new();
@@ -206,7 +223,9 @@ const DiscountsTab = ({ people, jobs, requests, timeEntries, foodControl, confir
             {Array.from(groupedByPerson.entries()).map(([personId, personDiscounts]) => {
               const personTotal = personDiscounts.reduce((s, d) => s + d.total, 0);
               const expanded = expandedPersons.has(personId);
-              const confirmed = isConfirmed(personId);
+              const personConfirmation = confirmations.find((c) => c.personId === personId);
+              const confirmed = personConfirmation?.confirmed || false;
+              const paymentDate = personConfirmation?.paymentDate || "";
 
               return (
                 <div key={personId}>
@@ -218,23 +237,30 @@ const DiscountsTab = ({ people, jobs, requests, timeEntries, foodControl, confir
                     <div className="flex items-center gap-3">
                       {expanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
                       <span className="font-medium text-foreground">{getPersonName(personId)}</span>
-                      <Badge variant={confirmed ? "secondary" : "destructive"} className="text-2xs">
-                        {confirmed ? "Descontado" : "Pendente"}
-                      </Badge>
+                      {confirmed ? (
+                        <Badge variant="secondary" className="text-2xs bg-green-100 text-green-700 hover:bg-green-100 border-green-200">
+                          {paymentDate ? `Pago em ${paymentDate.split("-").reverse().join("/")}` : "Pago"}
+                        </Badge>
+                      ) : (
+                        <Badge variant="destructive" className="text-2xs">
+                          Pendente
+                        </Badge>
+                      )}
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="tabular-nums font-bold text-destructive">-{personTotal.toFixed(2)}</span>
-                      <Button
-                        size="sm"
-                        variant={confirmed ? "secondary" : "outline"}
-                        className="h-7 text-xs gap-1"
-                        onClick={(e) => { e.stopPropagation(); toggleConfirm(personId); }}
-                      >
-                        <Check className="h-3 w-3" />
-                        {confirmed ? "Confirmado" : "Confirmar"}
-                      </Button>
+                      <span className="tabular-nums font-bold text-destructive mr-2">-{personTotal.toFixed(2)}</span>
+                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                        <label className="text-2xs text-muted-foreground whitespace-nowrap">Data Pgto:</label>
+                        <Input
+                          type="date"
+                          className="h-7 text-xs w-32 px-2"
+                          value={paymentDate}
+                          onChange={(e) => updatePaymentDate(personId, e.target.value)}
+                        />
+                      </div>
                     </div>
                   </div>
+
 
                   {/* Expanded details */}
                   {expanded && (

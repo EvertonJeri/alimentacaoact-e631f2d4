@@ -52,7 +52,8 @@ CREATE TABLE IF NOT EXISTS public.food_control (
   date DATE NOT NULL,
   meal_type TEXT NOT NULL, -- 'cafe', 'almoco' ou 'janta'
   status TEXT DEFAULT 'not_consumed',
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(person_id, job_id, date, meal_type)
 );
 
 -- Habilitar RLS (Row Level Security) para segurança
@@ -62,9 +63,18 @@ ALTER TABLE public.time_entries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.meal_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.food_control ENABLE ROW LEVEL SECURITY;
 
--- Políticas para permitir leitura e escrita livre (ajuste depois se houver autenticação)
-CREATE POLICY "Enable all for jobs" ON public.jobs FOR ALL USING (true);
-CREATE POLICY "Enable all for people" ON public.people FOR ALL USING (true);
-CREATE POLICY "Enable all for time_entries" ON public.time_entries FOR ALL USING (true);
-CREATE POLICY "Enable all for meal_requests" ON public.meal_requests FOR ALL USING (true);
-CREATE POLICY "Enable all for food_control" ON public.food_control FOR ALL USING (true);
+-- Tabela: discount_confirmations (Confirmação de Pagamento de Descontos)
+CREATE TABLE IF NOT EXISTS public.discount_confirmations (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  person_id UUID NOT NULL REFERENCES public.people(id) ON DELETE CASCADE,
+  confirmed BOOLEAN DEFAULT FALSE,
+  payment_date DATE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  unique(person_id)
+);
+
+-- Habilitar RLS
+ALTER TABLE public.discount_confirmations ENABLE ROW LEVEL SECURITY;
+
+-- Política
+CREATE POLICY "Enable all for discount_confirmations" ON public.discount_confirmations FOR ALL USING (true);
