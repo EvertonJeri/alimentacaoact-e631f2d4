@@ -196,15 +196,6 @@ const Index = () => {
               </p>
             </div>
             <div className="ml-auto flex items-center gap-2">
-              <Button 
-                variant={activePage === "extrato" ? "default" : "outline"}
-                size="sm"
-                className="h-8 gap-2"
-                onClick={() => setActivePage("extrato")}
-              >
-                <FileText className="h-4 w-4" />
-                <span>Ver Extrato Completo</span>
-              </Button>
             </div>
           </header>
 
