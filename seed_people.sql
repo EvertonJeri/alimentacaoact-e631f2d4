@@ -1,4 +1,12 @@
--- Script para inserir os Funcionários (Removendo duplicatas e marcando registrados)
+-- Script para inserir os Funcionários (Garante unicidade pelo nome)
+-- Primeiro, garante que o nome seja único para o comando INSERT funcionar corretamente
+DO $$ 
+BEGIN 
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'people_name_key') THEN
+        ALTER TABLE public.people ADD CONSTRAINT people_name_key UNIQUE (name);
+    END IF;
+END $$;
+
 INSERT INTO public.people (name, is_registered) VALUES
 ('Alexandre Augusto Teixeira', true),
 ('Alexandre Pereira de Lima', true),
