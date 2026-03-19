@@ -28,7 +28,7 @@ interface DiscountsTabProps {
   timeEntries: TimeEntry[];
   foodControl: FoodControlEntry[];
   confirmations: DiscountConfirmation[];
-  setConfirmations: React.Dispatch<React.SetStateAction<DiscountConfirmation[]>>;
+  setConfirmations: (confs: DiscountConfirmation[]) => void;
   onUpdateConfirmation?: (conf: DiscountConfirmation) => void;
 }
 
@@ -158,15 +158,14 @@ const DiscountsTab = ({
     const updated: DiscountConfirmation = { personId, paymentDate: date, confirmed: !!date };
     onUpdateConfirmation?.(updated);
 
-    setConfirmations((prev) => {
-      const idx = prev.findIndex((c) => c.personId === personId);
-      if (idx >= 0) {
-        const copy = [...prev];
-        copy[idx] = updated;
-        return copy;
-      }
-      return [...prev, updated];
-    });
+    const idx = confirmations.findIndex((c) => c.personId === personId);
+    if (idx >= 0) {
+      const copy = [...confirmations];
+      copy[idx] = updated;
+      setConfirmations(copy);
+    } else {
+      setConfirmations([...confirmations, updated]);
+    }
   };
 
 
