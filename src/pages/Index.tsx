@@ -1,7 +1,25 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
-import { Clock, Utensils, AlertTriangle, UtensilsCrossed, CreditCard, FileText, Loader2 } from "lucide-react";
+import { useState, useMemo } from "react";
+import { 
+  SidebarProvider, 
+  Sidebar, 
+  SidebarHeader, 
+  SidebarContent, 
+  SidebarMenu, 
+  SidebarMenuItem, 
+  SidebarMenuButton, 
+  SidebarInset, 
+  SidebarTrigger 
+} from "@/components/ui/sidebar";
+import { 
+  Clock, 
+  Utensils, 
+  AlertTriangle, 
+  UtensilsCrossed, 
+  CreditCard, 
+  FileText, 
+  Loader2,
+  AlertCircle
+} from "lucide-react";
 import TimeRegistrationTab from "@/components/TimeRegistrationTab";
 import MealRequestTab from "@/components/MealRequestTab";
 import FoodControlTab from "@/components/FoodControlTab";
@@ -9,6 +27,7 @@ import DiscountsTab from "@/components/DiscountsTab";
 import PaymentTab from "@/components/PaymentTab";
 import StatementTab from "@/components/StatementTab";
 import { useDatabase } from "@/hooks/use-database";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const Index = () => {
   const {
@@ -29,23 +48,51 @@ const Index = () => {
 
   const [activePage, setActivePage] = useState("horas");
 
-  if (people.isLoading || jobs.isLoading) {
+  const isLoading = people.isLoading || jobs.isLoading || timeEntries.isLoading || mealRequests.isLoading;
+  const isError = people.error || jobs.error || timeEntries.error || mealRequests.error;
+
+  const peopleData = useMemo(() => people.data || [], [people.data]);
+  const jobsData = useMemo(() => jobs.data || [], [jobs.data]);
+  const timeEntriesData = useMemo(() => timeEntries.data || [], [timeEntries.data]);
+  const mealRequestsData = useMemo(() => mealRequests.data || [], [mealRequests.data]);
+  const foodControlData = useMemo(() => foodControl.data || [], [foodControl.data]);
+  const discountConfirmationsData = useMemo(() => discountConfirmations.data || [], [discountConfirmations.data]);
+  const paymentConfirmationsData = useMemo(() => paymentConfirmations.data || [], [paymentConfirmations.data]);
+
+  if (isLoading) {
     return (
-      <div className="flex h-screen w-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex h-screen w-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          <p className="text-sm font-medium text-muted-foreground animate-pulse">Carregando painel de controle...</p>
+        </div>
       </div>
     );
   }
 
-  const peopleData = people.data || [];
-  const jobsData = jobs.data || [];
-  const timeEntriesData = timeEntries.data || [];
-  const mealRequestsData = mealRequests.data || [];
-  const foodControlData = foodControl.data || [];
-  const discountConfirmationsData = discountConfirmations.data || [];
-  const paymentConfirmationsData = paymentConfirmations.data || [];
+  if (isError) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center p-6 bg-background">
+        <Alert variant="destructive" className="max-w-md">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Erro de Conexão</AlertTitle>
+          <AlertDescription>
+            Não foi possível carregar os dados do banco. Por favor, verifique sua conexão ou tente novamente mais tarde.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
 
   const renderContent = () => {
+    const commonProps = {
+      people: peopleData,
+      jobs: jobsData,
+      requests: mealRequestsData,
+      timeEntries: timeEntriesData,
+      foodControl: foodControlData,
+    };
+
     switch (activePage) {
       case "horas":
         return (
@@ -53,7 +100,7 @@ const Index = () => {
             entries={timeEntriesData}
             setEntries={() => {}}
             onUpdateEntry={(entry) => updateTimeEntry.mutate(entry)}
-            onRemoveEntry={() => {}}
+            onRemoveEntry={(id) => id && console.log("Removendo", id)}
             people={peopleData}
             jobs={jobsData}
           />
@@ -61,50 +108,28 @@ const Index = () => {
       case "refeicoes":
         return (
           <MealRequestTab
-            people={peopleData}
-            jobs={jobsData}
-            timeEntries={timeEntriesData}
-            requests={mealRequestsData}
-            foodControl={foodControlData}
+            {...commonProps}
             confirmations={[...discountConfirmationsData, ...paymentConfirmationsData] as any}
             setRequests={() => {}}
             onUpdateRequest={(req) => updateMealRequest.mutate(req)}
             onRemoveRequest={(id) => removeMealRequest.mutate(id)}
-            onGenerateEntries={(newEntries) => {
-              newEntries.forEach(e => updateTimeEntry.mutate(e));
-            }}
+            onGenerateEntries={() => {}}
           />
         );
       case "pagamento":
         return (
           <PaymentTab
-            people={peopleData}
-            jobs={jobsData}
-            requests={mealRequestsData}
-            timeEntries={timeEntriesData}
-            foodControl={foodControlData}
+            {...commonProps}
             confirmations={paymentConfirmationsData}
             onUpdateConfirmation={(conf) => updatePaymentConfirmation.mutate(conf)}
           />
         );
       case "extrato":
-        return (
-          <StatementTab
-            people={peopleData}
-            jobs={jobsData}
-            requests={mealRequestsData}
-            timeEntries={timeEntriesData}
-            foodControl={foodControlData}
-          />
-        );
+        return <StatementTab {...commonProps} />;
       case "controle":
         return (
           <FoodControlTab
-            people={peopleData}
-            jobs={jobsData}
-            requests={mealRequestsData}
-            timeEntries={timeEntriesData}
-            foodControl={foodControlData}
+            {...commonProps}
             setFoodControl={() => {}}
             onUpdateEntry={(entry) => updateFoodControl.mutate(entry)}
           />
@@ -112,97 +137,71 @@ const Index = () => {
       case "descontos":
         return (
           <DiscountsTab
-            people={peopleData}
-            jobs={jobsData}
-            requests={mealRequestsData}
-            timeEntries={timeEntriesData}
-            foodControl={foodControlData}
+            {...commonProps}
             confirmations={discountConfirmationsData}
             setConfirmations={() => {}}
             onUpdateConfirmation={(conf) => updateDiscountConfirmation.mutate(conf)}
           />
         );
       default:
-        return (
-          <TimeRegistrationTab
-            entries={timeEntriesData}
-            setEntries={() => {}}
-            onUpdateEntry={(entry) => updateTimeEntry.mutate(entry)}
-            onRemoveEntry={() => {}}
-            people={peopleData}
-            jobs={jobsData}
-          />
-        );
+        return <div>Selecione uma página no menu lateral.</div>;
     }
   };
 
+  const menuItems = [
+    { id: "horas", label: "Registro de Horas", icon: Clock },
+    { id: "refeicoes", label: "Solicitação de Refeições", icon: Utensils },
+    { id: "pagamento", label: "Pagamento", icon: CreditCard },
+    { id: "controle", label: "Controle Alimentar", icon: UtensilsCrossed },
+    { id: "descontos", label: "Descontos", icon: AlertTriangle },
+    { id: "extrato", label: "Extrato Geral", icon: FileText },
+  ];
+
   return (
     <SidebarProvider>
-      <Sidebar variant="inset" className="border-r border-border bg-muted/30">
+      <Sidebar variant="inset" className="border-r border-border bg-muted/20">
         <SidebarHeader className="h-16 flex items-center px-6 border-b border-border bg-background">
-          <h2 className="text-sm font-black uppercase tracking-widest text-primary">Menu Principal</h2>
+          <h2 className="text-sm font-black uppercase tracking-widest text-primary">Sistema ACT</h2>
         </SidebarHeader>
-        <SidebarContent>
+        <SidebarContent className="py-2">
           <SidebarMenu className="px-2 space-y-1">
-            <SidebarMenuItem>
-              <SidebarMenuButton isActive={activePage === "horas"} onClick={() => setActivePage("horas")}>
-                <Clock className="h-4 w-4" />
-                <span>Registro de Horas</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton isActive={activePage === "refeicoes"} onClick={() => setActivePage("refeicoes")}>
-                <Utensils className="h-4 w-4" />
-                <span>Solicitação de Refeições</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton isActive={activePage === "pagamento"} onClick={() => setActivePage("pagamento")}>
-                <CreditCard className="h-4 w-4" />
-                <span>Pagamento</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton isActive={activePage === "controle"} onClick={() => setActivePage("controle")}>
-                <UtensilsCrossed className="h-4 w-4" />
-                <span>Controle de Alimentação</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton isActive={activePage === "descontos"} onClick={() => setActivePage("descontos")}>
-                <AlertTriangle className="h-4 w-4" />
-                <span>Descontos</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton isActive={activePage === "extrato"} onClick={() => setActivePage("extrato")}>
-                <FileText className="h-4 w-4" />
-                <span>Extrato Geral</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
+            {menuItems.map((item) => (
+              <SidebarMenuItem key={item.id}>
+                <SidebarMenuButton 
+                  isActive={activePage === item.id} 
+                  onClick={() => setActivePage(item.id)}
+                  className="transition-all duration-200"
+                >
+                  <item.icon className={`h-4 w-4 ${activePage === item.id ? 'text-primary' : 'text-muted-foreground'}`} />
+                  <span className={activePage === item.id ? 'font-semibold' : ''}>{item.label}</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
           </SidebarMenu>
         </SidebarContent>
       </Sidebar>
       <SidebarInset>
-        <div className="flex min-h-screen flex-col bg-background relative max-w-full overflow-hidden">
-          <header className="sticky top-0 z-20 flex shrink-0 items-center gap-3 border-b border-border bg-background/80 px-4 py-4 backdrop-blur-sm">
-            <SidebarTrigger className="-ml-1" />
-            <div>
-              <h1 className="text-lg font-semibold tracking-tight text-foreground">
-                Controle de Montagem
-              </h1>
-              <p className="text-xs text-muted-foreground mt-0.5 hidden sm:block">
-                Registro de horas, solicitação de refeições, controle de alimentação, descontos e extrato
-              </p>
+        <div className="flex min-h-screen flex-col bg-background">
+          <header className="sticky top-0 z-20 flex shrink-0 items-center justify-between border-b border-border bg-background/80 px-6 py-4 backdrop-blur-sm">
+            <div className="flex items-center gap-4">
+              <SidebarTrigger className="-ml-1" />
+              <div className="h-4 w-px bg-border hidden sm:block" />
+              <div>
+                <h1 className="text-lg font-bold tracking-tight text-foreground">
+                  {menuItems.find(i => i.id === activePage)?.label}
+                </h1>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-medium hidden sm:block">
+                  Painel de Controle de Montagem
+                </p>
+              </div>
             </div>
-            <div className="ml-auto flex items-center gap-2">
+            <div className="text-2xs text-muted-foreground font-mono tabular-nums bg-muted px-2 py-1 rounded">
+              v1.5.0-stable
             </div>
           </header>
 
-          <main className="flex-1 w-full max-w-7xl mx-auto px-4 py-6 overflow-x-hidden">
-            <div className="animate-in fade-in zoom-in-95 duration-200 w-full min-w-0">
-              {renderContent()}
-            </div>
+          <main className="flex-1 w-full max-w-7xl mx-auto px-6 py-8 animate-in fade-in duration-500">
+            {renderContent()}
           </main>
         </div>
       </SidebarInset>
