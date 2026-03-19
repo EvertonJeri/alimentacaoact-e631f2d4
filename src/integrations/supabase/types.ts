@@ -160,6 +160,30 @@ export type Database = {
           },
         ]
       }
+      payment_confirmations: {
+        Row: {
+          confirmed: boolean
+          created_at: string | null
+          id: string
+          payment_date: string | null
+          type: string
+        }
+        Insert: {
+          confirmed?: boolean
+          created_at?: string | null
+          id: string
+          payment_date?: string | null
+          type?: string
+        }
+        Update: {
+          confirmed?: boolean
+          created_at?: string | null
+          id?: string
+          payment_date?: string | null
+          type?: string
+        }
+        Relationships: []
+      }
       people: {
         Row: {
           created_at: string | null
