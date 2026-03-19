@@ -53,9 +53,14 @@ export function useDatabase() {
       const { data, error } = await supabase.from("meal_requests").select("*");
       if (error) throw error;
       return (data as any[]).map(req => ({
-        ...req,
-        meals: req.meals as any[],
-        dailyOverrides: req.daily_overrides as any
+        id: req.id,
+        personId: req.person_id,
+        jobId: req.job_id,
+        startDate: req.start_date,
+        endDate: req.end_date,
+        meals: (req.meals as any[]) || [],
+        dailyOverrides: req.daily_overrides as any,
+        location: req.location
       })) as MealRequest[];
     },
   });

@@ -212,17 +212,21 @@ const MealRequestTab = ({
               </tr>
             ) : (
               jobRequests.map((req) => {
-                const total = getDatesInRange(req.startDate, req.endDate).reduce((sum, date) => {
+                // Segurança extra: se não houver datas, ignoramos o cálculo para evitar crash
+                if (!req.startDate || !req.endDate) return null;
+
+                const datesInRange = getDatesInRange(req.startDate, req.endDate);
+                const total = datesInRange.reduce((sum, date) => {
                   const person = people.find(p => p.id === req.personId);
                   const dayMeals = req.dailyOverrides?.[date] ?? req.meals;
-                  return sum + dayMeals.reduce((dSum, m) => dSum + getMealValue(m, date, person), 0);
+                  return sum + (dayMeals?.reduce((dSum, m) => dSum + getMealValue(m, date, person), 0) || 0);
                 }, 0);
 
                 return (
                   <tr key={req.id} className="hover:bg-muted/30 transition-colors">
                     <td className="px-4 py-3 font-semibold text-foreground">{getPersonName(req.personId)}</td>
                     <td className="px-4 py-3 text-xs text-muted-foreground tabular-nums">
-                      {req.startDate?.includes("-") ? req.startDate.split("-").reverse().join("/") : "—"} até {req.endDate?.includes("-") ? req.endDate.split("-").reverse().join("/") : "—"}
+                      {(req.startDate || "").split("-").reverse().join("/")} até {(req.endDate || "").split("-").reverse().join("/")}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-1.5 flex-wrap">
