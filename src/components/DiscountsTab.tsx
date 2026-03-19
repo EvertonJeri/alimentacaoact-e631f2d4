@@ -55,7 +55,9 @@ const DiscountsTab = ({ people, jobs, requests, timeEntries, foodControl, confir
         const entry = timeEntries.find(
           (e) => e.personId === req.personId && e.jobId === req.jobId && e.date === date
         );
-        const hasHours = entry && calcTotalMinutes(entry) > 0;
+        // Only show discounts for days with time entries registered
+        if (!entry) return;
+        const hasHours = calcTotalMinutes(entry) > 0;
 
         // Check food control overrides
         const fc = foodControl.find(
