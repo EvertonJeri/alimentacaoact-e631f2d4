@@ -23,7 +23,8 @@ const Index = () => {
     updateDiscountConfirmation,
     updatePaymentConfirmation,
     updateTimeEntry,
-    updateMealRequest
+    updateMealRequest,
+    removeMealRequest
   } = useDatabase();
 
   const [activePage, setActivePage] = useState("horas");
@@ -68,7 +69,7 @@ const Index = () => {
             confirmations={[...discountConfirmationsData, ...paymentConfirmationsData] as any}
             setRequests={() => {}}
             onUpdateRequest={(req) => updateMealRequest.mutate(req)}
-            onRemoveRequest={() => {}}
+            onRemoveRequest={(id) => removeMealRequest.mutate(id)}
             onGenerateEntries={(newEntries) => {
               newEntries.forEach(e => updateTimeEntry.mutate(e));
             }}

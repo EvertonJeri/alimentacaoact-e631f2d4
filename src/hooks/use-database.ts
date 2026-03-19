@@ -210,6 +210,19 @@ export function useDatabase() {
       queryClient.invalidateQueries({ queryKey: ["meal_requests"] });
     },
   });
+  
+  const removeMealRequest = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("meal_requests")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["meal_requests"] });
+    },
+  });
 
   return {
     people,
@@ -224,5 +237,6 @@ export function useDatabase() {
     updatePaymentConfirmation,
     updateTimeEntry,
     updateMealRequest,
+    removeMealRequest,
   };
 }
