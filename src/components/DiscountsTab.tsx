@@ -131,7 +131,7 @@ const DiscountsTab = ({
     });
 
     return rows;
-  }, [requests, timeEntries, foodControl, people]);
+  }, [registeredRequests, timeEntries, foodControl, people]);
 
   // Group by person
   const groupedByPerson = useMemo(() => {

@@ -27,9 +27,19 @@ const StatementTab = ({ people, jobs, requests, timeEntries, foodControl }: Stat
   const [selectedJob, setSelectedJob] = useState("all");
   const statementRef = useRef<HTMLDivElement>(null);
 
+  // Only consider requests that have time entries registered
+  const registeredRequests = useMemo(() => {
+    return requests.filter((req) => {
+      const dates = getDatesInRange(req.startDate, req.endDate);
+      return dates.some((date) =>
+        timeEntries.some((e) => e.personId === req.personId && e.jobId === req.jobId && e.date === date)
+      );
+    });
+  }, [requests, timeEntries]);
+
   const filteredRequests = useMemo(() => {
-    return selectedJob === "all" ? requests : requests.filter(r => r.jobId === selectedJob);
-  }, [requests, selectedJob]);
+    return selectedJob === "all" ? registeredRequests : registeredRequests.filter(r => r.jobId === selectedJob);
+  }, [registeredRequests, selectedJob]);
 
   const personStatements = useMemo(() => {
     const data: Record<string, any> = {};
@@ -51,6 +61,10 @@ const StatementTab = ({ people, jobs, requests, timeEntries, foodControl }: Stat
       const dates = getDatesInRange(req.startDate, req.endDate);
 
       dates.forEach(date => {
+        // Only process dates with time entries
+        const hasEntry = timeEntries.some(e => e.personId === req.personId && e.jobId === req.jobId && e.date === date);
+        if (!hasEntry) return;
+
         const reqMeals = req.dailyOverrides?.[date] ?? req.meals;
         const fc = foodControl.find(f => f.personId === req.personId && f.jobId === req.jobId && f.date === date);
         
@@ -58,12 +72,11 @@ const StatementTab = ({ people, jobs, requests, timeEntries, foodControl }: Stat
           const val = getMealValue(m, date, person);
           data[req.personId].totalRequested += val;
           
-          const used = fc ? (m === 'cafe' ? fc.usedCafe : m === 'almoco' ? fc.usedAlmoco : fc.usedJanta) : false;
+          const used = fc ? (m === 'cafe' ? fc.usedCafe : m === 'almoco' ? fc.usedAlmoco : fc.usedJanta) : true;
           
           if (used) {
             data[req.personId].totalUsed += val;
           } else {
-            // Requested but not used -> Discount
             data[req.personId].balance -= val;
             data[req.personId].details.push({
               date,
@@ -102,7 +115,7 @@ const StatementTab = ({ people, jobs, requests, timeEntries, foodControl }: Stat
     });
 
     return Object.values(data);
-  }, [filteredRequests, foodControl, people]);
+  }, [filteredRequests, foodControl, people, timeEntries]);
 
   const exportAsImage = () => {
     window.print();
