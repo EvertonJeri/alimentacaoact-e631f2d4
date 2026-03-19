@@ -32,7 +32,18 @@ export function useDatabase() {
     queryFn: async () => {
       const { data, error } = await supabase.from("time_entries").select("*");
       if (error) throw error;
-      return data as TimeEntry[];
+      return (data as any[]).map(e => ({
+        id: e.id,
+        personId: e.person_id,
+        jobId: e.job_id,
+        date: e.date,
+        entry1: e.entry1 || "",
+        exit1: e.exit1 || "",
+        entry2: e.entry2 || "",
+        exit2: e.exit2 || "",
+        entry3: e.entry3 || "",
+        exit3: e.exit3 || "",
+      })) as TimeEntry[];
     },
   });
 
