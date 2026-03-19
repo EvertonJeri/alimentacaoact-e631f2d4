@@ -108,7 +108,7 @@ const DiscountsTab = ({
         } else if (entry) {
           // Partial - check time-based rules
           const firstEntry = getFirstEntryTime(entry);
-          if (firstEntry) {
+          if (firstEntry?.includes(":")) {
             const [eh] = firstEntry.split(":").map(Number);
             // If entered after 8:00 and cafe was requested for this day, discount cafe
             if (dayMeals.includes("cafe") && eh > 8) {
