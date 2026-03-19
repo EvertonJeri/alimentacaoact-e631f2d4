@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/sidebar";
 import { 
   Clock, 
+  Utensils, 
   AlertTriangle, 
   UtensilsCrossed, 
   CreditCard, 
@@ -20,6 +21,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import TimeRegistrationTab from "@/components/TimeRegistrationTab";
+import MealRequestTab from "@/components/MealRequestSystem";
 import FoodControlTab from "@/components/FoodControlTab";
 import DiscountsTab from "@/components/DiscountsTab";
 import PaymentTab from "@/components/PaymentTab";
@@ -40,6 +42,8 @@ const Index = () => {
     updateDiscountConfirmation,
     updatePaymentConfirmation,
     updateTimeEntry,
+    updateMealRequest,
+    removeMealRequest,
   } = useDatabase();
 
   const [activePage, setActivePage] = useState("horas");
@@ -101,6 +105,15 @@ const Index = () => {
             jobs={jobsData}
           />
         );
+      case "refeicoes":
+        return (
+          <MealRequestTab
+            {...commonProps}
+            confirmations={discountConfirmationsData}
+            onUpdateRequest={(req) => updateMealRequest.mutate(req)}
+            onRemoveRequest={(id) => removeMealRequest.mutate(id)}
+          />
+        );
       case "pagamento":
         return (
           <PaymentTab
@@ -135,6 +148,7 @@ const Index = () => {
 
   const menuItems = [
     { id: "horas", label: "Registro de Horas", icon: Clock },
+    { id: "refeicoes", label: "Solicitação de Refeições", icon: Utensils },
     { id: "pagamento", label: "Pagamento", icon: CreditCard },
     { id: "controle", label: "Controle Alimentar", icon: UtensilsCrossed },
     { id: "descontos", label: "Descontos", icon: AlertTriangle },
