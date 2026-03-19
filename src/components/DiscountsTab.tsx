@@ -58,10 +58,20 @@ const DiscountsTab = ({
   const getPersonName = (id: string) => people.find((p) => p.id === id)?.name || "—";
   const getJobName = (id: string) => jobs.find((j) => j.id === id)?.name || "—";
 
+  // Only consider requests with time entries registered (like PaymentTab)
+  const registeredRequests = useMemo(() => {
+    return requests.filter((req) => {
+      const dates = getDatesInRange(req.startDate, req.endDate);
+      return dates.some((date) =>
+        timeEntries.some((e) => e.personId === req.personId && e.jobId === req.jobId && e.date === date)
+      );
+    });
+  }, [requests, timeEntries]);
+
   const discounts = useMemo(() => {
     const rows: DiscountRow[] = [];
 
-    requests.forEach((req) => {
+    registeredRequests.forEach((req) => {
       const dates = getDatesInRange(req.startDate, req.endDate);
       dates.forEach((date) => {
         const entry = timeEntries.find(
