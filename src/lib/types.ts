@@ -87,9 +87,9 @@ export const MEAL_VALUES: Record<MealType, number> = {
 };
 
 export function calcTimeDiffMinutes(start: string, end: string): number {
-  if (!start?.includes(":") || !end?.includes(":")) return 0;
-  const [sh, sm] = start.split(":").map(Number);
-  const [eh, em] = end.split(":").map(Number);
+  if (!String(start || "").includes(":") || !String(end || "").includes(":")) return 0;
+  const [sh, sm] = String(start).split(":").map(Number);
+  const [eh, em] = String(end).split(":").map(Number);
   return (eh * 60 + em) - (sh * 60 + sm);
 }
 
@@ -115,7 +115,7 @@ export function getDatesInRange(start: string, end: string): string[] {
     if (isNaN(current.getTime()) || isNaN(last.getTime())) return [];
     
     while (current <= last) {
-      dates.push(current.toISOString().split("T")[0]);
+      dates.push(String(current.toISOString() || "").split("T")[0]);
       current.setDate(current.getDate() + 1);
     }
   } catch (e) {
@@ -215,8 +215,8 @@ export function determineMealsUsed(entry: TimeEntry): { cafe: boolean; almoco: b
   const lastExit = getLastExitTime(entry);
   
   let cafe = false;
-  if (firstEntry?.includes(":")) {
-    const [h, m] = firstEntry.split(":").map(Number);
+  if (String(firstEntry || "").includes(":")) {
+    const [h, m] = String(firstEntry).split(":").map(Number);
     if (h < 8 || (h === 8 && m <= 0)) cafe = true; // Até 08:00
   }
   
@@ -230,8 +230,8 @@ export function determineMealsUsed(entry: TimeEntry): { cafe: boolean; almoco: b
   }
   
   let janta = false;
-  if (lastExit?.includes(":")) {
-    const [h] = lastExit.split(":").map(Number);
+  if (String(lastExit || "").includes(":")) {
+    const [h] = String(lastExit).split(":").map(Number);
     if (h >= 19) janta = true; // Após 19h
   }
   if (entry.entry3 || entry.exit3) janta = true;

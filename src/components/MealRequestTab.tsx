@@ -229,7 +229,7 @@ const MealRequestTab = ({
                   <tr key={req.id} className="hover:bg-muted/30 transition-colors">
                     <td className="px-4 py-3 font-semibold text-foreground">{getPersonName(req.personId)}</td>
                     <td className="px-4 py-3 text-xs text-muted-foreground tabular-nums">
-                      {(req.startDate || "").split("-").reverse().join("/")} até {(req.endDate || "").split("-").reverse().join("/")}
+                      {String(req.startDate || "").split("-").reverse().join("/")} até {String(req.endDate || "").split("-").reverse().join("/")}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-1.5 flex-wrap">
