@@ -132,11 +132,13 @@ const MealRequestTab = ({ people, jobs, timeEntries, requests, setRequests, onGe
       toast({
         title: "Operação Concluída",
         description: "Os registros de horas foram gerados com sucesso.",
+        duration: 5000,
       });
     } else {
       toast({
         title: "Tudo atualizado",
         description: "Todos os dias solicitados já estão no registro de horas.",
+        duration: 5000,
       });
     }
   };

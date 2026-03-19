@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
-import { Clock, Utensils, AlertTriangle, UtensilsCrossed, LayoutDashboard, Beaker } from "lucide-react";
+import { Clock, Utensils, AlertTriangle, UtensilsCrossed, CreditCard } from "lucide-react";
 import TimeRegistrationTab from "@/components/TimeRegistrationTab";
 import MealRequestTab from "@/components/MealRequestTab";
 import FoodControlTab from "@/components/FoodControlTab";
 import DiscountsTab from "@/components/DiscountsTab";
-import PanelTab from "@/components/PanelTab";
-import TesteHojeTab from "@/components/TesteHojeTab";
+import PaymentTab from "@/components/PaymentTab";
+import { type PaymentConfirmation } from "@/components/PaymentTab";
 import {
   type TimeEntry,
   type MealRequest,
@@ -21,15 +21,12 @@ const Index = () => {
   const [mealRequests, setMealRequests] = useState<MealRequest[]>([]);
   const [foodControl, setFoodControl] = useState<FoodControlEntry[]>([]);
   const [discountConfirmations, setDiscountConfirmations] = useState<DiscountConfirmation[]>([]);
+  const [paymentConfirmations, setPaymentConfirmations] = useState<PaymentConfirmation[]>([]);
 
-  const [activePage, setActivePage] = useState("painel");
+  const [activePage, setActivePage] = useState("horas");
 
   const renderContent = () => {
     switch (activePage) {
-      case "painel":
-        return <PanelTab />;
-      case "testehoje":
-        return <TesteHojeTab />;
       case "horas":
         return (
           <TimeRegistrationTab
@@ -50,6 +47,17 @@ const Index = () => {
             onGenerateEntries={(newEntries) =>
               setTimeEntries((prev) => [...prev, ...newEntries])
             }
+          />
+        );
+      case "pagamento":
+        return (
+          <PaymentTab
+            people={SAMPLE_PEOPLE}
+            jobs={SAMPLE_JOBS}
+            requests={mealRequests}
+            timeEntries={timeEntries}
+            confirmations={paymentConfirmations}
+            setConfirmations={setPaymentConfirmations}
           />
         );
       case "controle":
@@ -76,7 +84,14 @@ const Index = () => {
           />
         );
       default:
-        return <PanelTab />;
+        return (
+          <TimeRegistrationTab
+            entries={timeEntries}
+            setEntries={setTimeEntries}
+            people={SAMPLE_PEOPLE}
+            jobs={SAMPLE_JOBS}
+          />
+        );
     }
   };
 
@@ -89,18 +104,6 @@ const Index = () => {
         <SidebarContent>
           <SidebarMenu className="px-2 space-y-1">
             <SidebarMenuItem>
-              <SidebarMenuButton isActive={activePage === "painel"} onClick={() => setActivePage("painel")}>
-                <LayoutDashboard className="h-4 w-4" />
-                <span>Painel</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton isActive={activePage === "testehoje"} onClick={() => setActivePage("testehoje")}>
-                <Beaker className="h-4 w-4" />
-                <span>Teste hoje</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
               <SidebarMenuButton isActive={activePage === "horas"} onClick={() => setActivePage("horas")}>
                 <Clock className="h-4 w-4" />
                 <span>Registro de Horas</span>
@@ -110,6 +113,12 @@ const Index = () => {
               <SidebarMenuButton isActive={activePage === "refeicoes"} onClick={() => setActivePage("refeicoes")}>
                 <Utensils className="h-4 w-4" />
                 <span>Solicitação de Refeições</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton isActive={activePage === "pagamento"} onClick={() => setActivePage("pagamento")}>
+                <CreditCard className="h-4 w-4" />
+                <span>Pagamento</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>

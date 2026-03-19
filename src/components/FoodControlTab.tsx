@@ -34,12 +34,19 @@ const FoodControlTab = ({ people, jobs, requests, timeEntries, foodControl, setF
   const getJobName = (id: string) => jobs.find((j) => j.id === id)?.name || "—";
 
   // Build rows from requests, merging with foodControl overrides
+  // Only show rows that have a matching time entry
   const rows = useMemo(() => {
     const result: (FoodControlEntry & { key: string })[] = [];
 
     requests.forEach((req) => {
       const dates = getDatesInRange(req.startDate, req.endDate);
       dates.forEach((date) => {
+        // Only include if there's a time entry for this person/job/date
+        const entry = timeEntries.find(
+          (e) => e.personId === req.personId && e.jobId === req.jobId && e.date === date
+        );
+        if (!entry) return;
+
         const key = `${req.personId}-${req.jobId}-${date}`;
         const existing = foodControl.find(
           (fc) => fc.personId === req.personId && fc.jobId === req.jobId && fc.date === date
@@ -48,20 +55,17 @@ const FoodControlTab = ({ people, jobs, requests, timeEntries, foodControl, setF
         if (existing) {
           result.push({ ...existing, key });
         } else {
-          // Auto-determine used meals from time entries
-          const entry = timeEntries.find(
-            (e) => e.personId === req.personId && e.jobId === req.jobId && e.date === date
-          );
-          const used = entry ? determineMealsUsed(entry) : { cafe: false, almoco: false, janta: false };
+          const used = determineMealsUsed(entry);
+          const dayMeals = req.dailyOverrides?.[date] ?? req.meals;
 
           result.push({
             key,
             personId: req.personId,
             jobId: req.jobId,
             date,
-            requestedCafe: req.meals.includes("cafe"),
-            requestedAlmoco: req.meals.includes("almoco"),
-            requestedJanta: req.meals.includes("janta"),
+            requestedCafe: dayMeals.includes("cafe"),
+            requestedAlmoco: dayMeals.includes("almoco"),
+            requestedJanta: dayMeals.includes("janta"),
             usedCafe: used.cafe,
             usedAlmoco: used.almoco,
             usedJanta: used.janta,
