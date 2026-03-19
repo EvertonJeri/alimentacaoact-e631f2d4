@@ -83,6 +83,7 @@ const DiscountsTab = ({
 
         // Use daily overrides if they exist for this date, otherwise use original meals
         const dayMeals = req.dailyOverrides?.[date] ?? req.meals;
+        if (!Array.isArray(dayMeals)) return;
 
         // Check food control overrides
         const fc = foodControl.find(
@@ -101,9 +102,11 @@ const DiscountsTab = ({
 
         if (!hasHours) {
           // Falta total - desconta tudo que foi solicitado NESSE DIA
-          if (dayMeals.includes("cafe")) discountCafe = refCafe;
-          if (dayMeals.includes("almoco")) discountAlmoco = refAlmoco;
-          if (dayMeals.includes("janta")) discountJanta = refJanta;
+          if (Array.isArray(dayMeals)) {
+            if (dayMeals.includes("cafe")) discountCafe = refCafe;
+            if (dayMeals.includes("almoco")) discountAlmoco = refAlmoco;
+            if (dayMeals.includes("janta")) discountJanta = refJanta;
+          }
           reason = "Falta - sem registro de horas";
         } else if (entry) {
           // Partial - check time-based rules
@@ -111,7 +114,7 @@ const DiscountsTab = ({
           if (firstEntry?.includes(":")) {
             const [eh] = firstEntry.split(":").map(Number);
             // If entered after 8:00 and cafe was requested for this day, discount cafe
-            if (dayMeals.includes("cafe") && eh > 8) {
+            if (Array.isArray(dayMeals) && dayMeals.includes("cafe") && eh > 8) {
               discountCafe = refCafe;
               reason = `Entrada às ${firstEntry} - café não utilizado`;
             }

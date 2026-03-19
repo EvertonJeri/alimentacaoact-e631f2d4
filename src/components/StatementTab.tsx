@@ -67,6 +67,7 @@ const StatementTab = ({ people, jobs, requests, timeEntries, foodControl }: Stat
         if (!hasEntry) return;
 
         const reqMeals = req.dailyOverrides?.[date] ?? req.meals;
+        if (!Array.isArray(reqMeals)) return;
         const fc = foodControl.find(f => f.personId === req.personId && f.jobId === req.jobId && f.date === date);
         
         reqMeals.forEach(m => {
