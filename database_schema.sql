@@ -94,3 +94,15 @@ ALTER TABLE public.payment_confirmations ENABLE ROW LEVEL SECURITY;
 -- Política
 CREATE POLICY "Enable all for payment_confirmations" ON public.payment_confirmations FOR ALL USING (true);
 
+-- ============================================================
+-- POLÍTICAS RLS FALTANTES (rode no Supabase SQL Editor)
+-- ============================================================
+
+-- Sem essas políticas o Supabase bloqueia todas as leituras/gravações
+CREATE POLICY "Enable all for jobs" ON public.jobs FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Enable all for people" ON public.people FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Enable all for time_entries" ON public.time_entries FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Enable all for meal_requests" ON public.meal_requests FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Enable all for food_control" ON public.food_control FOR ALL USING (true) WITH CHECK (true);
+
+
