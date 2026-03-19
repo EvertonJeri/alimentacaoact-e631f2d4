@@ -199,3 +199,32 @@ export function calculatePersonBalance(
   return balance;
 }
 
+export function determineMealsUsed(entry: TimeEntry): { cafe: boolean; almoco: boolean; janta: boolean } {
+  const firstEntry = getFirstEntryTime(entry);
+  const lastExit = getLastExitTime(entry);
+  
+  let cafe = false;
+  if (firstEntry) {
+    const [h, m] = firstEntry.split(":").map(Number);
+    if (h < 8 || (h === 8 && m <= 0)) cafe = true; // Até 08:00
+  }
+  
+  let almoco = false;
+  // Regra básica: se tem o primeiro período e o segundo período, presume-se almoço no intervalo. 
+  // Ou se trabalhou mais de 6 horas.
+  if (entry.entry1 && entry.exit1 && entry.entry2 && entry.exit2) {
+    almoco = true;
+  } else if (calcTotalMinutes(entry) > 360) {
+    almoco = true;
+  }
+  
+  let janta = false;
+  if (lastExit) {
+    const [h] = lastExit.split(":").map(Number);
+    if (h >= 19) janta = true; // Após 19h
+  }
+  if (entry.entry3 || entry.exit3) janta = true;
+
+  return { cafe, almoco, janta };
+}
+
