@@ -212,42 +212,62 @@ const MealRequestTab = ({
               </tr>
             ) : (
               jobRequests.map((req) => {
-                // Segurança extra: se não houver datas, ignoramos o cálculo para evitar crash
-                if (!req.startDate || !req.endDate) return null;
+                try {
+                  // Segurança absoluta: se não houver objeto, pulamos
+                  if (!req) return null;
 
-                const datesInRange = getDatesInRange(req.startDate, req.endDate);
-                const total = datesInRange.reduce((sum, date) => {
-                  const person = people.find(p => p.id === req.personId);
-                  const dayMeals = req.dailyOverrides?.[date] ?? req.meals;
-                  const dayTotal = Array.isArray(dayMeals) 
-                    ? dayMeals.reduce((dSum, m) => dSum + getMealValue(m, date, person), 0)
-                    : 0;
-                  return sum + dayTotal;
-                }, 0);
+                  const datesInRange = getDatesInRange(req.startDate, req.endDate);
+                  const total = (datesInRange || []).reduce((sum, date) => {
+                    const person = people.find(p => p.id === req.personId);
+                    const dayMeals = req.dailyOverrides?.[date] ?? req.meals;
+                    const dayTotal = Array.isArray(dayMeals) 
+                      ? dayMeals.reduce((dSum, m) => dSum + getMealValue(m, date, person), 0)
+                      : 0;
+                    return sum + dayTotal;
+                  }, 0);
 
-                return (
-                  <tr key={req.id} className="hover:bg-muted/30 transition-colors">
-                    <td className="px-4 py-3 font-semibold text-foreground">{getPersonName(req.personId)}</td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground tabular-nums">
-                      {String(req.startDate || "").split("-").reverse().join("/")} até {String(req.endDate || "").split("-").reverse().join("/")}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-1.5 flex-wrap">
-                        {req.meals?.map((m) => (
-                          <Badge key={m} variant="outline" className="text-[10px] capitalize font-medium">{MEAL_LABELS[m]}</Badge>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-right font-bold tabular-nums text-foreground">
-                      R$ {total.toFixed(2)}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <Button variant="ghost" size="icon" onClick={() => onRemoveRequest(req.id)} className="h-8 w-8 text-muted-foreground hover:text-destructive">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </td>
-                  </tr>
-                );
+                  const formattedStart = String(req.startDate || "").includes("-") 
+                    ? String(req.startDate).split("-").reverse().join("/") 
+                    : "—";
+                  const formattedEnd = String(req.endDate || "").includes("-") 
+                    ? String(req.endDate).split("-").reverse().join("/") 
+                    : "—";
+
+                  return (
+                    <tr key={req.id} className="hover:bg-muted/30 transition-colors">
+                      <td className="px-4 py-3 font-semibold text-foreground">{getPersonName(req.personId)}</td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground tabular-nums">
+                        {formattedStart} até {formattedEnd}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-1.5 flex-wrap">
+                          {(req.meals || []).map((m) => (
+                            <Badge key={m} variant="outline" className="text-[10px] capitalize font-medium">
+                              {MEAL_LABELS[m] || m}
+                            </Badge>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-right font-bold tabular-nums text-foreground">
+                        R$ {total.toFixed(2)}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <Button variant="ghost" size="icon" onClick={() => onRemoveRequest(req.id)} className="h-8 w-8 text-muted-foreground hover:text-destructive">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                } catch (err) {
+                  console.error("Erro ao renderizar linha de solicitação:", err);
+                  return (
+                    <tr key={req?.id || Math.random()} className="bg-destructive/5 text-destructive text-xs">
+                      <td colSpan={5} className="px-4 py-2 italic font-medium">
+                        Erro ao carregar os dados desta solicitação (ID: {req?.id || '?'}). Por favor, verifique se as datas e refeições estão corretas.
+                      </td>
+                    </tr>
+                  );
+                }
               })
             )}
           </tbody>
