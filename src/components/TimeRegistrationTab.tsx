@@ -207,7 +207,7 @@ const TimeRegistrationTab = ({ entries, setEntries, people, jobs, onUpdateEntry,
                       {getJobName(entry.jobId)}
                     </td>
                     <td className="px-3 py-2 tabular-nums text-muted-foreground whitespace-nowrap">
-                      {entry.date.split("-").reverse().join("/")}
+                      {entry.date?.includes("-") ? entry.date.split("-").reverse().join("/") : entry.date || "—"}
                     </td>
                     {(["entry1", "exit1", "entry2", "exit2", "entry3", "exit3"] as const).map(
                       (field) => (

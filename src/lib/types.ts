@@ -200,7 +200,7 @@ export function determineMealsUsed(entry: TimeEntry): { cafe: boolean; almoco: b
   const lastExit = getLastExitTime(entry);
   
   let cafe = false;
-  if (firstEntry) {
+  if (firstEntry?.includes(":")) {
     const [h, m] = firstEntry.split(":").map(Number);
     if (h < 8 || (h === 8 && m <= 0)) cafe = true; // Até 08:00
   }
@@ -215,7 +215,7 @@ export function determineMealsUsed(entry: TimeEntry): { cafe: boolean; almoco: b
   }
   
   let janta = false;
-  if (lastExit) {
+  if (lastExit?.includes(":")) {
     const [h] = lastExit.split(":").map(Number);
     if (h >= 19) janta = true; // Após 19h
   }
