@@ -219,7 +219,10 @@ const MealRequestTab = ({
                 const total = datesInRange.reduce((sum, date) => {
                   const person = people.find(p => p.id === req.personId);
                   const dayMeals = req.dailyOverrides?.[date] ?? req.meals;
-                  return sum + (dayMeals?.reduce((dSum, m) => dSum + getMealValue(m, date, person), 0) || 0);
+                  const dayTotal = Array.isArray(dayMeals) 
+                    ? dayMeals.reduce((dSum, m) => dSum + getMealValue(m, date, person), 0)
+                    : 0;
+                  return sum + dayTotal;
                 }, 0);
 
                 return (

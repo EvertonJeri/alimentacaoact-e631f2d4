@@ -164,17 +164,19 @@ export function calculatePersonBalance(
   personRequests.forEach(req => {
     const dates = getDatesInRange(req.startDate, req.endDate);
     dates.forEach(date => {
-      const reqMeals = req.dailyOverrides?.[date] ?? req.meals;
+      const reqMeals = (req.dailyOverrides?.[date] ?? req.meals) as MealType[];
       const fc = foodControl.find(f => f.personId === personId && f.jobId === req.jobId && f.date === date);
       
-      reqMeals?.forEach(m => {
-        const val = getMealValue(m, date, person);
-        const used = fc ? (m === 'cafe' ? fc.usedCafe : m === 'almoco' ? fc.usedAlmoco : fc.usedJanta) : false;
-        
-        if (!used) {
-          balance += val; // Requested but not used -> Credit for person (Positive)
-        }
-      });
+      if (Array.isArray(reqMeals)) {
+        reqMeals.forEach(m => {
+          const val = getMealValue(m, date, person);
+          const used = fc ? (m === 'cafe' ? fc.usedCafe : m === 'almoco' ? fc.usedAlmoco : fc.usedJanta) : false;
+          
+          if (!used) {
+            balance += val; // Requested but not used -> Credit for person (Positive)
+          }
+        });
+      }
 
       if (fc) {
         const usedMeals: { type: MealType; used: boolean }[] = [
@@ -184,7 +186,7 @@ export function calculatePersonBalance(
         ];
 
         usedMeals.forEach(um => {
-          if (um.used && !reqMeals?.includes(um.type)) {
+          if (um.used && (!Array.isArray(reqMeals) || !reqMeals.includes(um.type))) {
             balance -= getMealValue(um.type, date, person); // Used but not requested -> Charge person (Negative)
           }
         });
