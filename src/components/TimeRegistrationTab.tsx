@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Plus, Trash2, Filter } from "lucide-react";
 import {
   type Person,
@@ -90,35 +91,28 @@ const TimeRegistrationTab = ({ entries, setEntries, people, jobs, onUpdateEntry,
           <label className="text-2xs uppercase tracking-wider font-medium text-muted-foreground block mb-1.5">
             Pessoa
           </label>
-          <Select value={selectedPerson} onValueChange={setSelectedPerson}>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione..." />
-            </SelectTrigger>
-            <SelectContent>
-              {people.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            options={people.map(p => ({ 
+              value: p.id, 
+              label: `${p.name} ${p.isRegistered ? "(Registrado)" : ""}` 
+            }))}
+            value={selectedPerson}
+            onValueChange={setSelectedPerson}
+            placeholder="Selecione..."
+            searchPlaceholder="Buscar pessoa..."
+          />
         </div>
         <div className="flex-1 min-w-[200px]">
           <label className="text-2xs uppercase tracking-wider font-medium text-muted-foreground block mb-1.5">
             Job
           </label>
-          <Select value={selectedJob} onValueChange={setSelectedJob}>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione o JOB..." />
-            </SelectTrigger>
-            <SelectContent>
-              {jobs.map((j) => (
-                <SelectItem key={j.id} value={j.id}>
-                  {j.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            options={jobs.map(j => ({ value: j.id, label: j.name }))}
+            value={selectedJob}
+            onValueChange={setSelectedJob}
+            placeholder="Selecione o JOB..."
+            searchPlaceholder="Buscar JOB..."
+          />
         </div>
         <div className="min-w-[160px]">
           <label className="text-2xs uppercase tracking-wider font-medium text-muted-foreground block mb-1.5">
@@ -144,33 +138,23 @@ const TimeRegistrationTab = ({ entries, setEntries, people, jobs, onUpdateEntry,
           <label className="text-2xs uppercase tracking-wider font-medium text-muted-foreground block mb-1.5">
             Filtrar Pessoa
           </label>
-          <Select value={filterPerson} onValueChange={setFilterPerson}>
-            <SelectTrigger className="h-8 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas</SelectItem>
-              {people.map((p) => (
-                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            options={[{ value: "all", label: "Todas" }, ...people.map(p => ({ value: p.id, label: p.name }))]}
+            value={filterPerson}
+            onValueChange={setFilterPerson}
+            className="h-8 text-xs"
+          />
         </div>
         <div className="min-w-[200px]">
           <label className="text-2xs uppercase tracking-wider font-medium text-muted-foreground block mb-1.5">
             Filtrar Job
           </label>
-          <Select value={filterJob} onValueChange={setFilterJob}>
-            <SelectTrigger className="h-8 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              {jobs.map((j) => (
-                <SelectItem key={j.id} value={j.id}>{j.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            options={[{ value: "all", label: "Todos" }, ...jobs.map(j => ({ value: j.id, label: j.name }))]}
+            value={filterJob}
+            onValueChange={setFilterJob}
+            className="h-8 text-xs"
+          />
         </div>
         <div className="min-w-[160px]">
           <label className="text-2xs uppercase tracking-wider font-medium text-muted-foreground block mb-1.5">

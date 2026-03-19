@@ -107,12 +107,19 @@ export function formatMinutes(mins: number): string {
 }
 
 export function getDatesInRange(start: string, end: string): string[] {
+  if (!start || !end) return [];
   const dates: string[] = [];
-  const current = new Date(start + "T12:00:00");
-  const last = new Date(end + "T12:00:00");
-  while (current <= last) {
-    dates.push(current.toISOString().split("T")[0]);
-    current.setDate(current.getDate() + 1);
+  try {
+    const current = new Date(start + "T12:00:00");
+    const last = new Date(end + "T12:00:00");
+    if (isNaN(current.getTime()) || isNaN(last.getTime())) return [];
+    
+    while (current <= last) {
+      dates.push(current.toISOString().split("T")[0]);
+      current.setDate(current.getDate() + 1);
+    }
+  } catch (e) {
+    return [];
   }
   return dates;
 }

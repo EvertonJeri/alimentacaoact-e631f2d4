@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   type Person,
   type Job,
@@ -90,16 +91,13 @@ const MealRequestTab = ({
           <label className="text-2xs uppercase tracking-wider font-medium text-muted-foreground block mb-1.5">
             Job / Projeto
           </label>
-          <Select value={selectedJob} onValueChange={setSelectedJob}>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione o JOB..." />
-            </SelectTrigger>
-            <SelectContent>
-              {jobs.map((j) => (
-                <SelectItem key={j.id} value={j.id}>{j.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            options={jobs.map(j => ({ value: j.id, label: j.name }))}
+            value={selectedJob}
+            onValueChange={setSelectedJob}
+            placeholder="Selecione o JOB..."
+            searchPlaceholder="Buscar JOB..."
+          />
         </div>
         <div>
           <label className="text-2xs uppercase tracking-wider font-medium text-muted-foreground block mb-1.5">
@@ -126,18 +124,16 @@ const MealRequestTab = ({
             <label className="text-2xs uppercase tracking-wider font-medium text-muted-foreground block mb-1.5">
               Pessoa
             </label>
-            <Select value={currentPerson} onValueChange={setCurrentPerson}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione..." />
-              </SelectTrigger>
-              <SelectContent>
-                {people.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.name} {p.isRegistered ? "(Registrado)" : ""}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              options={people.map(p => ({ 
+                value: p.id, 
+                label: `${p.name} ${p.isRegistered ? "(Registrado)" : ""}` 
+              }))}
+              value={currentPerson}
+              onValueChange={setCurrentPerson}
+              placeholder="Selecione..."
+              searchPlaceholder="Buscar pessoa..."
+            />
 
             {currentPerson && personBalance !== 0 && (
               <div className={`mt-3 flex items-center gap-3 p-3 rounded-xl border ${personBalance < 0 ? 'bg-destructive/10 border-destructive/20 text-destructive font-bold' : 'bg-green-500/10 border-green-200 text-green-600 font-bold'} animate-in fade-in slide-in-from-top-2 duration-300`}>
@@ -226,7 +222,7 @@ const MealRequestTab = ({
                   <tr key={req.id} className="hover:bg-muted/30 transition-colors">
                     <td className="px-4 py-3 font-semibold text-foreground">{getPersonName(req.personId)}</td>
                     <td className="px-4 py-3 text-xs text-muted-foreground tabular-nums">
-                      {req.startDate.split("-").reverse().join("/")} até {req.endDate.split("-").reverse().join("/")}
+                      {req.startDate?.includes("-") ? req.startDate.split("-").reverse().join("/") : "—"} até {req.endDate?.includes("-") ? req.endDate.split("-").reverse().join("/") : "—"}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-1.5 flex-wrap">

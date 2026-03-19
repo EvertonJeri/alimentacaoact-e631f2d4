@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Input } from "@/components/ui/input";
 import { Filter } from "lucide-react";
 import {
@@ -155,17 +156,12 @@ const FoodControlTab = ({
           <label className="text-2xs uppercase tracking-wider font-medium text-muted-foreground block mb-1.5">
             Filtrar Job
           </label>
-          <Select value={filterJob} onValueChange={setFilterJob}>
-            <SelectTrigger className="h-8 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              {jobs.map((j) => (
-                <SelectItem key={j.id} value={j.id}>{j.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            options={[{ value: "all", label: "Todos" }, ...jobs.map(j => ({ value: j.id, label: j.name }))]}
+            value={filterJob}
+            onValueChange={setFilterJob}
+            className="h-8 text-xs"
+          />
         </div>
         <div className="min-w-[160px]">
           <label className="text-2xs uppercase tracking-wider font-medium text-muted-foreground block mb-1.5">

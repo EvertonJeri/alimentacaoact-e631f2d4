@@ -2,6 +2,7 @@ import { useState, useMemo, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { FileDown, Filter, Info, User } from "lucide-react";
 import {
   type Person,
@@ -131,17 +132,12 @@ const StatementTab = ({ people, jobs, requests, timeEntries, foodControl }: Stat
           <label className="text-2xs uppercase tracking-wider font-semibold text-muted-foreground block mb-2 px-1 flex items-center gap-2">
             <Filter className="h-3 w-3" /> Filtrar por Montagem (Job)
           </label>
-          <Select value={selectedJob} onValueChange={setSelectedJob}>
-            <SelectTrigger className="h-10 bg-background border-border shadow-sm">
-              <SelectValue placeholder="Selecione um Job" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas as Montagens</SelectItem>
-              {jobs.map(j => (
-                <SelectItem key={j.id} value={j.id}>{j.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            options={[{ value: "all", label: "Todas as Montagens" }, ...jobs.map(j => ({ value: j.id, label: j.name }))]}
+            value={selectedJob}
+            onValueChange={setSelectedJob}
+            className="h-10 bg-background border-border shadow-sm text-sm"
+          />
         </div>
         <Button onClick={exportAsImage} className="gap-2 h-10 shadow-sm" variant="default">
           <FileDown className="h-4 w-4" /> Exportar Extrato (PDF/Print)

@@ -195,7 +195,7 @@ const DiscountsTab = ({
     discounts.forEach((d) => {
       rows.push([
         getPersonName(d.personId), getJobName(d.jobId),
-        d.date.split("-").reverse().join("/"),
+        d.date?.includes("-") ? d.date.split("-").reverse().join("/") : "—",
         d.discountCafe > 0 ? -d.discountCafe : 0,
         d.discountAlmoco > 0 ? -d.discountAlmoco : 0,
         d.discountJanta > 0 ? -d.discountJanta : 0,
@@ -254,7 +254,7 @@ const DiscountsTab = ({
                       <span className="font-medium text-foreground">{getPersonName(personId)}</span>
                       {confirmed ? (
                         <Badge variant="secondary" className="text-2xs bg-green-100 text-green-700 hover:bg-green-100 border-green-200">
-                          {paymentDate ? `Pago em ${paymentDate.split("-").reverse().join("/")}` : "Pago"}
+                          {paymentDate?.includes("-") ? `Pago em ${paymentDate.split("-").reverse().join("/")}` : "Pago"}
                         </Badge>
                       ) : (
                         <Badge variant="destructive" className="text-2xs">
@@ -295,7 +295,7 @@ const DiscountsTab = ({
                         <tbody className="divide-y divide-border/50">
                           {personDiscounts.map((d, i) => (
                             <tr key={`${d.date}-${i}`} className="hover:bg-muted/20">
-                              <td className="px-2 py-1.5 tabular-nums text-muted-foreground">{d.date.split("-").reverse().join("/")}</td>
+                              <td className="px-2 py-1.5 tabular-nums text-muted-foreground">{d.date?.includes("-") ? d.date.split("-").reverse().join("/") : "—"}</td>
                               <td className="px-2 py-1.5 text-xs text-muted-foreground">{getJobName(d.jobId)}</td>
                               <td className="px-2 py-1.5 text-right tabular-nums text-destructive">
                                 {d.discountCafe > 0 ? `-${d.discountCafe.toFixed(2)}` : "—"}

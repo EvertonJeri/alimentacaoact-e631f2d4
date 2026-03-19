@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Check, ChevronDown, ChevronRight, Filter, Undo2 } from "lucide-react";
 import {
   type Person,
@@ -131,17 +132,12 @@ const PaymentTab = ({
           <label className="text-2xs uppercase tracking-wider font-medium text-muted-foreground block mb-1.5">
             Filtrar Job
           </label>
-          <Select value={filterJob} onValueChange={setFilterJob}>
-            <SelectTrigger className="h-8 text-xs">
-              <SelectValue placeholder="Todos os Jobs" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os Jobs</SelectItem>
-              {jobs.map((j) => (
-                <SelectItem key={j.id} value={j.id}>{j.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            options={[{ value: "all", label: "Todos os Jobs" }, ...jobs.map(j => ({ value: j.id, label: j.name }))]}
+            value={filterJob}
+            onValueChange={setFilterJob}
+            className="h-8 text-xs"
+          />
         </div>
       </div>
 
@@ -223,7 +219,7 @@ const PaymentTab = ({
                               {isPaid && <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">✓ Pago</Badge>}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              {req.startDate.split("-").reverse().join("/")} — {req.endDate.split("-").reverse().join("/")}
+                              {req.startDate?.includes("-") ? req.startDate.split("-").reverse().join("/") : "—"} — {req.endDate?.includes("-") ? req.endDate.split("-").reverse().join("/") : "—"}
                             </p>
                           </div>
                         </div>
