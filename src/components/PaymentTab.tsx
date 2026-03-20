@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SearchableSelect } from "@/components/ui/searchable-select";
-import { Check, ChevronDown, ChevronRight, Filter, Undo2 } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, Filter, Undo2, Trash2 } from "lucide-react";
 import {
   type Person,
   type Job,
@@ -29,6 +29,7 @@ interface PaymentTabProps {
   onUpdateConfirmation: (conf: PaymentConfirmation) => void;
   onUpdateDiscountConfirmation?: (conf: DiscountConfirmation) => void;
   onRemoveConfirmation?: (id: string) => void;
+  onRemoveRequest?: (id: string) => void;
 }
 
 const PaymentTab = ({
@@ -41,6 +42,7 @@ const PaymentTab = ({
   onUpdateConfirmation,
   onUpdateDiscountConfirmation,
   onRemoveConfirmation,
+  onRemoveRequest,
 }: PaymentTabProps) => {
 
   const [filterJob, setFilterJob] = useState("all");
@@ -248,6 +250,20 @@ const PaymentTab = ({
                           </div>
                           
                           <div className="flex items-center gap-3">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                              onClick={() => {
+                                if (confirm("Deseja realmente apagar esta solicitação?")) {
+                                  onRemoveRequest?.(req.id);
+                                }
+                              }}
+                              title="Apagar solicitação"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                            
                             {!isPaid ? (
                               <>
                                 <Input

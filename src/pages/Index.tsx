@@ -45,6 +45,7 @@ const Index = () => {
     updateMealRequest,
     removeMealRequest,
     removeTimeEntry,
+    removePaymentConfirmation,
   } = useDatabase();
 
   const [activePage, setActivePage] = useState("horas");
@@ -122,6 +123,8 @@ const Index = () => {
             {...commonProps}
             confirmations={[...paymentConfirmationsData, ...discountConfirmationsData]}
             onUpdateConfirmation={(conf) => updatePaymentConfirmation.mutate(conf)}
+            onRemoveConfirmation={(id) => removePaymentConfirmation.mutate(id)}
+            onRemoveRequest={(id) => removeMealRequest.mutate(id)}
             onUpdateDiscountConfirmation={(conf) => updateDiscountConfirmation.mutate(conf)}
           />
         );

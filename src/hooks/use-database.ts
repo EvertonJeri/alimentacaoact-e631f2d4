@@ -253,6 +253,19 @@ export function useDatabase() {
     },
   });
 
+  const removePaymentConfirmation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("payment_confirmations")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["payment_confirmations"] });
+    },
+  });
+
   return {
     people,
     jobs,
@@ -268,5 +281,6 @@ export function useDatabase() {
     updateMealRequest,
     removeMealRequest,
     removeTimeEntry,
+    removePaymentConfirmation,
   };
 }
