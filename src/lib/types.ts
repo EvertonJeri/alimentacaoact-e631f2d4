@@ -232,10 +232,12 @@ export function calculatePersonBalance(
   timeEntries: TimeEntry[]
 ): number {
   const personRequests = requests.filter(r => r.personId === personId);
+  const person = people.find(p => p.id === personId);
   const discConf = confirmations.find(c => 'personId' in c && c.personId === personId && c.confirmed) as DiscountConfirmation | undefined;
   const paymentDate = discConf?.paymentDate;
 
   let totalDiscount = 0;
+  let totalExtra = 0;
 
   personRequests.forEach(req => {
     const dates = getDatesInRange(req.startDate, req.endDate);
@@ -244,17 +246,34 @@ export function calculatePersonBalance(
       if (paymentDate && date <= paymentDate) return;
 
       const entry = timeEntries.find(e => e.personId === personId && e.jobId === req.jobId && e.date === date);
-      if (!entry) return; // If not even an empty Time Entry was assigned, it was never "Sent"
-
       const fc = foodControl.find(f => f.personId === personId && f.jobId === req.jobId && f.date === date);
-      
-      const dayCalc = calculateDayDiscount(req, date, entry, fc, people);
-      totalDiscount += dayCalc.total;
+
+      // Descontos: Solicitados mas não utilizados (Ponto/Divergência)
+      if (entry) {
+        const dayCalc = calculateDayDiscount(req, date, entry, fc, people);
+        totalDiscount += dayCalc.total;
+      }
+
+      // Adicionais (Extras): Utilizados mas não solicitados
+      if (fc) {
+        const reqMeals = (req.dailyOverrides?.[date] ?? req.meals) || [];
+        const usedMeals: { type: MealType; used: boolean }[] = [
+          { type: 'cafe', used: fc.usedCafe },
+          { type: 'almoco', used: fc.usedAlmoco },
+          { type: 'janta', used: fc.usedJanta }
+        ];
+
+        usedMeals.forEach(um => {
+          if (um.used && !reqMeals.includes(um.type)) {
+            totalExtra += getMealValue(um.type, date, person);
+          }
+        });
+      }
     });
   });
 
-  // Debt flows dynamically as negative integer against gross totals
-  return -totalDiscount;
+  // Saldo: Extras a cobrar - Descontos a abater
+  return totalExtra - totalDiscount;
 }
 
 export function determineMealsUsed(entry: TimeEntry): { cafe: boolean; almoco: boolean; janta: boolean } {

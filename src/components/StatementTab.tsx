@@ -13,6 +13,7 @@ import {
   getDatesInRange,
   getMealValue,
   MEAL_LABELS,
+  calculateDayDiscount,
 } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -58,35 +59,33 @@ const StatementTab = ({ people, jobs, requests, timeEntries, foodControl }: Stat
       const dates = getDatesInRange(req.startDate, req.endDate);
 
       dates.forEach(date => {
-        // Removed haveEntry check so we track requested meals regardless of entry logic
-        // This makes sure statements always show what was actually ordered
-        // Future modifications can be done directly by the admin in Food Control if meals weren't used
-
-        const reqMeals = req.dailyOverrides?.[date] ?? req.meals;
-        if (!Array.isArray(reqMeals)) return;
+        const entry = timeEntries.find(e => e.personId === req.personId && e.jobId === req.jobId && e.date === date);
         const fc = foodControl.find(f => f.personId === req.personId && f.jobId === req.jobId && f.date === date);
         
-        reqMeals.forEach(m => {
-          const val = getMealValue(m, date, person);
-          data[req.personId].totalRequested += val;
-          
-          const used = fc ? (m === 'cafe' ? fc.usedCafe : m === 'almoco' ? fc.usedAlmoco : fc.usedJanta) : true;
-          
-          if (used) {
-            data[req.personId].totalUsed += val;
-          } else {
-            data[req.personId].balance -= val;
-            data[req.personId].details.push({
-              date,
-              type: 'desconto',
-              reason: `${MEAL_LABELS[m]} solicitado mas não utilizado`,
-              value: -val,
-              jobId: req.jobId
-            });
+        const reqMeals = (req.dailyOverrides?.[date] ?? req.meals) || [];
+        if (!Array.isArray(reqMeals)) return;
+
+        // 1. Calcula os Descontos baseados na regra central (calculateDayDiscount)
+        if (entry) {
+          const dayCalc = calculateDayDiscount(req, date, entry, fc, people);
+          if (dayCalc.total > 0) {
+             data[req.personId].balance -= dayCalc.total;
+             data[req.personId].details.push({
+               date,
+               type: 'desconto',
+               reason: dayCalc.reason,
+               value: -dayCalc.total,
+               jobId: req.jobId
+             });
           }
+        }
+
+        // 2. Registra o Valor Total Solicitado (para fins de exibição no extrato)
+        reqMeals.forEach(m => {
+          data[req.personId].totalRequested += getMealValue(m, date, person);
         });
 
-        // Used but not requested (extras)
+        // 3. Adicionais (Extras): Utilizados mas não solicitados
         if (fc) {
           const usedMeals: { type: 'cafe' | 'almoco' | 'janta'; used: boolean }[] = [
             { type: 'cafe', used: fc.usedCafe },
@@ -97,7 +96,6 @@ const StatementTab = ({ people, jobs, requests, timeEntries, foodControl }: Stat
           usedMeals.forEach(um => {
             if (um.used && !reqMeals.includes(um.type)) {
               const val = getMealValue(um.type, date, person);
-              data[req.personId].totalUsed += val;
               data[req.personId].balance += val;
               data[req.personId].details.push({
                 date,
@@ -110,6 +108,11 @@ const StatementTab = ({ people, jobs, requests, timeEntries, foodControl }: Stat
           });
         }
       });
+    });
+
+    // Calcula o total consumido final para cada pessoa
+    Object.values(data).forEach((ps: any) => {
+      ps.totalUsed = ps.totalRequested + ps.balance;
     });
 
     return Object.values(data);
