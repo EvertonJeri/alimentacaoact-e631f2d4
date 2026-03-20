@@ -240,6 +240,19 @@ export function useDatabase() {
     },
   });
 
+  const removeTimeEntry = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("time_entries")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["time_entries"] });
+    },
+  });
+
   return {
     people,
     jobs,
@@ -254,5 +267,6 @@ export function useDatabase() {
     updateTimeEntry,
     updateMealRequest,
     removeMealRequest,
+    removeTimeEntry,
   };
 }

@@ -44,6 +44,7 @@ const Index = () => {
     updateTimeEntry,
     updateMealRequest,
     removeMealRequest,
+    removeTimeEntry,
   } = useDatabase();
 
   const [activePage, setActivePage] = useState("horas");
@@ -100,7 +101,7 @@ const Index = () => {
             entries={timeEntriesData}
             setEntries={() => {}}
             onUpdateEntry={(entry) => updateTimeEntry.mutate(entry)}
-            onRemoveEntry={(id) => id && console.log("Removendo", id)}
+            onRemoveEntry={(id) => removeTimeEntry.mutate(id)}
             people={peopleData}
             jobs={jobsData}
           />
