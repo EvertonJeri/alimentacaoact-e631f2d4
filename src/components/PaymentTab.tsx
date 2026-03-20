@@ -27,6 +27,7 @@ interface PaymentTabProps {
   foodControl: FoodControlEntry[];
   confirmations: (DiscountConfirmation | PaymentConfirmation)[];
   onUpdateConfirmation: (conf: PaymentConfirmation) => void;
+  onUpdateDiscountConfirmation?: (conf: DiscountConfirmation) => void;
   onRemoveConfirmation?: (id: string) => void;
 }
 
@@ -38,6 +39,7 @@ const PaymentTab = ({
   foodControl,
   confirmations,
   onUpdateConfirmation,
+  onUpdateDiscountConfirmation,
   onRemoveConfirmation,
 }: PaymentTabProps) => {
 
@@ -82,6 +84,16 @@ const PaymentTab = ({
     if (type === "request") {
       const req = requests.find(r => r.id === id);
       if (req) {
+        // Evaluate deduction auto-abatimento
+        const personBalance = calculatePersonBalance(req.personId, requests, foodControl, confirmations, people);
+        if (personBalance < 0 && onUpdateDiscountConfirmation) {
+          onUpdateDiscountConfirmation({
+            personId: req.personId,
+            confirmed: true,
+            paymentDate
+          });
+        }
+
         const jobReqs = registeredRequests.filter(r => r.jobId === req.jobId);
         const otherReqsConfirmed = jobReqs.every(r => r.id === id || getConfirmation(r.id)?.confirmed);
         if (otherReqsConfirmed) {
@@ -191,6 +203,8 @@ const PaymentTab = ({
                   const paymentDate = conf?.paymentDate || new Date().toISOString().split("T")[0];
                   const total = calcRequestTotal(req);
                   const personBalance = calculatePersonBalance(req.personId, requests, foodControl, confirmations, people);
+                  const deduction = personBalance < 0 ? personBalance : 0;
+                  const finalTotal = Math.max(0, total + deduction);
 
                   return (
                     <div key={req.id} className="bg-background hover:bg-muted/5 transition-colors">
@@ -222,7 +236,12 @@ const PaymentTab = ({
                         <div className="flex items-center gap-6">
                           <div className="text-right">
                             <p className="text-2xs uppercase tracking-wider font-semibold text-muted-foreground mb-0.5">Total</p>
-                            <p className="text-sm font-bold tabular-nums">R$ {total.toFixed(2)}</p>
+                            <div className="flex flex-col items-end">
+                              {deduction < 0 && (
+                                <span className="text-[10px] text-destructive line-through decoration-destructive/50">R$ {total.toFixed(2)}</span>
+                              )}
+                              <p className="text-sm font-bold tabular-nums">R$ {finalTotal.toFixed(2)}</p>
+                            </div>
                           </div>
                           
                           <div className="flex items-center gap-3">

@@ -21,6 +21,7 @@ import {
   calculatePersonBalance,
   isWeekend,
   type FoodControlEntry,
+  type TimeEntry,
   type DiscountConfirmation,
   type PaymentConfirmation,
 } from "@/lib/types";
@@ -29,20 +30,24 @@ interface MealRequestSystemProps {
   people: Person[];
   jobs: Job[];
   requests: MealRequest[];
+  timeEntries?: TimeEntry[];
   foodControl: FoodControlEntry[];
   confirmations: (DiscountConfirmation | PaymentConfirmation)[];
   onUpdateRequest: (req: MealRequest) => void;
   onRemoveRequest: (id: string) => void;
+  onUpdateTimeEntry?: (entry: TimeEntry) => void;
 }
 
 const MealRequestSystem = ({
   people = [],
   jobs = [],
   requests = [],
+  timeEntries = [],
   foodControl = [],
   confirmations = [],
   onUpdateRequest,
   onRemoveRequest,
+  onUpdateTimeEntry,
 }: MealRequestSystemProps) => {
   const [selectedJob, setSelectedJob] = useState("");
   const [location, setLocation] = useState<LocationType>("Dentro SP");
@@ -76,7 +81,26 @@ const MealRequestSystem = ({
 
   const handleSendAll = () => {
     if (filtered.length === 0) return;
-    toast.success(`${filtered.length} solicitação(ões) enviada(s) para registro!`, { duration: 5000 });
+    
+    let createdCount = 0;
+    filtered.forEach(req => {
+      const dates = getDatesInRange(req.startDate, req.endDate);
+      dates.forEach(date => {
+        const existing = timeEntries.find(e => e.personId === req.personId && e.jobId === req.jobId && e.date === date);
+        if (!existing && onUpdateTimeEntry) {
+          onUpdateTimeEntry({
+            id: crypto.randomUUID(),
+            personId: req.personId,
+            jobId: req.jobId,
+            date,
+            entry1: "", exit1: "", entry2: "", exit2: "", entry3: "", exit3: ""
+          });
+          createdCount++;
+        }
+      });
+    });
+
+    toast.success(`${filtered.length} solicitação(ões) processadas. ${createdCount > 0 ? `${createdCount} dia(s) criados no Registro de Horas!` : 'Todas as datas já constavam no Registro de Horas!'}`, { duration: 5000 });
   };
 
   const toggleExpanded = (id: string) => {

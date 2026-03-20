@@ -112,14 +112,16 @@ const Index = () => {
             confirmations={discountConfirmationsData}
             onUpdateRequest={(req) => updateMealRequest.mutate(req)}
             onRemoveRequest={(id) => removeMealRequest.mutate(id)}
+            onUpdateTimeEntry={(entry) => updateTimeEntry.mutate(entry)}
           />
         );
       case "pagamento":
         return (
           <PaymentTab
             {...commonProps}
-            confirmations={paymentConfirmationsData}
+            confirmations={[...paymentConfirmationsData, ...discountConfirmationsData]}
             onUpdateConfirmation={(conf) => updatePaymentConfirmation.mutate(conf)}
+            onUpdateDiscountConfirmation={(conf) => updateDiscountConfirmation.mutate(conf)}
           />
         );
       case "extrato":
