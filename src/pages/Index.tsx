@@ -200,7 +200,7 @@ const Index = () => {
               </div>
             </div>
             <div className="text-2xs text-muted-foreground font-mono tabular-nums bg-muted px-2 py-1 rounded">
-              v1.5.0-stable
+              v1.5.1-stable
             </div>
           </header>
 
