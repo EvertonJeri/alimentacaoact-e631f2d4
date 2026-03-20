@@ -87,12 +87,18 @@ const Index = () => {
   }
 
   const renderContent = () => {
+    const allConfirmations = useMemo(() => [
+      ...(discountConfirmations.data || []),
+      ...(paymentConfirmations.data || [])
+    ], [discountConfirmations.data, paymentConfirmations.data]);
+
     const commonProps = {
       people: peopleData,
       jobs: jobsData,
       requests: mealRequestsData,
       timeEntries: timeEntriesData,
       foodControl: foodControlData,
+      confirmations: allConfirmations,
     };
 
     switch (activePage) {
@@ -198,7 +204,7 @@ const Index = () => {
               </div>
             </div>
             <div className="text-2xs text-muted-foreground font-mono tabular-nums bg-muted px-2 py-1 rounded">
-              v1.5.2-stable
+              v1.5.3-stable
             </div>
           </header>
 

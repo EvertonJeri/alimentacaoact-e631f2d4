@@ -45,11 +45,8 @@ const FoodControlTab = ({
   const getJobName = (id: string) => jobs.find((j) => j.id === id)?.name || "—";
 
   const registeredRequests = useMemo(() => {
-    return requests.filter((req) => {
-      const dates = getDatesInRange(req.startDate, req.endDate);
-      return dates.some((date) => timeEntries.some((e) => e.personId === req.personId && e.jobId === req.jobId && e.date === date));
-    });
-  }, [requests, timeEntries]);
+    return requests;
+  }, [requests]);
 
   const rows = useMemo(() => {
     const result: (FoodControlEntry & { key: string })[] = [];
