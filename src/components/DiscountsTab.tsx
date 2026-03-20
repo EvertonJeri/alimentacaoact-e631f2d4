@@ -59,12 +59,15 @@ const DiscountsTab = ({
   const getPersonName = (id: string) => people.find((p) => p.id === id)?.name || "—";
   const getJobName = (id: string) => jobs.find((j) => j.id === id)?.name || "—";
 
-  // Filtra as solicitações garantindo que elas tenham saído do estágio "Draft" / "Apenas Solicitado"
-  // antes de acusar o indivíduo de fraude e devoluções.
-  const registeredRequests = requests.filter((req) => {
-    const dates = getDatesInRange(req.startDate, req.endDate);
-    return dates.some((date) => timeEntries.some((e) => e.personId === req.personId && e.date === date));
-  });
+  // Filtra as solicitações garantindo que elas tenham saído do estágio "Draft"
+  const registeredRequests = useMemo(() => {
+    return requests.filter((req) => {
+      const dates = getDatesInRange(req.startDate, req.endDate);
+      return dates.some((date) => 
+        timeEntries.some((e) => e.personId === req.personId && e.jobId === req.jobId && e.date === date)
+      );
+    });
+  }, [requests, timeEntries]);
 
   const discounts = useMemo(() => {
     const rows: DiscountRow[] = [];
@@ -75,7 +78,7 @@ const DiscountsTab = ({
         const entry = timeEntries.find(
           (e) => e.personId === req.personId && e.jobId === req.jobId && e.date === date
         );
-        // Só há desconto viável se houver ou um TimeEntry em branco, ou em dias falhos
+        // Só há desconto viável se houver um registro (mesmo que vazio) vindo do MealRequestSystem
         if (!entry) return;
 
         const fc = foodControl.find(
