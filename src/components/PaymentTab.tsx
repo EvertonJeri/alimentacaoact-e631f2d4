@@ -49,7 +49,10 @@ const PaymentTab = ({
   const getPersonName = (id: string) => people.find((p) => p.id === id)?.name || "—";
   const getJobName = (id: string) => jobs.find((j) => j.id === id)?.name || "—";
 
-  const registeredRequests = requests;
+  const registeredRequests = requests.filter((req) => {
+    const dates = getDatesInRange(req.startDate, req.endDate);
+    return dates.some((date) => timeEntries.some((e) => e.personId === req.personId && e.date === date));
+  });
 
   const filteredRequests = filterJob === "all"
     ? registeredRequests
@@ -85,7 +88,7 @@ const PaymentTab = ({
       const req = requests.find(r => r.id === id);
       if (req) {
         // Evaluate deduction auto-abatimento
-        const personBalance = calculatePersonBalance(req.personId, requests, foodControl, confirmations, people);
+        const personBalance = calculatePersonBalance(req.personId, requests, foodControl, confirmations, people, timeEntries);
         if (personBalance < 0 && onUpdateDiscountConfirmation) {
           onUpdateDiscountConfirmation({
             personId: req.personId,
@@ -202,7 +205,7 @@ const PaymentTab = ({
                   const isPaid = conf?.confirmed;
                   const paymentDate = conf?.paymentDate || new Date().toISOString().split("T")[0];
                   const total = calcRequestTotal(req);
-                  const personBalance = calculatePersonBalance(req.personId, requests, foodControl, confirmations, people);
+                  const personBalance = calculatePersonBalance(req.personId, requests, foodControl, confirmations, people, timeEntries);
                   const deduction = personBalance < 0 ? personBalance : 0;
                   const finalTotal = Math.max(0, total + deduction);
 

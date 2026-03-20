@@ -29,7 +29,10 @@ const StatementTab = ({ people, jobs, requests, timeEntries, foodControl }: Stat
   const statementRef = useRef<HTMLDivElement>(null);
 
   // Mostra todas as solicitações, independente de timeEntry já registrada
-  const registeredRequests = requests;
+  const registeredRequests = requests.filter((req) => {
+    const dates = getDatesInRange(req.startDate, req.endDate);
+    return dates.some((date) => timeEntries.some((e) => e.personId === req.personId && e.date === date));
+  });
 
   const filteredRequests = useMemo(() => {
     return selectedJob === "all" ? registeredRequests : registeredRequests.filter(r => r.jobId === selectedJob);

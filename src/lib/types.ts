@@ -150,64 +150,96 @@ export function getLastExitTime(entry: TimeEntry): string | null {
   return null;
 }
 
+export function calculateDayDiscount(
+  req: MealRequest,
+  date: string,
+  entry: TimeEntry | undefined,
+  fc: FoodControlEntry | undefined,
+  people: Person[]
+): { discountCafe: number; discountAlmoco: number; discountJanta: number; total: number; reason: string } {
+  const person = people.find((p) => p.id === req.personId);
+  const refCafe = getMealValue("cafe", date, person);
+  const refAlmoco = getMealValue("almoco", date, person);
+  const refJanta = getMealValue("janta", date, person);
+
+  let discountCafe = 0;
+  let discountAlmoco = 0;
+  let discountJanta = 0;
+  let reason = "";
+
+  const dayMeals = req.dailyOverrides?.[date] ?? req.meals;
+  if (!Array.isArray(dayMeals)) return { discountCafe, discountAlmoco, discountJanta, total: 0, reason: "" };
+
+  const hasHours = entry ? calcTotalMinutes(entry) > 0 : false;
+  // Evaluate "past" based on local ISO date compare "YYYY-MM-DD"
+  const localToday = new Date().toISOString().split("T")[0];
+  const isPast = date < localToday;
+
+  if (!hasHours && isPast) {
+    if (dayMeals.includes("cafe")) discountCafe = refCafe;
+    if (dayMeals.includes("almoco")) discountAlmoco = refAlmoco;
+    if (dayMeals.includes("janta")) discountJanta = refJanta;
+    reason = "Falta - sem registro de horas";
+  } else if (hasHours && entry) {
+    const firstEntry = getFirstEntryTime(entry);
+    if (firstEntry && firstEntry.includes(":")) {
+      const [eh] = firstEntry.split(":").map(Number);
+      if (dayMeals.includes("cafe") && eh > 8) {
+        discountCafe = refCafe;
+        reason = `Entrada às ${firstEntry} - café não utilizado`;
+      }
+    }
+  }
+
+  if (fc) {
+    if (dayMeals.includes("cafe") && !fc.usedCafe) discountCafe = refCafe;
+    else if (dayMeals.includes("cafe") && fc.usedCafe) discountCafe = 0;
+
+    if (dayMeals.includes("almoco") && !fc.usedAlmoco) discountAlmoco = refAlmoco;
+    else if (dayMeals.includes("almoco") && fc.usedAlmoco) discountAlmoco = 0;
+
+    if (dayMeals.includes("janta") && !fc.usedJanta) discountJanta = refJanta;
+    else if (dayMeals.includes("janta") && fc.usedJanta) discountJanta = 0;
+
+    if (!reason) reason = "Ajuste via controle de alimentação";
+  }
+
+  const total = discountCafe + discountAlmoco + discountJanta;
+  return { discountCafe, discountAlmoco, discountJanta, total, reason };
+}
+
 export function calculatePersonBalance(
   personId: string,
   requests: MealRequest[],
   foodControl: FoodControlEntry[],
   confirmations: (DiscountConfirmation | PaymentConfirmation)[],
-  people: Person[]
+  people: Person[],
+  timeEntries: TimeEntry[]
 ): number {
-  const person = people.find(p => p.id === personId);
   const personRequests = requests.filter(r => r.personId === personId);
-  let balance = 0;
+  const discConf = confirmations.find(c => 'personId' in c && c.personId === personId && c.confirmed) as DiscountConfirmation | undefined;
+  const paymentDate = discConf?.paymentDate;
+
+  let totalDiscount = 0;
 
   personRequests.forEach(req => {
     const dates = getDatesInRange(req.startDate, req.endDate);
     dates.forEach(date => {
-      const reqMeals = (req.dailyOverrides?.[date] ?? req.meals) as MealType[];
+      // Abate-se dívidas apenas PÓS-PAGAMENTO ativo se existir confirmação limpa.
+      if (paymentDate && date <= paymentDate) return;
+
+      const entry = timeEntries.find(e => e.personId === personId && e.jobId === req.jobId && e.date === date);
+      if (!entry) return; // If not even an empty Time Entry was assigned, it was never "Sent"
+
       const fc = foodControl.find(f => f.personId === personId && f.jobId === req.jobId && f.date === date);
       
-      if (Array.isArray(reqMeals)) {
-        reqMeals.forEach(m => {
-          const val = getMealValue(m, date, person);
-          const used = fc ? (m === 'cafe' ? fc.usedCafe : m === 'almoco' ? fc.usedAlmoco : fc.usedJanta) : false;
-          
-          if (!used) {
-            balance += val; // Requested but not used -> Credit for person (Positive)
-          }
-        });
-      }
-
-      if (fc) {
-        const usedMeals: { type: MealType; used: boolean }[] = [
-          { type: 'cafe', used: fc.usedCafe },
-          { type: 'almoco', used: fc.usedAlmoco },
-          { type: 'janta', used: fc.usedJanta }
-        ];
-
-        usedMeals.forEach(um => {
-          if (um.used && (!Array.isArray(reqMeals) || !reqMeals.includes(um.type))) {
-            balance -= getMealValue(um.type, date, person); // Used but not requested -> Charge person (Negative)
-          }
-        });
-      }
+      const dayCalc = calculateDayDiscount(req, date, entry, fc, people);
+      totalDiscount += dayCalc.total;
     });
   });
 
-  // Deduct confirmed payments or discounts already applied to payroll
-  confirmations.forEach(c => {
-    // If it's a person-specific confirmation (DiscountConfirmation)
-    if ('personId' in c && c.personId === personId && c.confirmed) {
-      // Logic for discount: it means the current balance was already settled via payroll
-      // For simplicity, we assume confirmed means balance is cleared
-      // This part might need refinement based on exact payment logic
-    }
-    // If it's a payment type confirmation (PaymentConfirmation)
-    // We would need to know which person these payments applied to
-    // In the current schema, PaymentConfirmation doesn't link to personId?
-  });
-
-  return balance;
+  // Debt flows dynamically as negative integer against gross totals
+  return -totalDiscount;
 }
 
 export function determineMealsUsed(entry: TimeEntry): { cafe: boolean; almoco: boolean; janta: boolean } {

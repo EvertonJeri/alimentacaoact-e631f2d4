@@ -59,8 +59,8 @@ const MealRequestSystem = ({
 
   const balance = useMemo(() => {
     if (!personId || !people || !requests) return 0;
-    return calculatePersonBalance(personId, requests, foodControl, confirmations, people);
-  }, [personId, requests, foodControl, confirmations, people]);
+    return calculatePersonBalance(personId, requests, foodControl, confirmations, people, timeEntries);
+  }, [personId, requests, foodControl, confirmations, people, timeEntries]);
 
   const handleAdd = () => {
     if (!selectedJob || !personId || !startDate || !endDate) return;

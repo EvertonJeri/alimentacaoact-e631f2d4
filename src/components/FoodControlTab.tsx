@@ -44,12 +44,19 @@ const FoodControlTab = ({
   const getPersonName = (id: string) => people.find((p) => p.id === id)?.name || "—";
   const getJobName = (id: string) => jobs.find((j) => j.id === id)?.name || "—";
 
+  const registeredRequests = useMemo(() => {
+    return requests.filter((req) => {
+      const dates = getDatesInRange(req.startDate, req.endDate);
+      return dates.some((date) => timeEntries.some((e) => e.personId === req.personId && e.date === date));
+    });
+  }, [requests, timeEntries]);
+
   // Build rows from requests, merging with foodControl overrides
   // Only show rows that have a matching time entry
   const rows = useMemo(() => {
     const result: (FoodControlEntry & { key: string })[] = [];
 
-    requests.forEach((req) => {
+    registeredRequests.forEach((req) => {
       const dates = getDatesInRange(req.startDate, req.endDate);
       dates.forEach((date) => {
         // Alterado: Mostrar mesmo sem time entry para que o admin tome ação.
@@ -90,7 +97,7 @@ const FoodControlTab = ({
     });
 
     return result.sort((a, b) => a.date.localeCompare(b.date) || a.personId.localeCompare(b.personId));
-  }, [requests, timeEntries, foodControl]);
+  }, [registeredRequests, timeEntries, foodControl]);
 
   const updateUsed = (personId: string, jobId: string, date: string, field: "usedCafe" | "usedAlmoco" | "usedJanta", value: boolean) => {
     const row = rows.find((r) => r.personId === personId && r.jobId === jobId && r.date === date);
