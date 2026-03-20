@@ -170,27 +170,42 @@ export function calculateDayDiscount(
   const dayMeals = req.dailyOverrides?.[date] ?? req.meals;
   if (!Array.isArray(dayMeals)) return { discountCafe, discountAlmoco, discountJanta, total: 0, reason: "" };
 
-  const hasHours = entry ? calcTotalMinutes(entry) > 0 : false;
-  // Evaluate "past" based on local ISO date compare "YYYY-MM-DD"
   const localToday = new Date().toISOString().split("T")[0];
   const isPast = date < localToday;
+  const hasHours = entry && calcTotalMinutes(entry) > 0;
 
-  if (!hasHours && isPast) {
-    if (dayMeals.includes("cafe")) discountCafe = refCafe;
-    if (dayMeals.includes("almoco")) discountAlmoco = refAlmoco;
-    if (dayMeals.includes("janta")) discountJanta = refJanta;
-    reason = "Falta - sem registro de horas";
-  } else if (hasHours && entry) {
-    const firstEntry = getFirstEntryTime(entry);
-    if (firstEntry && firstEntry.includes(":")) {
-      const [eh] = firstEntry.split(":").map(Number);
-      if (dayMeals.includes("cafe") && eh > 8) {
-        discountCafe = refCafe;
-        reason = `Entrada às ${firstEntry} - café não utilizado`;
+  // Só aplicamos desconto se for um dia no passado (falta confirmada) ou se já existir algum registro de horas.
+  if (isPast || hasHours) {
+    let usedCafe = false;
+    let usedAlmoco = false;
+    let usedJanta = false;
+
+    if (hasHours && entry) {
+       const u = determineMealsUsed(entry);
+       usedCafe = u.cafe;
+       usedAlmoco = u.almoco;
+       usedJanta = u.janta;
+    }
+
+    if (dayMeals.includes("cafe") && !usedCafe) discountCafe = refCafe;
+    if (dayMeals.includes("almoco") && !usedAlmoco) discountAlmoco = refAlmoco;
+    if (dayMeals.includes("janta") && !usedJanta) discountJanta = refJanta;
+
+    if (!hasHours) {
+      reason = "Falta - sem registro de horas";
+    } else {
+      const misses = [];
+      if (discountCafe > 0) misses.push("café");
+      if (discountAlmoco > 0) misses.push("almoço");
+      if (discountJanta > 0) misses.push("janta");
+
+      if (misses.length > 0) {
+        reason = `Horários divergentes para: ${misses.join(", ")}`;
       }
     }
   }
 
+  // Se tem controle manual (Food Control), ele se sobrepõe
   if (fc) {
     if (dayMeals.includes("cafe") && !fc.usedCafe) discountCafe = refCafe;
     else if (dayMeals.includes("cafe") && fc.usedCafe) discountCafe = 0;
@@ -201,7 +216,7 @@ export function calculateDayDiscount(
     if (dayMeals.includes("janta") && !fc.usedJanta) discountJanta = refJanta;
     else if (dayMeals.includes("janta") && fc.usedJanta) discountJanta = 0;
 
-    if (!reason) reason = "Ajuste via controle de alimentação";
+    reason = "Ajuste via controle de alimentação (" + (fc.usedCafe || fc.usedAlmoco || fc.usedJanta ? "consumiu pacial" : "não consumiu") + ")";
   }
 
   const total = discountCafe + discountAlmoco + discountJanta;
