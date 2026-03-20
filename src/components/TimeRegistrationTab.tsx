@@ -28,7 +28,7 @@ const emptyEntry = (personId: string, jobId: string, date: string): TimeEntry =>
 
 interface TimeRegistrationTabProps {
   entries: TimeEntry[];
-  setEntries: React.Dispatch<React.SetStateAction<TimeEntry[]>>;
+  setEntries?: React.Dispatch<React.SetStateAction<TimeEntry[]>>;
   people: Person[];
   jobs: Job[];
   onUpdateEntry?: (entry: TimeEntry) => void;
@@ -68,7 +68,7 @@ const TimeRegistrationTab = ({ entries, setEntries, people, jobs, onUpdateEntry,
   const removeEntry = (id: string) => {
     if (confirm("Deseja realmente apagar este registro de horas?")) {
       onRemoveEntry?.(id);
-      setEntries((prev) => prev.filter((e) => e.id !== id));
+      setEntries?.((prev) => prev.filter((e) => e.id !== id));
     }
   };
 

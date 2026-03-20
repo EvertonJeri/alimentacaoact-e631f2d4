@@ -248,7 +248,20 @@ export function useDatabase() {
         .eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ["time_entries"] });
+      const previous = queryClient.getQueryData(["time_entries"]);
+      queryClient.setQueryData(["time_entries"], (old: any) => 
+        (old || []).filter((e: any) => e.id !== id)
+      );
+      return { previous };
+    },
+    onError: (err, id, context: any) => {
+      if (context?.previous) {
+        queryClient.setQueryData(["time_entries"], context.previous);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["time_entries"] });
     },
   });

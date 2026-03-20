@@ -99,12 +99,10 @@ const Index = () => {
       case "horas":
         return (
           <TimeRegistrationTab
+            {...commonProps}
             entries={timeEntriesData}
-            setEntries={() => {}}
             onUpdateEntry={(entry) => updateTimeEntry.mutate(entry)}
             onRemoveEntry={(id) => removeTimeEntry.mutate(id)}
-            people={peopleData}
-            jobs={jobsData}
           />
         );
       case "refeicoes":
