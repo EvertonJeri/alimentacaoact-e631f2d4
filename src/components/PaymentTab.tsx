@@ -115,7 +115,9 @@ const PaymentTab = ({
     let total = 0;
     dates.forEach((date) => {
       const dayMeals = req.dailyOverrides?.[date] ?? req.meals;
-      dayMeals.forEach((m) => { total += getMealValue(m, date, person); });
+      if (Array.isArray(dayMeals)) {
+        dayMeals.forEach((m) => { total += getMealValue(m, date, person); });
+      }
     });
     return total;
   };
