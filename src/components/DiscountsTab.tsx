@@ -58,15 +58,9 @@ const DiscountsTab = ({
   const getPersonName = (id: string) => people.find((p) => p.id === id)?.name || "—";
   const getJobName = (id: string) => jobs.find((j) => j.id === id)?.name || "—";
 
-  // Only consider requests with time entries registered (like PaymentTab)
-  const registeredRequests = useMemo(() => {
-    return requests.filter((req) => {
-      const dates = getDatesInRange(req.startDate, req.endDate);
-      return dates.some((date) =>
-        timeEntries.some((e) => e.personId === req.personId && e.jobId === req.jobId && e.date === date)
-      );
-    });
-  }, [requests, timeEntries]);
+  // Módulo alterado para não filtrar mais por time entries, de modo que pedidos de refeições
+  // atuais e futuros sejam contabilizados na avaliação de débitos/créditos ou visualizados.
+  const registeredRequests = requests;
 
   const discounts = useMemo(() => {
     const rows: DiscountRow[] = [];

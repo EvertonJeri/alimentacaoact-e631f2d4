@@ -47,14 +47,7 @@ const PaymentTab = ({
   const getPersonName = (id: string) => people.find((p) => p.id === id)?.name || "—";
   const getJobName = (id: string) => jobs.find((j) => j.id === id)?.name || "—";
 
-  const registeredRequests = useMemo(() => {
-    return requests.filter((req) => {
-      const dates = getDatesInRange(req.startDate, req.endDate);
-      return dates.some((date) =>
-        timeEntries.some((e) => e.personId === req.personId && e.jobId === req.jobId && e.date === date)
-      );
-    });
-  }, [requests, timeEntries]);
+  const registeredRequests = requests;
 
   const filteredRequests = filterJob === "all"
     ? registeredRequests

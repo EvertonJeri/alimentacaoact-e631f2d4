@@ -52,11 +52,10 @@ const FoodControlTab = ({
     requests.forEach((req) => {
       const dates = getDatesInRange(req.startDate, req.endDate);
       dates.forEach((date) => {
-        // Only include if there's a time entry for this person/job/date
+        // Alterado: Mostrar mesmo sem time entry para que o admin tome ação.
         const entry = timeEntries.find(
           (e) => e.personId === req.personId && e.jobId === req.jobId && e.date === date
         );
-        if (!entry) return;
 
         const key = `${req.personId}-${req.jobId}-${date}`;
         const existing = foodControl.find(
@@ -66,8 +65,13 @@ const FoodControlTab = ({
         if (existing) {
           result.push({ ...existing, key });
         } else {
-          const used = determineMealsUsed(entry);
+          let used = { cafe: false, almoco: false, janta: false };
+          if (entry) {
+            used = determineMealsUsed(entry);
+          }
           const dayMeals = req.dailyOverrides?.[date] ?? req.meals;
+
+          if (!Array.isArray(dayMeals)) return;
 
           result.push({
             key,
