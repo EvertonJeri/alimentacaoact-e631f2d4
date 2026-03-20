@@ -61,6 +61,11 @@ const Index = () => {
   const discountConfirmationsData = useMemo(() => discountConfirmations.data || [], [discountConfirmations.data]);
   const paymentConfirmationsData = useMemo(() => paymentConfirmations.data || [], [paymentConfirmations.data]);
 
+  const allConfirmations = useMemo(() => [
+    ...(discountConfirmations.data || []),
+    ...(paymentConfirmations.data || [])
+  ], [discountConfirmations.data, paymentConfirmations.data]);
+
   if (isLoading) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-background">
@@ -87,35 +92,26 @@ const Index = () => {
   }
 
   const renderContent = () => {
-    const allConfirmations = useMemo(() => [
-      ...(discountConfirmations.data || []),
-      ...(paymentConfirmations.data || [])
-    ], [discountConfirmations.data, paymentConfirmations.data]);
-
-    const commonProps = {
-      people: peopleData,
-      jobs: jobsData,
-      requests: mealRequestsData,
-      timeEntries: timeEntriesData,
-      foodControl: foodControlData,
-      confirmations: allConfirmations,
-    };
-
     switch (activePage) {
       case "horas":
         return (
           <TimeRegistrationTab
-            {...commonProps}
             entries={timeEntriesData}
             onUpdateEntry={(entry) => updateTimeEntry.mutate(entry)}
             onRemoveEntry={(id) => removeTimeEntry.mutate(id)}
+            people={peopleData}
+            jobs={jobsData}
           />
         );
       case "refeicoes":
         return (
           <MealRequestTab
-            {...commonProps}
-            confirmations={discountConfirmationsData}
+            people={peopleData}
+            jobs={jobsData}
+            requests={mealRequestsData}
+            timeEntries={timeEntriesData}
+            foodControl={foodControlData}
+            confirmations={allConfirmations}
             onUpdateRequest={(req) => updateMealRequest.mutate(req)}
             onRemoveRequest={(id) => removeMealRequest.mutate(id)}
             onUpdateTimeEntry={(entry) => updateTimeEntry.mutate(entry)}
@@ -124,8 +120,12 @@ const Index = () => {
       case "pagamento":
         return (
           <PaymentTab
-            {...commonProps}
-            confirmations={[...paymentConfirmationsData, ...discountConfirmationsData]}
+            people={peopleData}
+            jobs={jobsData}
+            requests={mealRequestsData}
+            timeEntries={timeEntriesData}
+            foodControl={foodControlData}
+            confirmations={allConfirmations}
             onUpdateConfirmation={(conf) => updatePaymentConfirmation.mutate(conf)}
             onRemoveConfirmation={(id) => removePaymentConfirmation.mutate(id)}
             onRemoveRequest={(id) => removeMealRequest.mutate(id)}
@@ -133,20 +133,35 @@ const Index = () => {
           />
         );
       case "extrato":
-        return <StatementTab {...commonProps} />;
+        return (
+          <StatementTab 
+            people={peopleData}
+            jobs={jobsData}
+            requests={mealRequestsData}
+            timeEntries={timeEntriesData}
+            foodControl={foodControlData}
+          />
+        );
       case "controle":
         return (
           <FoodControlTab
-            {...commonProps}
+            people={peopleData}
+            jobs={jobsData}
+            requests={mealRequestsData}
+            timeEntries={timeEntriesData}
+            foodControl={foodControlData}
             onUpdateEntry={(entry) => updateFoodControl.mutate(entry)}
-            setFoodControl={() => {}} 
           />
         );
       case "descontos":
         return (
-          <DiscountsTab
-            {...commonProps}
-            confirmations={discountConfirmationsData}
+          <DiscountsTab 
+            people={peopleData}
+            jobs={jobsData}
+            requests={mealRequestsData}
+            timeEntries={timeEntriesData}
+            foodControl={foodControlData}
+            confirmations={allConfirmations}
             setConfirmations={() => {}}
             onUpdateConfirmation={(conf) => updateDiscountConfirmation.mutate(conf)}
           />

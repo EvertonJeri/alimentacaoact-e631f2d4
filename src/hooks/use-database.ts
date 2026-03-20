@@ -141,7 +141,7 @@ export function useDatabase() {
 
       const { error } = await supabase
         .from("food_control")
-        .upsert(upserts, { onConflict: "person_id,job_id,date,meal_type" });
+        .upsert(upserts); // Usar upsert padrão sem onConflict explícito se estiver falhando no build
       
       if (error) throw error;
     },
