@@ -194,13 +194,13 @@ const FoodControlTab = ({
                   <td className="px-3 py-2 tabular-nums text-muted-foreground">{row.date?.includes("-") ? row.date.split("-").reverse().join("/") : row.date || "—"}</td>
                   
                   <td className="text-center px-1 py-2">
-                    {row.requestedCafe ? <Badge variant="secondary" className="text-2xs opacity-60">✓</Badge> : <span className="text-muted-foreground/30">—</span>}
+                    {row.requestedCafe ? <Badge className="text-2xs opacity-60">✓</Badge> : <span className="text-muted-foreground/30">—</span>}
                   </td>
                   <td className="text-center px-1 py-2">
-                    {row.requestedAlmoco ? <Badge variant="secondary" className="text-2xs opacity-60">✓</Badge> : <span className="text-muted-foreground/30">—</span>}
+                    {row.requestedAlmoco ? <Badge className="text-2xs opacity-60">✓</Badge> : <span className="text-muted-foreground/30">—</span>}
                   </td>
                   <td className="text-center px-1 py-2">
-                    {row.requestedJanta ? <Badge variant="secondary" className="text-2xs opacity-60">✓</Badge> : <span className="text-muted-foreground/30">—</span>}
+                    {row.requestedJanta ? <Badge className="text-2xs opacity-60">✓</Badge> : <span className="text-muted-foreground/30">—</span>}
                   </td>
 
                   <td className="text-center px-1 py-4">
