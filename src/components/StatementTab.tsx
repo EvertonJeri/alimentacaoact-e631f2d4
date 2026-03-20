@@ -28,15 +28,11 @@ const StatementTab = ({ people, jobs, requests, timeEntries, foodControl }: Stat
   const [selectedJob, setSelectedJob] = useState("all");
   const statementRef = useRef<HTMLDivElement>(null);
 
-  // Only consider requests that have time entries registered
-  const registeredRequests = useMemo(() => {
-    return requests.filter((req) => {
-      const dates = getDatesInRange(req.startDate, req.endDate);
-      return dates.some((date) =>
-        timeEntries.some((e) => e.personId === req.personId && e.jobId === req.jobId && e.date === date)
-      );
-    });
-  }, [requests, timeEntries]);
+  // Mostra todas as solicitações, independente de timeEntry já registrada
+  const registeredRequests = requests.filter((req) => {
+    const dates = getDatesInRange(req.startDate, req.endDate);
+    return dates.some((date) => timeEntries.some((e) => e.personId === req.personId && e.date === date));
+  });
 
   const filteredRequests = useMemo(() => {
     return selectedJob === "all" ? registeredRequests : registeredRequests.filter(r => r.jobId === selectedJob);
@@ -62,11 +58,12 @@ const StatementTab = ({ people, jobs, requests, timeEntries, foodControl }: Stat
       const dates = getDatesInRange(req.startDate, req.endDate);
 
       dates.forEach(date => {
-        // Only process dates with time entries
-        const hasEntry = timeEntries.some(e => e.personId === req.personId && e.jobId === req.jobId && e.date === date);
-        if (!hasEntry) return;
+        // Removed haveEntry check so we track requested meals regardless of entry logic
+        // This makes sure statements always show what was actually ordered
+        // Future modifications can be done directly by the admin in Food Control if meals weren't used
 
         const reqMeals = req.dailyOverrides?.[date] ?? req.meals;
+        if (!Array.isArray(reqMeals)) return;
         const fc = foodControl.find(f => f.personId === req.personId && f.jobId === req.jobId && f.date === date);
         
         reqMeals.forEach(m => {

@@ -27,6 +27,7 @@ interface PaymentTabProps {
   foodControl: FoodControlEntry[];
   confirmations: (DiscountConfirmation | PaymentConfirmation)[];
   onUpdateConfirmation: (conf: PaymentConfirmation) => void;
+  onUpdateDiscountConfirmation?: (conf: DiscountConfirmation) => void;
   onRemoveConfirmation?: (id: string) => void;
 }
 
@@ -38,6 +39,7 @@ const PaymentTab = ({
   foodControl,
   confirmations,
   onUpdateConfirmation,
+  onUpdateDiscountConfirmation,
   onRemoveConfirmation,
 }: PaymentTabProps) => {
 
@@ -47,14 +49,10 @@ const PaymentTab = ({
   const getPersonName = (id: string) => people.find((p) => p.id === id)?.name || "—";
   const getJobName = (id: string) => jobs.find((j) => j.id === id)?.name || "—";
 
-  const registeredRequests = useMemo(() => {
-    return requests.filter((req) => {
-      const dates = getDatesInRange(req.startDate, req.endDate);
-      return dates.some((date) =>
-        timeEntries.some((e) => e.personId === req.personId && e.jobId === req.jobId && e.date === date)
-      );
-    });
-  }, [requests, timeEntries]);
+  const registeredRequests = requests.filter((req) => {
+    const dates = getDatesInRange(req.startDate, req.endDate);
+    return dates.some((date) => timeEntries.some((e) => e.personId === req.personId && e.date === date));
+  });
 
   const filteredRequests = filterJob === "all"
     ? registeredRequests
@@ -89,6 +87,16 @@ const PaymentTab = ({
     if (type === "request") {
       const req = requests.find(r => r.id === id);
       if (req) {
+        // Evaluate deduction auto-abatimento
+        const personBalance = calculatePersonBalance(req.personId, requests, foodControl, confirmations, people, timeEntries);
+        if (personBalance < 0 && onUpdateDiscountConfirmation) {
+          onUpdateDiscountConfirmation({
+            personId: req.personId,
+            confirmed: true,
+            paymentDate
+          });
+        }
+
         const jobReqs = registeredRequests.filter(r => r.jobId === req.jobId);
         const otherReqsConfirmed = jobReqs.every(r => r.id === id || getConfirmation(r.id)?.confirmed);
         if (otherReqsConfirmed) {
@@ -115,7 +123,9 @@ const PaymentTab = ({
     let total = 0;
     dates.forEach((date) => {
       const dayMeals = req.dailyOverrides?.[date] ?? req.meals;
-      dayMeals.forEach((m) => { total += getMealValue(m, date, person); });
+      if (Array.isArray(dayMeals)) {
+        dayMeals.forEach((m) => { total += getMealValue(m, date, person); });
+      }
     });
     return total;
   };
@@ -195,7 +205,9 @@ const PaymentTab = ({
                   const isPaid = conf?.confirmed;
                   const paymentDate = conf?.paymentDate || new Date().toISOString().split("T")[0];
                   const total = calcRequestTotal(req);
-                  const personBalance = calculatePersonBalance(req.personId, requests, foodControl, confirmations, people);
+                  const personBalance = calculatePersonBalance(req.personId, requests, foodControl, confirmations, people, timeEntries);
+                  const deduction = personBalance < 0 ? personBalance : 0;
+                  const finalTotal = Math.max(0, total + deduction);
 
                   return (
                     <div key={req.id} className="bg-background hover:bg-muted/5 transition-colors">
@@ -227,7 +239,12 @@ const PaymentTab = ({
                         <div className="flex items-center gap-6">
                           <div className="text-right">
                             <p className="text-2xs uppercase tracking-wider font-semibold text-muted-foreground mb-0.5">Total</p>
-                            <p className="text-sm font-bold tabular-nums">R$ {total.toFixed(2)}</p>
+                            <div className="flex flex-col items-end">
+                              {deduction < 0 && (
+                                <span className="text-[10px] text-destructive line-through decoration-destructive/50">R$ {total.toFixed(2)}</span>
+                              )}
+                              <p className="text-sm font-bold tabular-nums">R$ {finalTotal.toFixed(2)}</p>
+                            </div>
                           </div>
                           
                           <div className="flex items-center gap-3">
@@ -281,7 +298,7 @@ const PaymentTab = ({
                              )}
                              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-widest">Detalhamento da Solicitação</p>
                              <div className="flex flex-wrap gap-2">
-                               {req.meals.map(m => (
+                               {(req.meals || []).map(m => (
                                  <Badge key={m} variant="outline" className="capitalize text-[10px]">{MEAL_LABELS[m]}</Badge>
                                ))}
                              </div>

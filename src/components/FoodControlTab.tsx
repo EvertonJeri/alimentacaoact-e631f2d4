@@ -44,19 +44,25 @@ const FoodControlTab = ({
   const getPersonName = (id: string) => people.find((p) => p.id === id)?.name || "—";
   const getJobName = (id: string) => jobs.find((j) => j.id === id)?.name || "—";
 
+  const registeredRequests = useMemo(() => {
+    return requests.filter((req) => {
+      const dates = getDatesInRange(req.startDate, req.endDate);
+      return dates.some((date) => timeEntries.some((e) => e.personId === req.personId && e.date === date));
+    });
+  }, [requests, timeEntries]);
+
   // Build rows from requests, merging with foodControl overrides
   // Only show rows that have a matching time entry
   const rows = useMemo(() => {
     const result: (FoodControlEntry & { key: string })[] = [];
 
-    requests.forEach((req) => {
+    registeredRequests.forEach((req) => {
       const dates = getDatesInRange(req.startDate, req.endDate);
       dates.forEach((date) => {
-        // Only include if there's a time entry for this person/job/date
+        // Alterado: Mostrar mesmo sem time entry para que o admin tome ação.
         const entry = timeEntries.find(
           (e) => e.personId === req.personId && e.jobId === req.jobId && e.date === date
         );
-        if (!entry) return;
 
         const key = `${req.personId}-${req.jobId}-${date}`;
         const existing = foodControl.find(
@@ -66,8 +72,13 @@ const FoodControlTab = ({
         if (existing) {
           result.push({ ...existing, key });
         } else {
-          const used = determineMealsUsed(entry);
+          let used = { cafe: false, almoco: false, janta: false };
+          if (entry) {
+            used = determineMealsUsed(entry);
+          }
           const dayMeals = req.dailyOverrides?.[date] ?? req.meals;
+
+          if (!Array.isArray(dayMeals)) return;
 
           result.push({
             key,
@@ -86,7 +97,7 @@ const FoodControlTab = ({
     });
 
     return result.sort((a, b) => a.date.localeCompare(b.date) || a.personId.localeCompare(b.personId));
-  }, [requests, timeEntries, foodControl]);
+  }, [registeredRequests, timeEntries, foodControl]);
 
   const updateUsed = (personId: string, jobId: string, date: string, field: "usedCafe" | "usedAlmoco" | "usedJanta", value: boolean) => {
     const row = rows.find((r) => r.personId === personId && r.jobId === jobId && r.date === date);
@@ -121,15 +132,15 @@ const FoodControlTab = ({
     let balance = 0;
     const person = people.find((p) => p.id === row.personId);
     
-    // Se foi solicitado mas NÃO foi utilizado -> Saldo Negativo (Desconto)
-    if (row.requestedCafe && !row.usedCafe) balance -= getMealValue("cafe", row.date, person);
-    if (row.requestedAlmoco && !row.usedAlmoco) balance -= getMealValue("almoco", row.date, person);
-    if (row.requestedJanta && !row.usedJanta) balance -= getMealValue("janta", row.date, person);
+    // Se foi solicitado mas NÃO foi utilizado -> Crédito para o funcionário (Positivo)
+    if (row.requestedCafe && !row.usedCafe) balance += getMealValue("cafe", row.date, person);
+    if (row.requestedAlmoco && !row.usedAlmoco) balance += getMealValue("almoco", row.date, person);
+    if (row.requestedJanta && !row.usedJanta) balance += getMealValue("janta", row.date, person);
 
-    // Se NÃO foi solicitado mas FOI utilizado -> Saldo Positivo (Cobrança extra)
-    if (row.usedCafe && !row.requestedCafe) balance += getMealValue("cafe", row.date, person);
-    if (row.usedAlmoco && !row.requestedAlmoco) balance += getMealValue("almoco", row.date, person);
-    if (row.usedJanta && !row.requestedJanta) balance += getMealValue("janta", row.date, person);
+    // Se NÃO foi solicitado mas FOI utilizado -> Débito do funcionário (Negativo)
+    if (row.usedCafe && !row.requestedCafe) balance -= getMealValue("cafe", row.date, person);
+    if (row.usedAlmoco && !row.requestedAlmoco) balance -= getMealValue("almoco", row.date, person);
+    if (row.usedJanta && !row.requestedJanta) balance -= getMealValue("janta", row.date, person);
     
     return balance;
   };

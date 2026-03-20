@@ -63,7 +63,7 @@ export function SearchableSelect({
           <CommandList>
             <CommandEmpty>{emptyMessage}</CommandEmpty>
             <CommandGroup>
-              {options.map((option) => (
+              {(options || []).map((option) => (
                 <CommandItem
                   key={option.value}
                   value={option.label}

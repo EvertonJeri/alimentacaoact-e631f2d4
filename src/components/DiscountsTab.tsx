@@ -19,6 +19,7 @@ import {
   calcTotalMinutes,
   getFirstEntryTime,
   getMealValue,
+  calculateDayDiscount,
 } from "@/lib/types";
 
 interface DiscountsTabProps {
@@ -58,15 +59,12 @@ const DiscountsTab = ({
   const getPersonName = (id: string) => people.find((p) => p.id === id)?.name || "—";
   const getJobName = (id: string) => jobs.find((j) => j.id === id)?.name || "—";
 
-  // Only consider requests with time entries registered (like PaymentTab)
-  const registeredRequests = useMemo(() => {
-    return requests.filter((req) => {
-      const dates = getDatesInRange(req.startDate, req.endDate);
-      return dates.some((date) =>
-        timeEntries.some((e) => e.personId === req.personId && e.jobId === req.jobId && e.date === date)
-      );
-    });
-  }, [requests, timeEntries]);
+  // Filtra as solicitações garantindo que elas tenham saído do estágio "Draft" / "Apenas Solicitado"
+  // antes de acusar o indivíduo de fraude e devoluções.
+  const registeredRequests = requests.filter((req) => {
+    const dates = getDatesInRange(req.startDate, req.endDate);
+    return dates.some((date) => timeEntries.some((e) => e.personId === req.personId && e.date === date));
+  });
 
   const discounts = useMemo(() => {
     const rows: DiscountRow[] = [];
@@ -77,65 +75,17 @@ const DiscountsTab = ({
         const entry = timeEntries.find(
           (e) => e.personId === req.personId && e.jobId === req.jobId && e.date === date
         );
-        // Only show discounts for days with time entries registered
+        // Só há desconto viável se houver ou um TimeEntry em branco, ou em dias falhos
         if (!entry) return;
-        const hasHours = calcTotalMinutes(entry) > 0;
 
-        // Use daily overrides if they exist for this date, otherwise use original meals
-        const dayMeals = req.dailyOverrides?.[date] ?? req.meals;
-
-        // Check food control overrides
         const fc = foodControl.find(
           (f) => f.personId === req.personId && f.jobId === req.jobId && f.date === date
         );
 
-        let discountCafe = 0;
-        let discountAlmoco = 0;
-        let discountJanta = 0;
-        let reason = "";
-
-        const person = people.find((p) => p.id === req.personId);
-        const refCafe = getMealValue("cafe", date, person);
-        const refAlmoco = getMealValue("almoco", date, person);
-        const refJanta = getMealValue("janta", date, person);
-
-        if (!hasHours) {
-          // Falta total - desconta tudo que foi solicitado NESSE DIA
-          if (dayMeals.includes("cafe")) discountCafe = refCafe;
-          if (dayMeals.includes("almoco")) discountAlmoco = refAlmoco;
-          if (dayMeals.includes("janta")) discountJanta = refJanta;
-          reason = "Falta - sem registro de horas";
-        } else if (entry) {
-          // Partial - check time-based rules
-          const firstEntry = getFirstEntryTime(entry);
-          if (firstEntry?.includes(":")) {
-            const [eh] = firstEntry.split(":").map(Number);
-            // If entered after 8:00 and cafe was requested for this day, discount cafe
-            if (dayMeals.includes("cafe") && eh > 8) {
-              discountCafe = refCafe;
-              reason = `Entrada às ${firstEntry} - café não utilizado`;
-            }
-          }
-        }
-
-        // Apply food control overrides: if fc says "not used", it's a discount
-        // Only apply discount if the meal was actually in the day's meal list
-        if (fc) {
-          if (dayMeals.includes("cafe") && !fc.usedCafe) discountCafe = refCafe;
-          else if (dayMeals.includes("cafe") && fc.usedCafe) discountCafe = 0;
-
-          if (dayMeals.includes("almoco") && !fc.usedAlmoco) discountAlmoco = refAlmoco;
-          else if (dayMeals.includes("almoco") && fc.usedAlmoco) discountAlmoco = 0;
-
-          if (dayMeals.includes("janta") && !fc.usedJanta) discountJanta = refJanta;
-          else if (dayMeals.includes("janta") && fc.usedJanta) discountJanta = 0;
-
-          if (!reason) reason = "Ajuste via controle de alimentação";
-        }
-
-        const total = discountCafe + discountAlmoco + discountJanta;
-        if (total > 0) {
-          rows.push({ personId: req.personId, jobId: req.jobId, date, discountCafe, discountAlmoco, discountJanta, total, reason });
+        const dayCalc = calculateDayDiscount(req, date, entry, fc, people);
+        
+        if (dayCalc.total > 0) {
+          rows.push({ personId: req.personId, jobId: req.jobId, date, ...dayCalc });
         }
       });
     });

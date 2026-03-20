@@ -3,7 +3,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SearchableSelect } from "@/components/ui/searchable-select";
-import { Plus, Trash2, Filter } from "lucide-react";
+import { Plus, Trash2, Filter, Download } from "lucide-react";
+import * as XLSX from "xlsx";
 import {
   type Person,
   type Job,
@@ -82,6 +83,36 @@ const TimeRegistrationTab = ({ entries, setEntries, people, jobs, onUpdateEntry,
     if (filterDate && e.date !== filterDate) return false;
     return true;
   });
+
+  const exportToExcel = () => {
+    const wb = XLSX.utils.book_new();
+    const rows: (string | number)[][] = [
+      ["REGISTRO DE HORAS"],
+      [],
+      ["Pessoa", "Job", "Data", "Entrada 1", "Saída 1", "Entrada 2", "Saída 2", "Entrada 3", "Saída 3", "Total Horas"],
+    ];
+
+    filteredEntries.forEach((entry) => {
+      rows.push([
+        getPersonName(entry.personId),
+        getJobName(entry.jobId),
+        entry.date?.includes("-") ? entry.date.split("-").reverse().join("/") : entry.date || "—",
+        entry.entry1 || "—",
+        entry.exit1 || "—",
+        entry.entry2 || "—",
+        entry.exit2 || "—",
+        entry.entry3 || "—",
+        entry.exit3 || "—",
+        formatMinutes(calcTotalMinutes(entry)),
+      ]);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws["!cols"] = [{ wch: 25 }, { wch: 25 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 12 }];
+    XLSX.utils.book_append_sheet(wb, ws, "Horas");
+    XLSX.writeFile(wb, "Registro_de_Horas.xlsx");
+  };
+
 
   return (
     <div className="space-y-4">
@@ -167,6 +198,11 @@ const TimeRegistrationTab = ({ entries, setEntries, people, jobs, onUpdateEntry,
             className="h-8 text-xs tabular-nums"
           />
         </div>
+        <div className="flex-1"></div>
+        <Button onClick={exportToExcel} variant="outline" className="h-8 text-xs gap-1.5 shadow-sm">
+          <Download className="h-3.5 w-3.5" />
+          Exportar .xlsx
+        </Button>
       </div>
 
       {/* Table */}

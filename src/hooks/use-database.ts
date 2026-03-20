@@ -10,7 +10,7 @@ export function useDatabase() {
     queryFn: async () => {
       const { data, error } = await supabase.from("people").select("*").order("name");
       if (error) throw error;
-      return (data as any[]).map(p => ({
+      return (data || []).map(p => ({
         id: p.id,
         name: p.name,
         isRegistered: p.is_registered
@@ -32,7 +32,7 @@ export function useDatabase() {
     queryFn: async () => {
       const { data, error } = await supabase.from("time_entries").select("*");
       if (error) throw error;
-      return (data as any[]).map(e => ({
+      return (data || []).map(e => ({
         id: e.id,
         personId: e.person_id,
         jobId: e.job_id,
@@ -52,7 +52,7 @@ export function useDatabase() {
     queryFn: async () => {
       const { data, error } = await supabase.from("meal_requests").select("*");
       if (error) throw error;
-      return (data as any[]).map(req => ({
+      return (data || []).map(req => ({
         id: req.id,
         personId: req.person_id,
         jobId: req.job_id,
@@ -100,7 +100,7 @@ export function useDatabase() {
     queryFn: async () => {
       const { data, error } = await supabase.from("discount_confirmations").select("*");
       if (error) throw error;
-      return (data as any[]).map(c => ({
+      return (data || []).map(c => ({
         personId: c.person_id,
         confirmed: c.confirmed,
         paymentDate: c.payment_date
@@ -113,7 +113,7 @@ export function useDatabase() {
     queryFn: async () => {
       const { data, error } = await supabase.from("payment_confirmations").select("*");
       if (error) throw error;
-      return (data as any[]).map(c => ({
+      return (data || []).map(c => ({
         id: c.id,
         type: c.type,
         paymentDate: c.payment_date,
