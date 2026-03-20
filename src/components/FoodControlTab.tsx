@@ -24,7 +24,7 @@ interface FoodControlTabProps {
   requests: MealRequest[];
   timeEntries: TimeEntry[];
   foodControl: FoodControlEntry[];
-  setFoodControl: React.Dispatch<React.SetStateAction<FoodControlEntry[]>>;
+  setFoodControl?: React.Dispatch<React.SetStateAction<FoodControlEntry[]>>;
   onUpdateEntry?: (entry: FoodControlEntry) => void;
 }
 
@@ -47,7 +47,7 @@ const FoodControlTab = ({
   const registeredRequests = useMemo(() => {
     return requests.filter((req) => {
       const dates = getDatesInRange(req.startDate, req.endDate);
-      return dates.some((date) => timeEntries.some((e) => e.personId === req.personId && e.date === date));
+      return dates.some((date) => timeEntries.some((e) => e.personId === req.personId && e.jobId === req.jobId && e.date === date));
     });
   }, [requests, timeEntries]);
 
@@ -236,17 +236,29 @@ const FoodControlTab = ({
                     </td>
                     {/* Used columns - editable */}
                     <td className="text-center px-1 py-2">
-                      <Checkbox checked={row.usedCafe} onCheckedChange={(v) => updateUsed(row.personId, row.jobId, row.date, "usedCafe", !!v)} />
+                       <Checkbox 
+                        checked={row.usedCafe} 
+                        onCheckedChange={(v) => updateUsed(row.personId, row.jobId, row.date, "usedCafe", !!v)} 
+                        className="rounded-full data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+                      />
                     </td>
                     <td className="text-center px-1 py-2">
-                      <Checkbox checked={row.usedAlmoco} onCheckedChange={(v) => updateUsed(row.personId, row.jobId, row.date, "usedAlmoco", !!v)} />
+                      <Checkbox 
+                        checked={row.usedAlmoco} 
+                        onCheckedChange={(v) => updateUsed(row.personId, row.jobId, row.date, "usedAlmoco", !!v)} 
+                        className="rounded-full data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+                      />
                     </td>
                     <td className="text-center px-1 py-2">
-                      <Checkbox checked={row.usedJanta} onCheckedChange={(v) => updateUsed(row.personId, row.jobId, row.date, "usedJanta", !!v)} />
+                      <Checkbox 
+                        checked={row.usedJanta} 
+                        onCheckedChange={(v) => updateUsed(row.personId, row.jobId, row.date, "usedJanta", !!v)} 
+                        className="rounded-full data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+                      />
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums font-semibold">
                       {balance > 0 ? (
-                        <span className="text-primary">+{balance.toFixed(2)}</span>
+                        <span className="text-green-600">+{balance.toFixed(2)}</span>
                       ) : balance < 0 ? (
                         <span className="text-destructive">{balance.toFixed(2)}</span>
                       ) : (

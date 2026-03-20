@@ -134,8 +134,8 @@ const Index = () => {
         return (
           <FoodControlTab
             {...commonProps}
-            setFoodControl={() => {}}
             onUpdateEntry={(entry) => updateFoodControl.mutate(entry)}
+            setFoodControl={() => {}} 
           />
         );
       case "descontos":
