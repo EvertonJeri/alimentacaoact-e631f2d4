@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Plus, Trash2, AlertCircle } from "lucide-react";
+import { Plus, Trash2, AlertCircle, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +23,7 @@ import {
   type DiscountConfirmation,
   type PaymentConfirmation,
 } from "@/lib/types";
+import { toast } from "@/hooks/use-toast";
 
 interface MealRequestTabProps {
   people: Person[];
@@ -83,6 +84,54 @@ const MealRequestTab = ({
   const getJobName = (id: string) => jobs.find((j) => j.id === id)?.name || "—";
 
   const jobRequests = selectedJob ? requests.filter((r) => r.jobId === selectedJob) : requests;
+
+  const handleGenerateEntries = () => {
+    if (jobRequests.length === 0) return;
+    
+    const entriesToGenerate: TimeEntry[] = [];
+    let count = 0;
+
+    jobRequests.forEach((req) => {
+      if (!req.startDate || !req.endDate) return;
+      const dates = getDatesInRange(req.startDate, req.endDate);
+      
+      dates.forEach((date) => {
+        // Verifica se já existe uma entrada para esta pessoa, neste job e nesta data
+        const alreadyExists = timeEntries.some(
+          (entry) => entry.personId === req.personId && entry.jobId === req.jobId && entry.date === date
+        );
+
+        if (!alreadyExists) {
+          entriesToGenerate.push({
+            id: Math.random().toString(36).substr(2, 9),
+            personId: req.personId,
+            jobId: req.jobId,
+            date,
+            entry1: "",
+            exit1: "",
+            entry2: "",
+            exit2: "",
+            entry3: "",
+            exit3: "",
+          });
+          count++;
+        }
+      });
+    });
+
+    if (entriesToGenerate.length > 0) {
+      onGenerateEntries(entriesToGenerate);
+      toast({
+        title: "Sucesso",
+        description: `${count} registros de horas gerados e enviados para acompanhamento.`,
+      });
+    } else {
+      toast({
+        title: "Atenção",
+        description: "Todos os registros solicitados já existem na aba de horas.",
+      });
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -192,8 +241,21 @@ const MealRequestTab = ({
         </div>
       </div>
 
-      <div className="rounded-xl border border-border overflow-x-auto shadow-card">
-        <table className="w-full text-sm">
+      <div className="rounded-xl border border-border shadow-card overflow-hidden">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 border-b border-border bg-muted/10 gap-4">
+          <h3 className="text-sm font-semibold text-foreground">
+            {selectedJob ? "Solicitações do Job" : "Todas as Solicitações"}
+          </h3>
+          <Button 
+            onClick={handleGenerateEntries} 
+            disabled={jobRequests.length === 0} 
+            className="gap-2 bg-primary hover:bg-primary/90 w-full sm:w-auto"
+          >
+            <Send className="h-4 w-4" /> Enviar para registro
+          </Button>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
           <thead>
             <tr className="bg-muted/50 border-b border-border">
               <th className="text-left px-4 py-3 text-2xs uppercase tracking-wider font-medium text-muted-foreground">Pessoa</th>
@@ -249,6 +311,7 @@ const MealRequestTab = ({
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );
