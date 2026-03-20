@@ -171,9 +171,8 @@ const MealRequestSystem = ({
       </div>
 
       {/* FORMULÁRIO DE ADIÇÃO */}
-      {selectedJob && (
-        <div className="rounded-2xl border border-border p-6 bg-muted/10 shadow-lg space-y-6 ring-1 ring-primary/5">
-          <div className="flex items-center justify-between border-b border-border pb-4">
+      <div className={`rounded-2xl border border-border p-6 shadow-lg space-y-6 ring-1 ring-primary/5 transition-opacity ${!selectedJob ? 'bg-muted/5 opacity-80' : 'bg-muted/10'}`}>
+        <div className="flex items-center justify-between border-b border-border pb-4">
             <h2 className="text-sm font-black text-foreground uppercase tracking-widest">Registrar Novas Refeições</h2>
             <div className="flex items-center gap-2 text-2xs text-muted-foreground italic">
               <Calendar className="h-3 w-3" /> Configurando Job: {jName(selectedJob)}
@@ -243,12 +242,10 @@ const MealRequestSystem = ({
             </Button>
           </div>
         </div>
-      )}
 
       {/* LISTA COM EXPANSÃO */}
-      {selectedJob && (
-        <div className="rounded-2xl border border-border overflow-hidden bg-card shadow-card">
-          <div className="px-6 py-4 bg-muted/40 border-b border-border flex justify-between items-center">
+      <div className={`rounded-2xl border border-border overflow-hidden bg-card shadow-card transition-opacity ${!selectedJob ? 'opacity-80' : ''}`}>
+        <div className="px-6 py-4 bg-muted/40 border-b border-border flex justify-between items-center">
             <h3 className="font-black uppercase text-[10px] tracking-widest text-muted-foreground">Refeições Programadas</h3>
             <div className="flex gap-3 items-center">
               <span className="text-[9px] bg-primary/10 text-primary px-3 py-1 rounded-full font-black uppercase">{filtered.length} Ativos</span>
@@ -378,7 +375,6 @@ const MealRequestSystem = ({
             )}
           </div>
         </div>
-      )}
     </div>
   );
 };
