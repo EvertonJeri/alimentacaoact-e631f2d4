@@ -64,6 +64,22 @@ const MealRequestSystem = ({
 
   const handleAdd = () => {
     if (!selectedJob || !personId || !startDate || !endDate) return;
+
+    const person = people.find(p => p.id === personId);
+    const overrides: Record<string, MealType[]> = {};
+    const dates = getDatesInRange(startDate, endDate);
+    let hasOverride = false;
+
+    // Se é registrado e selecionou almoço, remove do solicitado de Seg a Sex
+    if (person?.isRegistered && meals.includes("almoco")) {
+      dates.forEach(date => {
+        if (!isWeekend(date)) {
+          overrides[date] = meals.filter(m => m !== "almoco");
+          hasOverride = true;
+        }
+      });
+    }
+
     const newRequest: MealRequest = {
       id: crypto.randomUUID(),
       personId,
@@ -71,7 +87,7 @@ const MealRequestSystem = ({
       startDate,
       endDate,
       meals,
-      dailyOverrides: {},
+      dailyOverrides: hasOverride ? overrides : {},
       location,
     };
     onUpdateRequest(newRequest);
@@ -344,18 +360,20 @@ const MealRequestSystem = ({
                                     </span>
                                   </div>
                                   {(["cafe", "almoco", "janta"] as MealType[]).map(meal => {
-                                    const isActive = activeMeals.includes(meal);
                                     const val = getMealValue(meal, date, person);
                                     const isFree = meal === "almoco" && person?.isRegistered && !weekend;
+                                    const isActive = isFree ? false : activeMeals.includes(meal);
+                                    
                                     return (
                                       <div key={meal} className="flex flex-col items-center gap-0.5">
                                         <Checkbox
                                           checked={isActive}
                                           onCheckedChange={() => toggleDayMeal(req, date, meal)}
+                                          disabled={isFree}
                                           className="h-5 w-5"
                                         />
                                         <span className={`text-[9px] tabular-nums ${isFree ? 'text-primary font-bold' : 'text-muted-foreground'}`}>
-                                          {isActive ? (isFree ? 'Grátis' : `R$${val.toFixed(0)}`) : '—'}
+                                          {isFree ? 'N/A' : (isActive ? `R$${val.toFixed(0)}` : '—')}
                                         </span>
                                       </div>
                                     );
