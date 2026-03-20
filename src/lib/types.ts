@@ -242,9 +242,6 @@ export function calculatePersonBalance(
   personRequests.forEach(req => {
     const dates = getDatesInRange(req.startDate, req.endDate);
     dates.forEach(date => {
-      // Abate-se dívidas apenas PÓS-PAGAMENTO ativo se existir confirmação limpa.
-      if (paymentDate && date <= paymentDate) return;
-
       const entry = timeEntries.find(e => e.personId === personId && e.jobId === req.jobId && e.date === date);
       const fc = foodControl.find(f => f.personId === personId && f.jobId === req.jobId && f.date === date);
 

@@ -145,7 +145,21 @@ export function useDatabase() {
       
       if (error) throw error;
     },
-    onSuccess: () => {
+    onMutate: async (newEntry) => {
+      await queryClient.cancelQueries({ queryKey: ["food_control"] });
+      const previous = queryClient.getQueryData(["food_control"]);
+      queryClient.setQueryData(["food_control"], (old: any[]) => {
+        const other = (old || []).filter(fc => !(fc.personId === newEntry.personId && fc.jobId === newEntry.jobId && fc.date === newEntry.date));
+        return [...other, newEntry];
+      });
+      return { previous };
+    },
+    onError: (err, newEntry, context: any) => {
+      if (context?.previous) {
+        queryClient.setQueryData(["food_control"], context.previous);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["food_control"] });
     },
   });

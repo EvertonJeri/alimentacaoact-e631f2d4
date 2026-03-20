@@ -51,15 +51,12 @@ const FoodControlTab = ({
     });
   }, [requests, timeEntries]);
 
-  // Build rows from requests, merging with foodControl overrides
-  // Only show rows that have a matching time entry
   const rows = useMemo(() => {
     const result: (FoodControlEntry & { key: string })[] = [];
 
     registeredRequests.forEach((req) => {
       const dates = getDatesInRange(req.startDate, req.endDate);
       dates.forEach((date) => {
-        // Alterado: Mostrar mesmo sem time entry para que o admin tome ação.
         const entry = timeEntries.find(
           (e) => e.personId === req.personId && e.jobId === req.jobId && e.date === date
         );
@@ -76,7 +73,8 @@ const FoodControlTab = ({
           if (entry) {
             used = determineMealsUsed(entry);
           }
-          const dayMeals = req.dailyOverrides?.[date] ?? req.meals;
+          const dayOverrides = req.dailyOverrides as Record<string, string[]> | undefined;
+          const dayMeals = dayOverrides?.[date] ?? req.meals;
 
           if (!Array.isArray(dayMeals)) return;
 
@@ -114,8 +112,7 @@ const FoodControlTab = ({
     };
 
     onUpdateEntry?.(updated);
-
-    setFoodControl((prev) => {
+    setFoodControl?.((prev) => {
       const idx = prev.findIndex((fc) => fc.personId === personId && fc.jobId === jobId && fc.date === date);
       if (idx >= 0) {
         const copy = [...prev];
@@ -126,38 +123,16 @@ const FoodControlTab = ({
     });
   };
 
-
-  // Calculate balance per row
-  const getBalance = (row: FoodControlEntry & { key: string }) => {
-    let balance = 0;
-    const person = people.find((p) => p.id === row.personId);
-    
-    // Se foi solicitado mas NÃO foi utilizado -> Crédito para o funcionário (Positivo)
-    if (row.requestedCafe && !row.usedCafe) balance += getMealValue("cafe", row.date, person);
-    if (row.requestedAlmoco && !row.usedAlmoco) balance += getMealValue("almoco", row.date, person);
-    if (row.requestedJanta && !row.usedJanta) balance += getMealValue("janta", row.date, person);
-
-    // Se NÃO foi solicitado mas FOI utilizado -> Débito do funcionário (Negativo)
-    if (row.usedCafe && !row.requestedCafe) balance -= getMealValue("cafe", row.date, person);
-    if (row.usedAlmoco && !row.requestedAlmoco) balance -= getMealValue("almoco", row.date, person);
-    if (row.usedJanta && !row.requestedJanta) balance -= getMealValue("janta", row.date, person);
-    
-    return balance;
-  };
-
-
   const filteredRows = rows.filter((r) => {
     if (filterJob !== "all" && r.jobId !== filterJob) return false;
     if (filterDate && r.date !== filterDate) return false;
     return true;
   });
 
-  const totalBalance = filteredRows.reduce((sum, r) => sum + getBalance(r), 0);
-
   return (
     <div className="space-y-4">
       <p className="text-xs text-muted-foreground">
-        Controle de alimentação: compare o que foi solicitado com o que foi efetivamente utilizado. Edite a coluna "Utilizado" conforme necessário. O saldo mostra valores adicionais a depositar.
+        Controle de alimentação: compare o que foi solicitado com o que foi efetivamente utilizado. Marque os círculos verdes para uso real.
       </p>
 
       {/* Filters */}
@@ -196,7 +171,6 @@ const FoodControlTab = ({
               <th className="text-left px-3 py-2.5 text-2xs uppercase tracking-wider font-medium text-muted-foreground">Data</th>
               <th className="text-center px-2 py-2.5 text-2xs uppercase tracking-wider font-medium text-muted-foreground" colSpan={3}>Solicitado</th>
               <th className="text-center px-2 py-2.5 text-2xs uppercase tracking-wider font-medium text-primary" colSpan={3}>Utilizado</th>
-              <th className="text-right px-3 py-2.5 text-2xs uppercase tracking-wider font-medium text-primary">Saldo (R$)</th>
             </tr>
             <tr className="bg-muted/30">
               <th colSpan={3}></th>
@@ -206,7 +180,6 @@ const FoodControlTab = ({
               <th className="text-center px-1 py-1 text-2xs text-primary">Café</th>
               <th className="text-center px-1 py-1 text-2xs text-primary">Almoço</th>
               <th className="text-center px-1 py-1 text-2xs text-primary">Janta</th>
-              <th></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -217,73 +190,47 @@ const FoodControlTab = ({
                 </td>
               </tr>
             ) : (
-              filteredRows.map((row) => {
-                const balance = getBalance(row);
-                return (
-                  <tr key={row.key} className="hover:bg-muted/30 transition-colors">
-                    <td className="px-3 py-2 font-medium text-foreground whitespace-nowrap">{getPersonName(row.personId)}</td>
-                    <td className="px-3 py-2 tabular-nums text-muted-foreground whitespace-nowrap max-w-[160px] truncate">{getJobName(row.jobId)}</td>
-                    <td className="px-3 py-2 tabular-nums text-muted-foreground">{row.date?.includes("-") ? row.date.split("-").reverse().join("/") : row.date || "—"}</td>
-                    {/* Requested columns - read only */}
-                    <td className="text-center px-1 py-2">
-                      {row.requestedCafe ? <Badge variant="secondary" className="text-2xs">✓</Badge> : <span className="text-muted-foreground/40">—</span>}
-                    </td>
-                    <td className="text-center px-1 py-2">
-                      {row.requestedAlmoco ? <Badge variant="secondary" className="text-2xs">✓</Badge> : <span className="text-muted-foreground/40">—</span>}
-                    </td>
-                    <td className="text-center px-1 py-2">
-                      {row.requestedJanta ? <Badge variant="secondary" className="text-2xs">✓</Badge> : <span className="text-muted-foreground/40">—</span>}
-                    </td>
-                    {/* Used columns - editable */}
-                    <td className="text-center px-1 py-2">
-                       <Checkbox 
-                        checked={row.usedCafe} 
-                        onCheckedChange={(v) => updateUsed(row.personId, row.jobId, row.date, "usedCafe", !!v)} 
-                        className="rounded-full data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
-                      />
-                    </td>
-                    <td className="text-center px-1 py-2">
-                      <Checkbox 
-                        checked={row.usedAlmoco} 
-                        onCheckedChange={(v) => updateUsed(row.personId, row.jobId, row.date, "usedAlmoco", !!v)} 
-                        className="rounded-full data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
-                      />
-                    </td>
-                    <td className="text-center px-1 py-2">
-                      <Checkbox 
-                        checked={row.usedJanta} 
-                        onCheckedChange={(v) => updateUsed(row.personId, row.jobId, row.date, "usedJanta", !!v)} 
-                        className="rounded-full data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
-                      />
-                    </td>
-                    <td className="px-3 py-2 text-right tabular-nums font-semibold">
-                      {balance > 0 ? (
-                        <span className="text-green-600">+{balance.toFixed(2)}</span>
-                      ) : balance < 0 ? (
-                        <span className="text-destructive">{balance.toFixed(2)}</span>
-                      ) : (
-                        <span className="text-muted-foreground">0,00</span>
-                      )}
-                    </td>
+              filteredRows.map((row) => (
+                <tr key={row.key} className="hover:bg-muted/30 transition-colors">
+                  <td className="px-3 py-2 font-medium text-foreground whitespace-nowrap">{getPersonName(row.personId)}</td>
+                  <td className="px-3 py-2 tabular-nums text-muted-foreground whitespace-nowrap max-w-[160px] truncate">{getJobName(row.jobId)}</td>
+                  <td className="px-3 py-2 tabular-nums text-muted-foreground">{row.date?.includes("-") ? row.date.split("-").reverse().join("/") : row.date || "—"}</td>
+                  
+                  <td className="text-center px-1 py-2">
+                    {row.requestedCafe ? <Badge variant="secondary" className="text-2xs opacity-60">✓</Badge> : <span className="text-muted-foreground/30">—</span>}
+                  </td>
+                  <td className="text-center px-1 py-2">
+                    {row.requestedAlmoco ? <Badge variant="secondary" className="text-2xs opacity-60">✓</Badge> : <span className="text-muted-foreground/30">—</span>}
+                  </td>
+                  <td className="text-center px-1 py-2">
+                    {row.requestedJanta ? <Badge variant="secondary" className="text-2xs opacity-60">✓</Badge> : <span className="text-muted-foreground/30">—</span>}
+                  </td>
 
-                  </tr>
-                );
-              })
+                  <td className="text-center px-1 py-4">
+                    <Checkbox 
+                      checked={row.usedCafe} 
+                      onCheckedChange={(v) => updateUsed(row.personId, row.jobId, row.date, "usedCafe", !!v)} 
+                      className="h-6 w-6 rounded-full border-2 border-green-500 data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+                    />
+                  </td>
+                  <td className="text-center px-1 py-4">
+                    <Checkbox 
+                      checked={row.usedAlmoco} 
+                      onCheckedChange={(v) => updateUsed(row.personId, row.jobId, row.date, "usedAlmoco", !!v)} 
+                      className="h-6 w-6 rounded-full border-2 border-green-500 data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+                    />
+                  </td>
+                  <td className="text-center px-1 py-4">
+                    <Checkbox 
+                      checked={row.usedJanta} 
+                      onCheckedChange={(v) => updateUsed(row.personId, row.jobId, row.date, "usedJanta", !!v)} 
+                      className="h-6 w-6 rounded-full border-2 border-green-500 data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+                    />
+                  </td>
+                </tr>
+              ))
             )}
           </tbody>
-          {filteredRows.length > 0 && totalBalance !== 0 && (
-            <tfoot>
-              <tr className="bg-muted/30 border-t border-border">
-                <td colSpan={9} className="px-3 py-2.5 text-right text-xs font-semibold uppercase text-muted-foreground">
-                  {totalBalance > 0 ? "Total Saldo a Depositar" : "Total Saldo a Descontar"}
-                </td>
-                <td className={`px-3 py-2.5 text-right tabular-nums font-bold ${totalBalance > 0 ? "text-primary" : "text-destructive"}`}>
-                  {totalBalance > 0 ? `+${totalBalance.toFixed(2)}` : totalBalance.toFixed(2)}
-                </td>
-              </tr>
-            </tfoot>
-          )}
-
         </table>
       </div>
     </div>
