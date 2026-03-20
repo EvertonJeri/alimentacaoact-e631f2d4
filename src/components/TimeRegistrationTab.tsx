@@ -66,8 +66,10 @@ const TimeRegistrationTab = ({ entries, setEntries, people, jobs, onUpdateEntry,
   };
 
   const removeEntry = (id: string) => {
-    onRemoveEntry?.(id);
-    setEntries((prev) => prev.filter((e) => e.id !== id));
+    if (confirm("Deseja realmente apagar este registro de horas?")) {
+      onRemoveEntry?.(id);
+      setEntries((prev) => prev.filter((e) => e.id !== id));
+    }
   };
 
 
@@ -266,12 +268,15 @@ const TimeRegistrationTab = ({ entries, setEntries, people, jobs, onUpdateEntry,
                       </span>
                     </td>
                     <td className="px-2 py-2">
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => removeEntry(entry.id)}
-                        className="p-1 rounded-md hover:bg-muted transition-colors"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors"
+                        title="Apagar este registro"
                       >
-                        <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
-                      </button>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </td>
                   </tr>
                 );
