@@ -51,6 +51,8 @@ const MealRequestSystem = ({
 }: MealRequestSystemProps) => {
   const [selectedJob, setSelectedJob] = useState("");
   const [location, setLocation] = useState<LocationType>("Dentro SP");
+  const [transportType, setTransportType] = useState<"onibus" | "aviao">("onibus");
+  const [travelTime, setTravelTime] = useState("");
   const [personId, setPersonId] = useState("");
   const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0]);
   const [endDate, setEndDate] = useState(new Date().toISOString().split("T")[0]);
@@ -89,6 +91,8 @@ const MealRequestSystem = ({
       meals,
       dailyOverrides: hasOverride ? overrides : {},
       location,
+      transportType,
+      travelTime: travelTime || undefined,
     };
     onUpdateRequest(newRequest);
     setPersonId("");
@@ -241,7 +245,7 @@ const MealRequestSystem = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end pt-2">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end pt-2">
             <div className="space-y-2">
               <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Data Início</Label>
               <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="h-11 bg-background" />
@@ -250,12 +254,26 @@ const MealRequestSystem = ({
               <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Data Término</Label>
               <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="h-11 bg-background" />
             </div>
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Transporte</Label>
+              <Select value={transportType} onValueChange={(v) => setTransportType(v as "onibus" | "aviao")}>
+                <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="onibus">🚌 Ônibus</SelectItem>
+                  <SelectItem value="aviao">✈️ Avião</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Hora Viagem</Label>
+              <Input type="time" value={travelTime} onChange={e => setTravelTime(e.target.value)} className="h-11 bg-background" />
+            </div>
             <Button
               onClick={handleAdd}
               disabled={!personId || !startDate || !endDate}
               className="h-11 w-full bg-foreground text-background font-black uppercase tracking-widest hover:bg-foreground/90 transition-all shadow-md active:scale-[0.98]"
             >
-              <Plus className="h-4 w-4 mr-2" /> Adicionar na Programação
+              <Plus className="h-4 w-4 mr-2" /> Adicionar
             </Button>
           </div>
         </div>

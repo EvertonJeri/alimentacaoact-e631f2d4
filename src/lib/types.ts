@@ -172,16 +172,25 @@ export function calculateDayDiscount(
 
   const localToday = new Date().toISOString().split("T")[0];
   const isPast = date < localToday;
+  
+  // Regra de viagem se for o primeiro dia da solicitação
+  const isTravelDay = date === req.startDate && !!req.travelTime;
   const hasHours = entry && calcTotalMinutes(entry) > 0;
 
-  // Só aplicamos desconto se for um dia no passado (falta confirmada) ou se já existir algum registro de horas.
-  if (isPast || hasHours) {
+  // Só aplicamos desconto se for um dia no passado (falta confirmada) ou se já existir algum registro de horas ou for dia de viagem
+  if (isPast || hasHours || isTravelDay) {
     let usedCafe = false;
     let usedAlmoco = false;
     let usedJanta = false;
 
     if (hasHours && entry) {
-       const u = determineMealsUsed(entry);
+       const u = determineMealsUsed(entry, req, date);
+       usedCafe = u.cafe;
+       usedAlmoco = u.almoco;
+       usedJanta = u.janta;
+    } else if (isTravelDay) {
+       // Se não tem horas mas é dia de viagem, calculamos baseado no horário da viagem
+       const u = determineMealsUsed(undefined as any, req, date);
        usedCafe = u.cafe;
        usedAlmoco = u.almoco;
        usedJanta = u.janta;
@@ -191,8 +200,10 @@ export function calculateDayDiscount(
     if (dayMeals.includes("almoco") && !usedAlmoco) discountAlmoco = refAlmoco;
     if (dayMeals.includes("janta") && !usedJanta) discountJanta = refJanta;
 
-    if (!hasHours) {
+    if (!hasHours && !isTravelDay) {
       reason = "Falta - sem registro de horas";
+    } else if (isTravelDay && !hasHours) {
+      reason = `Dia de viagem (${req.transportType === "aviao" ? "Avião" : "Ônibus"}) às ${req.travelTime}`;
     } else {
       const misses = [];
       if (discountCafe > 0) misses.push("café");
@@ -273,31 +284,47 @@ export function calculatePersonBalance(
   return totalExtra - totalDiscount;
 }
 
-export function determineMealsUsed(entry: TimeEntry): { cafe: boolean; almoco: boolean; janta: boolean } {
-  const firstEntry = getFirstEntryTime(entry);
-  const lastExit = getLastExitTime(entry);
-  
+export function determineMealsUsed(entry?: TimeEntry, req?: MealRequest, date?: string): { cafe: boolean; almoco: boolean; janta: boolean } {
   let cafe = false;
-  if (String(firstEntry || "").includes(":")) {
-    const [h, m] = String(firstEntry).split(":").map(Number);
-    if (h < 8 || (h === 8 && m <= 0)) cafe = true; // Até 08:00
-  }
-  
   let almoco = false;
-  // Regra básica: se tem o primeiro período e o segundo período, presume-se almoço no intervalo. 
-  // Ou se trabalhou mais de 6 horas.
-  if (entry.entry1 && entry.exit1 && entry.entry2 && entry.exit2) {
-    almoco = true;
-  } else if (calcTotalMinutes(entry) > 360) {
-    almoco = true;
-  }
-  
   let janta = false;
-  if (String(lastExit || "").includes(":")) {
-    const [h] = String(lastExit).split(":").map(Number);
-    if (h >= 19) janta = true; // Após 19h
+
+  // Regra de Viagem (Prioridade)
+  if (req && date && date === req.startDate && req.travelTime) {
+    const offset = req.transportType === "aviao" ? 4 : 2;
+    const [h, m] = req.travelTime.split(":").map(Number);
+    const adjustedMinutes = (h * 60 + m) - (offset * 60);
+
+    if (adjustedMinutes <= 8 * 60) cafe = true;
+    if (adjustedMinutes <= 13 * 60) almoco = true;
+    if (adjustedMinutes <= 19 * 60) janta = true;
+    
+    // Se tiver entrada real, ela pode adicionar refeições, mas não tirar as da viagem (regra de benefício)
+    if (!entry) return { cafe, almoco, janta };
   }
-  if (entry.entry3 || entry.exit3) janta = true;
+
+  if (entry) {
+    const firstEntry = getFirstEntryTime(entry);
+    const lastExit = getLastExitTime(entry);
+    
+    if (String(firstEntry || "").includes(":")) {
+      const [h, m] = String(firstEntry).split(":").map(Number);
+      if (h < 8 || (h === 8 && m <= 0)) cafe = true; // Até 08:00
+    }
+    
+    // Almoço: intervalo ou 6h+
+    if (entry.entry1 && entry.exit1 && entry.entry2 && entry.exit2) {
+      almoco = true;
+    } else if (calcTotalMinutes(entry) > 360) {
+      almoco = true;
+    }
+    
+    if (String(lastExit || "").includes(":")) {
+      const [h] = String(lastExit).split(":").map(Number);
+      if (h >= 19) janta = true; // Após 19h
+    }
+    if (entry.entry3 || entry.exit3) janta = true;
+  }
 
   return { cafe, almoco, janta };
 }

@@ -68,7 +68,7 @@ const FoodControlTab = ({
         } else {
           let used = { cafe: false, almoco: false, janta: false };
           if (entry) {
-            used = determineMealsUsed(entry);
+            used = determineMealsUsed(entry, req, date);
           }
           const dayOverrides = req.dailyOverrides as Record<string, string[]> | undefined;
           const dayMeals = dayOverrides?.[date] ?? req.meals;
