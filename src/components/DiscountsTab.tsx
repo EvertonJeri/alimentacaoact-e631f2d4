@@ -13,6 +13,7 @@ import {
   type TimeEntry,
   type FoodControlEntry,
   type DiscountConfirmation,
+  type PaymentConfirmation,
   MEAL_LABELS,
   MEAL_VALUES,
   getDatesInRange,
@@ -28,9 +29,9 @@ interface DiscountsTabProps {
   requests: MealRequest[];
   timeEntries: TimeEntry[];
   foodControl: FoodControlEntry[];
-  confirmations: DiscountConfirmation[];
-  setConfirmations: (confs: DiscountConfirmation[]) => void;
-  onUpdateConfirmation?: (conf: DiscountConfirmation) => void;
+  confirmations: (DiscountConfirmation | PaymentConfirmation)[];
+  setConfirmations: (confs: any[]) => void;
+  onUpdateConfirmation?: (conf: any) => void;
 }
 
 interface DiscountRow {
@@ -119,16 +120,16 @@ const DiscountsTab = ({
     });
   };
 
-  const isConfirmed = (personId: string) => confirmations.find((c) => c.personId === personId)?.confirmed || false;
+  const isConfirmed = (personId: string) => (confirmations as any[]).find((c) => c.personId === personId)?.confirmed || false;
 
   const updatePaymentDate = (personId: string, date: string) => {
     const updated: DiscountConfirmation = { personId, paymentDate: date, confirmed: !!date };
     onUpdateConfirmation?.(updated);
 
-    const idx = confirmations.findIndex((c) => c.personId === personId);
+    const idx = (confirmations as any[]).findIndex((c) => c.personId === personId);
     if (idx >= 0) {
       const copy = [...confirmations];
-      copy[idx] = updated;
+      (copy as any[])[idx] = updated;
       setConfirmations(copy);
     } else {
       setConfirmations([...confirmations, updated]);
@@ -191,7 +192,7 @@ const DiscountsTab = ({
             {Array.from(groupedByPerson.entries()).map(([personId, personDiscounts]) => {
               const personTotal = personDiscounts.reduce((s, d) => s + d.total, 0);
               const expanded = expandedPersons.has(personId);
-              const personConfirmation = confirmations.find((c) => c.personId === personId);
+              const personConfirmation = (confirmations as any[]).find((c) => c.personId === personId);
               const confirmed = personConfirmation?.confirmed || false;
               const paymentDate = personConfirmation?.paymentDate || "";
 
@@ -206,11 +207,11 @@ const DiscountsTab = ({
                       {expanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
                       <span className="font-medium text-foreground">{getPersonName(personId)}</span>
                       {confirmed ? (
-                        <Badge variant="secondary" className="text-2xs bg-green-100 text-green-700 hover:bg-green-100 border-green-200">
+                        <Badge className="text-2xs bg-green-100 text-green-700 hover:bg-green-100 border-green-200">
                           {paymentDate?.includes("-") ? `Pago em ${paymentDate.split("-").reverse().join("/")}` : "Pago"}
                         </Badge>
                       ) : (
-                        <Badge variant="destructive" className="text-2xs">
+                        <Badge className="text-2xs bg-destructive text-destructive-foreground">
                           Pendente
                         </Badge>
                       )}
