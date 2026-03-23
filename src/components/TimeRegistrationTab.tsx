@@ -149,10 +149,13 @@ const TimeRegistrationTab = ({
     jobs.find((j) => j.id === id)?.name || "—";
 
   const autofillRow = (entry: TimeEntry, forceType?: 'outbound' | 'return') => {
+    const travel = getTravelInfo(entry);
+    const loc = travel?.location || 'Dentro SP';
+
     let entry1 = "08:00";
-    let exit1 = "12:00";
-    let entry2 = "13:00";
-    let exit2 = "18:00";
+    let exit1 = loc === "Fora SP" ? "12:00" : "10:00";
+    let entry2 = loc === "Fora SP" ? "13:00" : "";
+    let exit2 = loc === "Fora SP" ? "18:00" : "";
     
     // Tabela de overrides locais (é a nossa fonte de verdade atual/contorno)
     const current = localOverrides[entry.id] || {};
@@ -164,7 +167,8 @@ const TimeRegistrationTab = ({
     if (forceType === 'outbound') {
         if (isTravelOut) { // Toggle off
             isTravelOut = false;
-            // Opcionalmente podemos resetar os horários aqui se o usuário quiser
+            isAutoFilled = false;
+            entry1 = ""; exit1 = ""; entry2 = ""; exit2 = "";
         } else {
             isTravelOut = true;
             isTravelReturn = false;
@@ -172,9 +176,17 @@ const TimeRegistrationTab = ({
     } else if (forceType === 'return') {
         if (isTravelReturn) { // Toggle off
             isTravelReturn = false;
+            isAutoFilled = false;
+            entry1 = ""; exit1 = ""; entry2 = ""; exit2 = "";
         } else {
             isTravelOut = false;
             isTravelReturn = true;
+        }
+    } else {
+        // Zap (automático padrão)
+        if (loc === "Dentro SP") {
+            entry1 = "08:00"; exit1 = "10:00";
+            entry2 = ""; exit2 = "";
         }
     }
 
@@ -206,14 +218,16 @@ const TimeRegistrationTab = ({
   };
 
   const getTravelInfo = (entry: TimeEntry) => {
-    if (!requests) return null;
     const req = requests.find(r => r.personId === entry.personId && r.jobId === entry.jobId && (r.startDate === entry.date || r.endDate === entry.date));
-    if (!req || req.location !== "Fora SP") return null;
+    if (!req) return null;
+    
+    // Agora reconhecemos Dentro SP se houver travelTime (partida de ônibus/transporte)
+    if (req.location === "Dentro SP" && !req.travelTime) return null;
 
     if (entry.date === req.startDate && req.travelTime) {
-      return { type: 'outbound', label: `Ida` };
+        return { type: 'outbound', label: `Ida`, location: req.location || 'Dentro SP' };
     } else if (entry.date === req.endDate && req.startDate !== req.endDate) {
-      return { type: 'return', label: `Volta` };
+        return { type: 'return', label: `Volta`, location: req.location || 'Dentro SP' };
     }
     return null;
   };

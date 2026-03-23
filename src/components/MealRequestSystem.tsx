@@ -142,16 +142,52 @@ const MealRequestSystem = ({
     let createdCount = 0;
     filtered.forEach(req => {
       const dates = getDatesInRange(req.startDate, req.endDate);
-      dates.forEach(date => {
+      dates.forEach((date, idx) => {
         const existing = timeEntries.find(e => e.personId === req.personId && e.jobId === req.jobId && e.date === date);
         if (!existing && onUpdateTimeEntry) {
+          // Valores padrão baseados na localização e se é o primeiro dia (Ida)
+          let entry1 = "";
+          let exit1 = "";
+          let entry2 = "";
+          let exit2 = "";
+          let isTravelOut = false;
+          let isTravelReturn = false;
+          let isAutoFilled = false;
+
+          // Se for o primeiro dia e houver horário de viagem (Transporte)
+          if (idx === 0 && req.travelTime) {
+            isTravelOut = true;
+            isAutoFilled = true;
+            if (req.location === "Fora SP") {
+                entry1 = "08:00"; exit1 = "12:00"; 
+                entry2 = "13:00"; exit2 = "18:00";
+            } else {
+                // Regra usuário: Dentro SP + Ônibus/Transporte = Só 08:00 às 10:00
+                entry1 = "08:00"; exit1 = "10:00";
+            }
+          } else if (idx === dates.length - 1 && dates.length > 1) {
+             // Marca apenas como Volta, mas não autopreenche os horários por padrão no último dia (usuário perguntou sobre Ida)
+             isTravelReturn = true;
+          }
+
+          const id = crypto.randomUUID();
           onUpdateTimeEntry({
-            id: crypto.randomUUID(),
+            id,
             personId: req.personId,
             jobId: req.jobId,
             date,
-            entry1: "", exit1: "", entry2: "", exit2: "", entry3: "", exit3: ""
+            entry1, exit1, entry2, exit2, entry3: "", exit3: "",
+            isTravelOut,
+            isTravelReturn,
+            isAutoFilled
           });
+
+          // Sincroniza cache local para persistir as flags visuais
+          const saved = localStorage.getItem('time-reg-overrides');
+          const overrides = saved ? JSON.parse(saved) : {};
+          overrides[id] = { isTravelOut, isTravelReturn, isAutoFilled };
+          localStorage.setItem('time-reg-overrides', JSON.stringify(overrides));
+
           createdCount++;
         }
       });
