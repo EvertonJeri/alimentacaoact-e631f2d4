@@ -240,7 +240,7 @@ export const JobImportDialog = () => {
             </div>
             <div className="flex items-start gap-2 text-[10px] text-muted-foreground">
               <AlertCircle className="h-3 w-3 shrink-0 mt-0.5 text-amber-500" />
-              <span>Jobs com o mesmo número já existentes serão <strong>atualizados</strong>.</span>
+              <span>⚠️ Todos os Jobs atuais serão <strong>substituídos</strong> pelos da planilha ao confirmar.</span>
             </div>
           </div>
         )}
