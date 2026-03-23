@@ -325,9 +325,9 @@ const TimeRegistrationTab = ({
                 const total = calcTotalMinutes(entry);
                 const has6 = !!(entry.entry3 || entry.exit3);
                 const trClass = entry.isTravelOut 
-                  ? "bg-orange-50 hover:bg-orange-100/80 border-l-4 border-l-orange-500" 
+                  ? "bg-orange-100/40 hover:bg-orange-100/60 border-l-8 border-l-orange-500" 
                   : entry.isTravelReturn 
-                  ? "bg-blue-50 hover:bg-blue-100/80 border-l-4 border-l-blue-500" 
+                  ? "bg-blue-100/40 hover:bg-blue-100/60 border-l-8 border-l-blue-500" 
                   : "hover:bg-muted/30";
 
                 return (
@@ -342,6 +342,16 @@ const TimeRegistrationTab = ({
                       <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-2">
                           <span className="font-bold">{entry.date?.includes("-") ? entry.date.split("-").reverse().join("/") : entry.date || "—"}</span>
+                          {entry.isTravelOut && (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest bg-orange-200 text-orange-800 border border-orange-400 shadow-sm animate-pulse-subtle">
+                              ✈️ IDA
+                            </span>
+                          )}
+                          {entry.isTravelReturn && (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest bg-blue-200 text-blue-800 border border-blue-400 shadow-sm animate-pulse-subtle">
+                              ✈️ VOLTA
+                            </span>
+                          )}
                         </div>
                         <div className="flex gap-1 mt-1">
                           <Button
