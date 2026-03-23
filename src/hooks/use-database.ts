@@ -45,9 +45,6 @@ export function useDatabase() {
         exit2: e.exit2 || "",
         entry3: e.entry3 || "",
         exit3: e.exit3 || "",
-        isTravelOut: e.is_travel_out || false,
-        isTravelReturn: e.is_travel_return || false,
-        isAutoFilled: e.is_auto_filled || false,
       })) as TimeEntry[];
     },
   });
@@ -273,9 +270,6 @@ export function useDatabase() {
           exit2: entry.exit2 || null,
           entry3: entry.entry3 || null,
           exit3: entry.exit3 || null,
-          is_travel_out: entry.isTravelOut || false,
-          is_travel_return: entry.isTravelReturn || false,
-          is_auto_filled: entry.isAutoFilled || false,
         });
       if (error) {
         console.error("Erro no Supabase:", error);
