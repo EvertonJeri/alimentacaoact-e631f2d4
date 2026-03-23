@@ -373,14 +373,48 @@ export function useDatabase() {
   
   const bulkInsertJobs = useMutation({
     mutationFn: async (jobsToInsert: Job[]) => {
-      const { data, error } = await supabase
-        .from("jobs")
-        .upsert(jobsToInsert.map(j => ({ id: j.id, name: j.name })), { onConflict: "id" });
-      if (error) throw error;
-      return data;
+      // Extrai mensagem legível de erros do Supabase (que são objetos, não Error)
+      const getErrMsg = (e: unknown): string => {
+        if (!e) return "Erro desconhecido";
+        if (typeof e === "object") {
+          const obj = e as Record<string, unknown>;
+          return String(obj.message || obj.details || obj.hint || JSON.stringify(e));
+        }
+        return String(e);
+      };
+
+      // Processa em chunks de 50 para evitar limites do Supabase
+      const chunkSize = 50;
+      for (let i = 0; i < jobsToInsert.length; i += chunkSize) {
+        const chunk = jobsToInsert.slice(i, i + chunkSize);
+
+        // Tenta upsert primeiro (atualiza se já existe)
+        const { error: upsertError } = await supabase
+          .from("jobs")
+          .upsert(chunk.map(j => ({ id: j.id, name: j.name })), { onConflict: "id" });
+
+        if (upsertError) {
+          // Fallback: deleta os IDs do chunk e re-insere
+          const ids = chunk.map(j => j.id);
+          await supabase.from("jobs").delete().in("id", ids);
+
+          const { error: insertError } = await supabase
+            .from("jobs")
+            .insert(chunk.map(j => ({ id: j.id, name: j.name })));
+
+          if (insertError) {
+            throw new Error(getErrMsg(insertError));
+          }
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["jobs"] });
+    },
+    onError: (error: unknown) => {
+      const msg = error instanceof Error ? error.message : String(error);
+      toast.error(`Erro ao salvar Jobs: ${msg}`);
+      console.error("bulkInsertJobs error:", error);
     },
   });
 
