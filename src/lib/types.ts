@@ -15,6 +15,9 @@ export interface TimeEntry {
   exit2: string;
   entry3: string; // dinner period (optional)
   exit3: string;
+  isTravelOut?: boolean;
+  isTravelReturn?: boolean;
+  isAutoFilled?: boolean;
 }
 
 export type MealType = "cafe" | "almoco" | "janta";

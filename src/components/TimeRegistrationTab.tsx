@@ -27,6 +27,9 @@ const emptyEntry = (personId: string, jobId: string, date: string): TimeEntry =>
   exit2: "",
   entry3: "",
   exit3: "",
+  isTravelOut: false,
+  isTravelReturn: false,
+  isAutoFilled: false,
 });
 
 interface TimeRegistrationTabProps {
@@ -88,7 +91,12 @@ const TimeRegistrationTab = ({
   const updateField = (id: string, field: keyof TimeEntry, value: any) => {
     const entry = entries.find(e => e.id === id);
     if (!entry) return;
-    const updated = { ...entry, [field]: value };
+    
+    // Se o usuário mexer em qualquer horário, removemos o sinalizador de auto-preenchimento (cor vermelha)
+    const timeFields = ["entry1", "exit1", "entry2", "exit2", "entry3", "exit3"];
+    const isAutoFilled = timeFields.includes(field as string) ? false : entry.isAutoFilled;
+
+    const updated = { ...entry, [field]: value, isAutoFilled };
     onUpdateEntry?.(updated);
     if (setEntries) {
       setEntries((prev) =>
@@ -111,13 +119,31 @@ const TimeRegistrationTab = ({
   const getJobName = (id: string) =>
     jobs.find((j) => j.id === id)?.name || "—";
 
-  const autofillRow = (entry: TimeEntry) => {
-    const updated = {
+  const autofillRow = (entry: TimeEntry, forceType?: 'outbound' | 'return') => {
+    let entry1 = "08:00";
+    let exit1 = "12:00";
+    let entry2 = "13:00";
+    let exit2 = "18:00";
+    let isTravelOut = entry.isTravelOut;
+    let isTravelReturn = entry.isTravelReturn;
+
+    if (forceType === 'outbound') {
+      isTravelOut = true;
+      isTravelReturn = false;
+    } else if (forceType === 'return') {
+      isTravelOut = false;
+      isTravelReturn = true;
+    }
+
+    const updated: TimeEntry = {
       ...entry,
-      entry1: "08:00",
-      exit1: "12:00",
-      entry2: "13:00",
-      exit2: "18:00"
+      entry1,
+      exit1,
+      entry2,
+      exit2,
+      isTravelOut,
+      isTravelReturn,
+      isAutoFilled: true
     };
     onUpdateEntry?.(updated);
     if (setEntries) {
@@ -298,9 +324,14 @@ const TimeRegistrationTab = ({
               filteredEntries.map((entry) => {
                 const total = calcTotalMinutes(entry);
                 const has6 = !!(entry.entry3 || entry.exit3);
-                const travel = getTravelInfo(entry);
+                const trClass = entry.isTravelOut 
+                  ? "bg-orange-50 hover:bg-orange-100/80 border-l-4 border-l-orange-500" 
+                  : entry.isTravelReturn 
+                  ? "bg-blue-50 hover:bg-blue-100/80 border-l-4 border-l-blue-500" 
+                  : "hover:bg-muted/30";
+
                 return (
-                  <tr key={entry.id} className={`hover:bg-muted/30 transition-colors ${travel?.type === 'outbound' ? 'bg-orange-50/40' : travel?.type === 'return' ? 'bg-blue-50/40' : ''}`}>
+                  <tr key={entry.id} className={`transition-colors ${trClass}`}>
                     <td className="px-3 py-2 font-medium text-foreground whitespace-nowrap">
                       {getPersonName(entry.personId)}
                     </td>
@@ -308,13 +339,28 @@ const TimeRegistrationTab = ({
                       {getJobName(entry.jobId)}
                     </td>
                     <td className="px-3 py-2 tabular-nums text-muted-foreground whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        <span>{entry.date?.includes("-") ? entry.date.split("-").reverse().join("/") : entry.date || "—"}</span>
-                        {travel && (
-                          <span className={`text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest border shadow-sm flex items-center gap-1 ${travel.type === 'outbound' ? 'bg-orange-100/80 text-orange-800 border-orange-300' : 'bg-blue-100/80 text-blue-800 border-blue-300'}`}>
-                            ✈️ {travel.label}
-                          </span>
-                        )}
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold">{entry.date?.includes("-") ? entry.date.split("-").reverse().join("/") : entry.date || "—"}</span>
+                        </div>
+                        <div className="flex gap-1 mt-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => autofillRow(entry, 'outbound')}
+                            className={`h-5 px-1.5 text-[8px] font-black border gap-1 shadow-sm ${entry.isTravelOut ? 'bg-orange-600 text-white border-orange-700 hover:bg-orange-700' : 'bg-muted/30 text-muted-foreground border-border hover:bg-orange-50'}`}
+                          >
+                            <ArrowRight className="h-2 w-2" /> IDA
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => autofillRow(entry, 'return')}
+                            className={`h-5 px-1.5 text-[8px] font-black border gap-1 shadow-sm ${entry.isTravelReturn ? 'bg-blue-600 text-white border-blue-700 hover:bg-blue-700' : 'bg-muted/30 text-muted-foreground border-border hover:bg-blue-50'}`}
+                          >
+                            <ArrowLeft className="h-2 w-2" /> VOLTA
+                          </Button>
+                        </div>
                       </div>
                     </td>
                     {(["entry1", "exit1", "entry2", "exit2", "entry3", "exit3"] as const).map(
@@ -324,7 +370,7 @@ const TimeRegistrationTab = ({
                             type="time"
                             value={entry[field]}
                             onChange={(e) => updateField(entry.id, field, e.target.value)}
-                            className="h-8 text-xs tabular-nums text-center w-[90px] mx-auto"
+                            className={`h-8 text-xs tabular-nums text-center w-[90px] mx-auto transition-colors ${entry.isAutoFilled ? "text-red-600 font-extrabold border-red-200 bg-red-50/40" : ""}`}
                           />
                         </td>
                       )
@@ -344,11 +390,11 @@ const TimeRegistrationTab = ({
                         onClick={() => autofillRow(entry)}
                         size="sm"
                         variant="ghost"
-                        className={`h-7 px-3 text-[10px] font-black border gap-1.5 transition-all active:scale-95 ${getTravelInfo(entry)?.type === 'outbound' ? 'bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100 shadow-sm' : getTravelInfo(entry)?.type === 'return' ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 shadow-sm' : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted opacity-60 hover:opacity-100'}`}
-                        title={getTravelInfo(entry) ? `Preencher horário de ${getTravelInfo(entry)?.label}` : "Preencher horário padrão 08-18h"}
+                        className={`h-7 px-3 text-[10px] font-black border gap-1.5 transition-all active:scale-95 ${entry.isTravelOut ? 'bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100 shadow-sm' : entry.isTravelReturn ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 shadow-sm' : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted opacity-60 hover:opacity-100'}`}
+                        title={entry.isTravelOut ? "Preencher horário de IDA" : entry.isTravelReturn ? "Preencher horário de VOLTA" : "Preencher horário padrão 08-18h"}
                       >
-                        {getTravelInfo(entry)?.type === 'outbound' ? <ArrowRight className="h-3 w-3" /> : getTravelInfo(entry)?.type === 'return' ? <ArrowLeft className="h-3 w-3" /> : <Zap className="h-3 w-3" />}
-                        {getTravelInfo(entry) ? getTravelInfo(entry)?.label : '08-18h'}
+                        {entry.isTravelOut ? <ArrowRight className="h-3 w-3" /> : entry.isTravelReturn ? <ArrowLeft className="h-3 w-3" /> : <Zap className="h-3 w-3" />}
+                        {entry.isTravelOut ? 'IDA' : entry.isTravelReturn ? 'VOLTA' : '08-18h'}
                       </Button>
                     </td>
                     <td className="px-2 py-2">
