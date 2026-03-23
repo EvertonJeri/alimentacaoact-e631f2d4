@@ -54,6 +54,7 @@ export const DEFAULT_SETTINGS: SystemSettings = {
 }
 
 export interface FoodControlEntry {
+  id?: string;
   personId: string;
   jobId: string;
   date: string;
@@ -69,6 +70,7 @@ export interface DiscountConfirmation {
   personId: string;
   confirmed: boolean;
   paymentDate?: string;
+  appliedBalance?: number;
 }
 
 export interface PaymentConfirmation {
@@ -76,6 +78,8 @@ export interface PaymentConfirmation {
   type: "request" | "job";
   paymentDate: string;
   confirmed: boolean;
+  appliedBalance?: number; // Valor do saldo retroativo liquidado nesta transação
+  applyBalance?: boolean;  // Se o usuário optou por abater o saldo
 }
 
 
@@ -156,11 +160,15 @@ export function isWeekendOrHoliday(dateStr: string): boolean {
 }
 
 export function getMealValue(meal: MealType, dateStr: string, person?: Person, location?: string): number {
-  if (location === "Fora SP") return MEAL_VALUES[meal];
-  
-  if (meal === "almoco" && person?.isRegistered && !isWeekendOrHoliday(dateStr)) {
-    return 0; // Almoço grátis para CLT de Seg a Sex (exceto feriados e Fora de SP)
+  // REGRA RÍGIDA CLT (REGISTRADO) - ALMOÇO
+  // Solo ganha o valor em dinheiro (R$32) se for Fim de Semana ou Feriado.
+  // De Seg-Sex o valor é sempre R$0 (independente de ser Fora SP ou Dentro SP).
+  if (meal === "almoco" && person?.isRegistered) {
+    if (isWeekendOrHoliday(dateStr)) return MEAL_VALUES[meal];
+    return 0;
   }
+
+  // Regra padrão para demais casos ou outras refeições (Café/Janta)
   return MEAL_VALUES[meal];
 }
 
@@ -201,17 +209,30 @@ export function calculateDayDiscount(
   const localToday = new Date().toISOString().split("T")[0];
   const isPast = date < localToday;
   
-  // Regra de viagem se for o primeiro dia da solicitação
-  const isTravelDay = date === req.startDate && !!req.travelTime;
+  // Regra de viagem se for o primeiro dia da solicitação. 
+  // Agora só é considerada se houver uma linha correspondente no Registro de Horas (entry).
+  const isTravelDay = entry && date === req.startDate && !!req.travelTime;
   const hasHours = entry && calcTotalMinutes(entry) > 0;
 
-  // Só aplicamos desconto se for um dia no passado (falta confirmada) ou se já existir algum registro de horas ou for dia de viagem
-  if (isPast || hasHours || isTravelDay) {
-    let usedCafe = false;
-    let usedAlmoco = false;
-    let usedJanta = false;
+  // O desconto agora só é calculado se houver um registro correspondente no Ponto (entry)
+  // Se o ponto foi apagado, o desconto é ZERO por regra de espelhamento 1:1
+  if (!entry) return { discountCafe: 0, discountAlmoco: 0, discountJanta: 0, total: 0, reason: "" };
 
-    if (hasHours && entry) {
+  // LÓGICA DE LINHA FANTASMA:
+  // Só processamos o desconto se:
+  // 1. A data da linha já é passado (ontem pra trás) - Falta configurada
+  // 2. O usuário já interagiu com a linha (Digitou algum horário ou marcou IDA/VOLTA)
+  const hasTouch = !!(entry.entry1 || entry.exit1 || entry.isTravelOut || entry.isTravelReturn || entry.isAutoFilled);
+  
+  if (!isPast && !hasTouch) {
+     return { discountCafe: 0, discountAlmoco: 0, discountJanta: 0, total: 0, reason: "" };
+  }
+
+  let usedCafe = false;
+  let usedAlmoco = false;
+  let usedJanta = false;
+
+  if (hasHours && entry) {
        const u = determineMealsUsed(entry, req, date);
        usedCafe = u.cafe;
        usedAlmoco = u.almoco;
@@ -242,11 +263,9 @@ export function calculateDayDiscount(
         reason = `Horários divergentes para: ${misses.join(", ")}`;
       }
     }
-  }
 
-  // Se tem controle manual (Food Control), ele se sobrepõe apenas se houver registro de horas,
-  // ignorando controles 'órfãos' caso o registro de horas tenha sido apagado.
-  if (fc && entry) {
+  // Se tem controle manual (Food Control), ele se sobrepõe
+  if (fc) {
     if (dayMeals.includes("cafe") && !fc.usedCafe) discountCafe = refCafe;
     else if (dayMeals.includes("cafe") && fc.usedCafe) discountCafe = 0;
 
@@ -256,7 +275,8 @@ export function calculateDayDiscount(
     if (dayMeals.includes("janta") && !fc.usedJanta) discountJanta = refJanta;
     else if (dayMeals.includes("janta") && fc.usedJanta) discountJanta = 0;
 
-    reason = "Ajuste via controle de alimentação (" + (fc.usedCafe || fc.usedAlmoco || fc.usedJanta ? "consumiu pacial" : "não consumiu") + ")";
+    const usedAny = fc.usedCafe || fc.usedAlmoco || fc.usedJanta;
+    reason = "Ajuste via controle de alimentação (" + (usedAny ? "consumiu pacial" : "não consumiu") + ")";
   }
 
   const total = discountCafe + discountAlmoco + discountJanta;
@@ -271,49 +291,79 @@ export function calculatePersonBalance(
   people: Person[],
   timeEntries: TimeEntry[]
 ): number {
-  const personRequests = requests.filter(r => r.personId === personId);
   const person = people.find(p => p.id === personId);
-  const discConf = confirmations.find(c => 'personId' in c && c.personId === personId && c.confirmed) as DiscountConfirmation | undefined;
-  const paymentDate = discConf?.paymentDate;
+  const personRequests = requests.filter(r => r.personId === personId);
+  const personConfs = confirmations.filter(c => ('id' in c && requests.find(r => r.id === c.id)?.personId === personId) || ('personId' in c && c.personId === personId));
 
-  let totalDiscount = 0;
-  let totalExtra = 0;
+  let walletBalance = 0;
 
+  // 1. Somar todo o valor bruto que o funcionário GANHOU (Créditos das solicitações)
+  personRequests.forEach(req => {
+    const dates = getDatesInRange(req.startDate, req.endDate);
+    dates.forEach(date => {
+        const dayMeals = (req.dailyOverrides?.[date] ?? req.meals) || [];
+        dayMeals.forEach(m => {
+            walletBalance += getMealValue(m, date, person, req.location);
+        });
+    });
+  });
+
+  // 2. Abater os DESCONTOS por faltas ou inconsistências (Débitos)
   personRequests.forEach(req => {
     const dates = getDatesInRange(req.startDate, req.endDate);
     dates.forEach(date => {
       const entry = timeEntries.find(e => e.personId === personId && e.jobId === req.jobId && e.date === date);
       const fc = foodControl.find(f => f.personId === personId && f.jobId === req.jobId && f.date === date);
-
-      // Descontos: Solicitados mas não utilizados (Ponto/Divergência)
+      
       if (entry) {
         const dayCalc = calculateDayDiscount(req, date, entry, fc, people);
-        totalDiscount += dayCalc.total;
-      }
-
-      // Adicionais (Extras): Utilizados mas não solicitados
-      if (fc) {
-        const reqMeals = (req.dailyOverrides?.[date] ?? req.meals) || [];
-        const usedMeals: { type: MealType; used: boolean }[] = [
-          { type: 'cafe', used: fc.usedCafe },
-          { type: 'almoco', used: fc.usedAlmoco },
-          { type: 'janta', used: fc.usedJanta }
-        ];
-
-        usedMeals.forEach(um => {
-          if (um.used && !reqMeals.includes(um.type)) {
-            totalExtra += getMealValue(um.type, date, person, req.location);
-          }
-        });
+        walletBalance -= dayCalc.total;
       }
     });
   });
 
-  // Saldo: Extras a cobrar - Descontos a abater
-  return totalExtra - totalDiscount;
+  // 3. Abater PAGAMENTOS reais já efetuados (Débitos na carteira)
+  // Um pagamento pode ter sido feito via Confirmação Individual (Request) ou Integral (Job)
+  personRequests.forEach(req => {
+    // Verifica se esta solicitação específica ou o Job dela foram quitados
+    const conf = confirmations.find(c => 
+        ('id' in c && c.confirmed && (c.id === req.id || c.id === `job-${req.jobId}`))
+    ) as PaymentConfirmation | undefined;
+
+    if (conf) {
+        let paidAmount = 0;
+        const dates = getDatesInRange(req.startDate, req.endDate);
+        const personAtTime = people.find(p => p.id === personId);
+        
+        // Valor Bruto solicitado na época
+        dates.forEach(d => {
+            const meals = (req.dailyOverrides?.[d] ?? req.meals) || [];
+            meals.forEach(m => { paidAmount += getMealValue(m, d, personAtTime, req.location); });
+        });
+
+        // Abatemos o que foi pago efetivamente. 
+        // Se for Job, o appliedBalance geralmente se aplica ao Job inteiro? 
+        // No momento, se for individual (Request), abatemos o appliedBalance específico.
+        const applied = conf.id === req.id ? (conf.appliedBalance || 0) : 0;
+        
+        walletBalance -= (paidAmount + applied);
+    }
+  });
+
+  return walletBalance;
 }
 
-export function determineMealsUsed(entry?: TimeEntry, req?: MealRequest, date?: string): { cafe: boolean; almoco: boolean; janta: boolean } {
+export function determineMealsUsed(
+  entry: TimeEntry | undefined,
+  req: MealRequest,
+  date: string
+): { cafe: boolean; almoco: boolean; janta: boolean } {
+  // Regra ACT: Se for auto-preenchido pelo sistema (ex: IDA automática)
+  // o controle alimentar não deve contabilizar como utilizado por padrão (Auditoria Manual)
+  if (entry?.isAutoFilled) {
+      return { cafe: false, almoco: false, janta: false };
+  }
+
   let cafe = false;
   let almoco = false;
   let janta = false;
@@ -336,30 +386,37 @@ export function determineMealsUsed(entry?: TimeEntry, req?: MealRequest, date?: 
     const firstEntry = getFirstEntryTime(entry);
     const lastExit = getLastExitTime(entry);
     
-    // Regra Fora de SP: Se trabalhou o dia e está fora, ganha as 3 refeições
-    if (req?.location === "Fora SP" && calcTotalMinutes(entry) > 0) {
-      cafe = true;
-      almoco = true;
-      janta = true;
-    } else {
-      if (String(firstEntry || "").includes(":")) {
-        const [h, m] = String(firstEntry).split(":").map(Number);
-        if (h < 8 || (h === 8 && m <= 0)) cafe = true; // Até 08:00
-      }
-      
-      // Almoço: intervalo ou 6h+
-      if (entry.entry1 && entry.exit1 && entry.entry2 && entry.exit2) {
-        almoco = true;
-      } else if (calcTotalMinutes(entry) > 360) {
-        almoco = true;
-      }
-      
-      if (String(lastExit || "").includes(":")) {
-        const [h] = String(lastExit).split(":").map(Number);
-        if (h >= 19) janta = true; // Após 19h
-      }
-      if (entry.entry3 || entry.exit3) janta = true;
+    // 1. REGRA IDA AUTOMÁTICA (1º DIA): 
+    // Se o sistema preencheu as horas sozinho, exige auditoria manual (bolinhas vazias).
+    if (entry?.isAutoFilled) {
+        return { cafe: false, almoco: false, janta: false };
     }
+
+    // 2. REGRA GERAL VIAGEM (FORA SP):
+    // Em viagem, se a pessoa trabalhou qualquer tempo, o sistema marca tudo como utilizado.
+    if (req?.location === "Fora SP" && calcTotalMinutes(entry) > 0) {
+        return { cafe: true, almoco: true, janta: true };
+    }
+
+    // 3. REGRA DENTRO DE SP OU SEM VIAGEM:
+    // Avaliação estrita pelos horários de batida de ponto.
+    if (String(firstEntry || "").includes(":")) {
+      const [h, m] = String(firstEntry).split(":").map(Number);
+      if (h < 8 || (h === 8 && m <= 0)) cafe = true; // Até 08:00
+    }
+    
+    // Almoço: intervalo ou 6h+
+    if (entry.entry1 && entry.exit1 && entry.entry2 && entry.exit2) {
+      almoco = true;
+    } else if (calcTotalMinutes(entry) >= 360) {
+      almoco = true;
+    }
+    
+    if (String(lastExit || "").includes(":")) {
+      const [h] = String(lastExit).split(":").map(Number);
+      if (h >= 19) janta = true; // Após 19h
+    }
+    if (entry.entry3 || entry.exit3) janta = true;
   }
 
   return { cafe, almoco, janta };

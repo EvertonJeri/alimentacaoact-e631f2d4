@@ -17,6 +17,7 @@ import {
   getDatesInRange,
   getMealValue,
   calculatePersonBalance,
+  calculateDayDiscount,
   type FoodControlEntry,
   type DiscountConfirmation,
 } from "@/lib/types";
@@ -49,6 +50,7 @@ const PaymentTab = ({
 
   const [filterJob, setFilterJob] = useState("all");
   const [expandedRequests, setExpandedRequests] = useState<Set<string>>(new Set());
+  const [applyBalanceMap, setApplyBalanceMap] = useState<Record<string, boolean>>({});
 
   const getPersonName = (id: string) => people.find((p) => p.id === id)?.name || "—";
   const getJobName = (id: string) => jobs.find((j) => j.id === id)?.name || "—";
@@ -86,19 +88,42 @@ const PaymentTab = ({
   };
 
   const confirmPayment = (id: string, type: "request" | "job", paymentDate: string) => {
-    onUpdateConfirmation({ id, type, paymentDate, confirmed: true });
+    const shouldApply = applyBalanceMap[id] !== false; // Default true
 
     if (type === "request") {
       const req = requests.find(r => r.id === id);
       if (req) {
         const personName = getPersonName(req.personId);
         const jobName = getJobName(req.jobId);
-        const total = calcRequestTotal(req);
+        
+        // Calculamos o saldo retroativo (tudo MENOS esta solicitação atual)
+        const totalWallet = calculatePersonBalance(req.personId, requests, foodControl, confirmations, people, timeEntries);
+        const currentReqBruto = calcRequestTotal(req);
+        
+        // Calculamos descontos desta solicitação p/ isolar o saldo antigo
+        let currentReqDiscounts = 0;
+        const dates = getDatesInRange(req.startDate, req.endDate);
+        dates.forEach(d => {
+            const entry = timeEntries.find(e => e.personId === req.personId && e.jobId === req.jobId && e.date === d);
+            const fc = foodControl.find(f => f.personId === req.personId && f.jobId === req.jobId && f.date === d);
+            if (entry) currentReqDiscounts += calculateDayDiscount(req, d, entry, fc, people).total;
+        });
+        
+        const currentReqNet = currentReqBruto - currentReqDiscounts;
+        const retroBalance = totalWallet - currentReqNet;
+        
+        const appliedBalance = shouldApply ? retroBalance : 0;
 
-        const personBalance = calculatePersonBalance(req.personId, requests, foodControl, confirmations, people, timeEntries);
-        if (personBalance < 0 && onUpdateDiscountConfirmation) {
-          onUpdateDiscountConfirmation({ personId: req.personId, confirmed: true, paymentDate });
-        }
+        onUpdateConfirmation({ 
+            id, 
+            type, 
+            paymentDate, 
+            confirmed: true, 
+            applyBalance: shouldApply,
+            appliedBalance: appliedBalance
+        });
+
+        const finalTotal = currentReqNet + appliedBalance;
 
         const jobReqs = registeredRequests.filter(r => r.jobId === req.jobId);
         const otherReqsConfirmed = jobReqs.every(r => r.id === id || getConfirmation(r.id)?.confirmed);
@@ -107,14 +132,14 @@ const PaymentTab = ({
         }
 
         // ==== NOTIFICAÇÕES (Pagamento Individual) ====
-        const teamsMsg = `**✅ Pagamento Confirmado**\n\n**Funcionário:** ${personName}\n**Projeto:** ${jobName}\n**Data de Pagamento:** ${paymentDate}\n**Valor:** R$ ${total.toFixed(2)}`;
+        const teamsMsg = `**✅ Pagamento Confirmado**\n\n**Funcionário:** ${personName}\n**Projeto:** ${jobName}\n**Data de Pagamento:** ${paymentDate}\n**Valor:** R$ ${finalTotal.toFixed(2)}`;
         sendTeamsNotification("✅ Pagamento Confirmado – Sistema ACT", teamsMsg, "00B050");
 
-        const waMsg = `✅ *Pagamento Confirmado - Sistema ACT*\n\n👤 Funcionário: ${personName}\n🏗️ Projeto: ${jobName}\n📅 Data: ${paymentDate}\n💰 Valor: R$ ${total.toFixed(2)}`;
+        const waMsg = `✅ *Pagamento Confirmado - Sistema ACT*\n\n👤 Funcionário: ${personName}\n🏗️ Projeto: ${jobName}\n📅 Data: ${paymentDate}\n💰 Valor: R$ ${finalTotal.toFixed(2)}`;
         sendWhatsAppMessage(waMsg);
 
         const emailSubject = `Pagamento Confirmado – ${personName} – ${jobName}`;
-        const emailBody = `Olá,\n\nInformamos que o pagamento abaixo foi confirmado no Sistema ACT:\n\nFuncionário: ${personName}\nProjeto: ${jobName}\nData de Pagamento: ${paymentDate}\nValor Total: R$ ${total.toFixed(2)}\n\nAtenciosamente,\nSistema ACT`;
+        const emailBody = `Olá,\n\nInformamos que o pagamento abaixo foi confirmado no Sistema ACT:\n\nFuncionário: ${personName}\nProjeto: ${jobName}\nData de Pagamento: ${paymentDate}\nValor Total: R$ ${finalTotal.toFixed(2)}\n\nAtenciosamente,\nSistema ACT`;
         sendEmailNotification(emailSubject, emailBody);
 
         toast.success(`Pagamento de ${personName} confirmado! Notificações disparadas.`, { duration: 5000 });
@@ -249,10 +274,29 @@ const PaymentTab = ({
                   const conf = getConfirmation(req.id);
                   const isPaid = conf?.confirmed;
                   const paymentDate = conf?.paymentDate || new Date().toISOString().split("T")[0];
-                  const total = calcRequestTotal(req);
-                  const personBalance = calculatePersonBalance(req.personId, requests, foodControl, confirmations, people, timeEntries);
-                  const deduction = personBalance < 0 ? personBalance : 0;
-                  const finalTotal = Math.max(0, total + deduction);
+                  const totalWallet = calculatePersonBalance(req.personId, requests, foodControl, confirmations, people, timeEntries);
+                  const currentReqBruto = calcRequestTotal(req);
+                  let currentReqDiscounts = 0;
+                  const dates = getDatesInRange(req.startDate, req.endDate);
+                  dates.forEach(d => {
+                      const entry = timeEntries.find(e => e.personId === req.personId && e.jobId === req.jobId && e.date === d);
+                      const fc = foodControl.find(f => f.personId === req.personId && f.jobId === req.jobId && f.date === d);
+                      if (entry) currentReqDiscounts += calculateDayDiscount(req, d, entry, fc, people).total;
+                  });
+                  const currentReqNet = currentReqBruto - currentReqDiscounts;
+                  const retroBalance = totalWallet - currentReqNet;
+                  
+                  const shouldApply = applyBalanceMap[req.id] !== false;
+                  
+                  // LOGICA NOVA: 
+                  // ON: Paga o valor trabalhado (Net) + Saldo Retroativo (Dívidas passadas)
+                  // OFF: Paga o valor TOTAL solicitado originalmente (Bruto), deixando descontos em aberto.
+                  const finalTotal = isPaid 
+                    ? (currentReqNet + (conf?.appliedBalance || 0)) 
+                    : (shouldApply ? Math.max(0, currentReqNet + retroBalance) : currentReqBruto);
+                    
+                  // O valor que será mostrado como "Ajuste" (em cima do total)
+                  const displayAdjustment = shouldApply ? retroBalance : 0;
 
                   return (
                     <div key={req.id} className="bg-background hover:bg-muted/5 transition-colors">
@@ -282,13 +326,31 @@ const PaymentTab = ({
                         </div>
 
                         <div className="flex items-center gap-6">
-                          <div className="text-right">
-                            <p className="text-2xs uppercase tracking-wider font-semibold text-muted-foreground mb-0.5">Total</p>
-                            <div className="flex flex-col items-end">
-                              {deduction < 0 && (
-                                <span className="text-[10px] text-destructive line-through decoration-destructive/50">R$ {total.toFixed(2)}</span>
+                          <div className="text-right flex flex-col items-end gap-0.5">
+                            <p className="text-[10px] uppercase tracking-widest font-black text-muted-foreground/60 leading-none">Total Pix</p>
+                            <p className="text-base font-black tabular-nums tracking-tighter text-foreground leading-none">R$ {finalTotal.toFixed(2)}</p>
+                            
+                            <div className="flex flex-col items-end pt-1">
+                              {/* Se Saldo ON: Mostra o desconto da montagem atual riscado */}
+                              {shouldApply && currentReqDiscounts > 0 && (
+                                <span className="text-[10px] text-destructive font-medium opacity-60 line-through">
+                                  - R$ {currentReqDiscounts.toFixed(2)} [DESC. FALTA]
+                                </span>
                               )}
-                              <p className="text-sm font-bold tabular-nums">R$ {finalTotal.toFixed(2)}</p>
+                              
+                              {/* Se Saldo ON: Mostra o ajuste retroativo (se houver) */}
+                              {shouldApply && Math.abs(retroBalance) > 0.1 && (
+                                <span className={`text-[10px] font-bold ${retroBalance < 0 ? 'text-destructive' : 'text-blue-600'}`}>
+                                  {retroBalance < 0 ? '' : '+'} R$ {retroBalance.toFixed(2)} [SALDO ANTERIOR]
+                                </span>
+                              )}
+
+                              {/* Se Saldo OFF: Mostra o valor bruto da montagem sem descontos */}
+                              {!shouldApply && (
+                                <span className="text-[10px] text-destructive font-black italic animate-pulse">
+                                  SALDO/DESC. NÃO APLICADO
+                                </span>
+                              )}
                             </div>
                           </div>
                           
@@ -306,6 +368,22 @@ const PaymentTab = ({
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
+
+                            {/* Botão de Abater Saldo (Toggle) */}
+                            {!isPaid && (
+                                <Button
+                                    size="sm"
+                                    variant={applyBalanceMap[req.id] === false ? "outline" : "default"}
+                                    onClick={() => setApplyBalanceMap(prev => ({ ...prev, [req.id]: !(prev[req.id] !== false) }))}
+                                    className={`h-8 text-[9px] px-2 font-black uppercase tracking-tight transition-all duration-300 ${
+                                        applyBalanceMap[req.id] === false 
+                                        ? "border-muted-foreground/30 text-muted-foreground bg-muted/20" 
+                                        : "bg-blue-600 hover:bg-blue-700 text-white shadow-sm ring-1 ring-blue-400/50"
+                                    }`}
+                                >
+                                    {applyBalanceMap[req.id] === false ? "NÃO APLICADO" : "APLICADO"}
+                                </Button>
+                            )}
                             
                             {!isPaid ? (
                               <>
@@ -350,9 +428,9 @@ const PaymentTab = ({
                       {expandedRequests.has(req.id) && (
                         <div className="px-14 pb-4 animate-in slide-in-from-top-2 duration-200">
                           <div className="p-3 rounded-lg border border-border bg-muted/20 space-y-3">
-                             {personBalance !== 0 && (
-                               <div className={`text-xs p-2 rounded border ${personBalance < 0 ? 'bg-destructive/10 border-destructive/20 text-destructive' : 'bg-green-500/10 border-green-200 text-green-600'}`}>
-                                 <strong>Saldo Global:</strong> R$ {personBalance.toFixed(2)} ({personBalance < 0 ? 'Débito' : 'Crédito'} acumulado de outras montagens)
+                             {Math.abs(retroBalance) > 0.1 && (
+                               <div className={`text-xs p-2 rounded border ${retroBalance < 0 ? 'bg-destructive/10 border-destructive/20 text-destructive' : 'bg-blue-500/10 border-green-200 text-blue-600'}`}>
+                                 <strong>Saldo Retroativo:</strong> R$ {retroBalance.toFixed(2)} ({retroBalance < 0 ? 'Débito' : 'Crédito'} acumulado de outras montagens)
                                </div>
                              )}
                              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-widest">Detalhamento da Solicitação</p>

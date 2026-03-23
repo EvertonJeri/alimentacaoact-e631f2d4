@@ -55,7 +55,7 @@ const MealRequestSystem = ({
   setAutoFillTravel,
 }: MealRequestSystemProps) => {
   const [selectedJob, setSelectedJob] = useState("");
-  const [location, setLocation] = useState<LocationType>("Dentro SP");
+  const [location, setLocation] = useState("");
   const [transportType, setTransportType] = useState<"onibus" | "aviao">("onibus");
   const [travelTime, setTravelTime] = useState("");
   const [personId, setPersonId] = useState("");
@@ -70,7 +70,7 @@ const MealRequestSystem = ({
   }, [personId, requests, foodControl, confirmations, people, timeEntries]);
 
   const handleAdd = () => {
-    if (!selectedJob || !personId || !startDate || !endDate) return;
+    if (!selectedJob || !personId || !startDate || !endDate || !location) return;
 
     const dates = getDatesInRange(startDate, endDate);
     
@@ -91,15 +91,8 @@ const MealRequestSystem = ({
     const overrides: Record<string, MealType[]> = {};
     let hasOverride = false;
 
-    // Regra CLT: Remove almoço de Seg a Sex (exceto feriados) dentro de SP
-    if (person?.isRegistered && meals.includes("almoco") && location !== "Fora SP") {
-      dates.forEach(date => {
-        if (!isWeekend(date) && !isHoliday(date)) {
-          overrides[date] = meals.filter(m => m !== "almoco");
-          hasOverride = true;
-        }
-      });
-    }
+    // Removemos a desmarcação automática do almoço CLT para que ele apareça na lista mas com valor 0.
+    // Isso evita confusão visual para o usuário.
 
     // Regra de Viagem: Aplica no dia de início se houver horário de viagem
     if (travelTime) {
@@ -127,7 +120,7 @@ const MealRequestSystem = ({
       endDate,
       meals,
       dailyOverrides: hasOverride ? overrides : {},
-      location,
+      location: location as LocationType,
       transportType,
       travelTime: travelTime || undefined,
     };
@@ -154,20 +147,22 @@ const MealRequestSystem = ({
           let isTravelReturn = false;
           let isAutoFilled = false;
 
-          // Se for o primeiro dia e houver horário de viagem (Transporte)
-          if (idx === 0 && req.travelTime) {
-            isTravelOut = true;
-            isAutoFilled = true;
+          // REGRA DE IDA AUTOMÁTICA (Primeiro Dia)
+          const isFirstDay = idx === 0;
+          
+          if (isFirstDay) {
             if (req.location === "Fora SP") {
+                // Fora SP sempre preenche IDA no primeiro dia
+                isTravelOut = true;
+                isAutoFilled = true;
                 entry1 = "08:00"; exit1 = "12:00"; 
                 entry2 = "13:00"; exit2 = "18:00";
-            } else {
-                // Regra usuário: Dentro SP + Ônibus/Transporte = Só 08:00 às 10:00
+            } else if (req.location === "Dentro SP" && req.travelTime) {
+                // Dentro SP só preenche se houver horário de viagem (transporte)
+                isTravelOut = true;
+                isAutoFilled = true;
                 entry1 = "08:00"; exit1 = "10:00";
             }
-          } else if (idx === dates.length - 1 && dates.length > 1) {
-             // Marca apenas como Volta, mas não autopreenche os horários por padrão no último dia (usuário perguntou sobre Ida)
-             isTravelReturn = true;
           }
 
           const id = crypto.randomUUID();
@@ -252,9 +247,11 @@ const MealRequestSystem = ({
           />
         </div>
         <div className="space-y-2">
-          <Label className="text-2xs uppercase tracking-widest font-black text-muted-foreground">Local das Refeições</Label>
-          <Select value={location} onValueChange={(v) => setLocation(v as LocationType)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+          <Label className="text-2xs uppercase tracking-widest font-black text-muted-foreground mr-1">
+            Local das Refeições <span className="text-destructive">*</span>
+          </Label>
+          <Select value={location} onValueChange={setLocation}>
+            <SelectTrigger><SelectValue placeholder="Selecione o Local..." /></SelectTrigger>
             <SelectContent>
               {LOCATIONS.map(loc => (
                 <SelectItem key={loc.value} value={loc.value}>{loc.label}</SelectItem>
@@ -343,8 +340,12 @@ const MealRequestSystem = ({
             </div>
             <Button
               onClick={handleAdd}
-              disabled={!personId || !startDate || !endDate}
-              className="h-11 w-full bg-foreground text-background font-black uppercase tracking-widest hover:bg-foreground/90 transition-all shadow-md active:scale-[0.98]"
+              disabled={!selectedJob || !personId || !startDate || !endDate || !location}
+              className={`h-11 w-full font-black uppercase tracking-widest transition-all shadow-md active:scale-[0.98] ${
+                (!selectedJob || !personId || !startDate || !endDate || !location)
+                ? "bg-muted text-muted-foreground opacity-50 cursor-not-allowed"
+                : "bg-foreground text-background hover:bg-foreground/90"
+              }`}
             >
               <Plus className="h-4 w-4 mr-2" /> Adicionar
             </Button>
@@ -456,7 +457,8 @@ const MealRequestSystem = ({
                                   </div>
                                   {(["cafe", "almoco", "janta"] as MealType[]).map(meal => {
                                     const val = getMealValue(meal, date, person, req.location);
-                                    const isFree = meal === "almoco" && person?.isRegistered && !isWeekendOrHol && req.location !== "Fora SP";
+                                    // Regra CLT: Almoço grátis (R$0) de seg-sex, independente do local
+                                    const isFree = meal === "almoco" && person?.isRegistered && !isWeekendOrHol;
                                     const isActive = isFree ? false : activeMeals.includes(meal);
                                     
                                     return (

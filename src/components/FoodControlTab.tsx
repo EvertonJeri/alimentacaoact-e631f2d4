@@ -54,28 +54,21 @@ const FoodControlTab = ({
   const rows = useMemo(() => {
     const result: (FoodControlEntry & { key: string })[] = [];
 
-    registeredRequests.forEach((req) => {
-      const dates = getDatesInRange(req.startDate, req.endDate);
-      dates.forEach((date) => {
-        const entry = timeEntries.find(
-          (e) => e.personId === req.personId && e.jobId === req.jobId && e.date === date
-        );
+    timeEntries.forEach((entry) => {
+        // A aba de Controle Alimentar é agora um ESPELHO TOTAL do Registro de Horas (Ponto)
+        // Não aplicamos mais a 'Linha Fantasma' aqui, conforme solicitado (mostrar todas as linhas).
+        if (!entry) return;
 
-        if (!entry) return; // Só aparece no controle após o envio para registro
+        // Procurar solicitação de refeição associada
+        const req = requests.find(r => r.personId === entry.personId && r.jobId === entry.jobId && entry.date >= r.startDate && entry.date <= r.endDate);
 
-        const key = `${req.personId}-${req.jobId}-${date}`;
-        const existing = foodControl.find(
-          (fc) => fc.personId === req.personId && fc.jobId === req.jobId && fc.date === date
-        );
+        const key = `${entry.id}`; // 1:1 com o ID do Ponto
+        const existing = foodControl.find(fc => fc.id === entry.id || (fc.personId === entry.personId && fc.jobId === entry.jobId && fc.date === entry.date));
 
-        const dayOverrides = req.dailyOverrides as Record<string, string[]> | undefined;
-        const dayMeals = dayOverrides?.[date] ?? req.meals;
-
-        if (!Array.isArray(dayMeals)) return;
-
-        const requestedCafe = dayMeals.includes("cafe");
-        const requestedAlmoco = dayMeals.includes("almoco");
-        const requestedJanta = dayMeals.includes("janta");
+        const dayMeals = req ? (req.dailyOverrides?.[entry.date] ?? req.meals) : [];
+        const requestedCafe = Array.isArray(dayMeals) && dayMeals.includes("cafe");
+        const requestedAlmoco = Array.isArray(dayMeals) && dayMeals.includes("almoco");
+        const requestedJanta = Array.isArray(dayMeals) && dayMeals.includes("janta");
 
         if (existing) {
           result.push({ 
@@ -86,16 +79,18 @@ const FoodControlTab = ({
             requestedJanta
           });
         } else {
+          // Se não houver override manual no FoodControl, calculamos o 'sugerido' pelo ponto
           let used = { cafe: false, almoco: false, janta: false };
-          if (entry) {
-            used = determineMealsUsed(entry, req, date);
+          if (req) {
+            used = determineMealsUsed(entry, req, entry.date);
           }
 
           result.push({
+            id: entry.id, // Sincroniza o ID
+            personId: entry.personId,
+            jobId: entry.jobId,
+            date: entry.date,
             key,
-            personId: req.personId,
-            jobId: req.jobId,
-            date,
             requestedCafe,
             requestedAlmoco,
             requestedJanta,
@@ -104,17 +99,17 @@ const FoodControlTab = ({
             usedJanta: used.janta,
           });
         }
-      });
     });
 
     return result.sort((a, b) => b.date.localeCompare(a.date) || a.personId.localeCompare(b.personId));
-  }, [registeredRequests, timeEntries, foodControl]);
+  }, [timeEntries, requests, foodControl]);
 
   const updateUsed = (personId: string, jobId: string, date: string, field: "usedCafe" | "usedAlmoco" | "usedJanta", value: boolean) => {
     const row = rows.find((r) => r.personId === personId && r.jobId === jobId && r.date === date);
     if (!row) return;
 
     const updated: FoodControlEntry = {
+      id: row.id, // Ensure ID is passed
       personId, jobId, date,
       requestedCafe: row.requestedCafe,
       requestedAlmoco: row.requestedAlmoco,

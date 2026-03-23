@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SearchableSelect } from "@/components/ui/searchable-select";
-import { Plus, Trash2, Filter, Download, Plane, Zap, ArrowRight, ArrowLeft } from "lucide-react";
+import { Plus, Trash2, Filter, Download, Plane, Zap, ArrowRight, ArrowLeft, ArrowUpAZ, ArrowDownAZ } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import * as XLSX from "xlsx";
@@ -80,6 +80,7 @@ const TimeRegistrationTab = ({
   }, [localOverrides]);
 
   // Filters
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [filterPerson, setFilterPerson] = useState("all");
   const [filterJob, setFilterJob] = useState("all");
   const [filterDate, setFilterDate] = useState("");
@@ -101,6 +102,29 @@ const TimeRegistrationTab = ({
     }
 
     const entry = emptyEntry(selectedPerson, selectedJob, selectedDate);
+    
+    // Auto-preenchimento de IDA se for o dia de início
+    const travel = getTravelInfo(entry);
+    if (travel?.type === 'outbound') {
+        const loc = travel.location || 'Dentro SP';
+        entry.isTravelOut = true;
+        entry.isAutoFilled = true;
+        entry.entry1 = "08:00";
+        entry.exit1 = loc === "Fora SP" ? "12:00" : "10:00";
+        entry.entry2 = loc === "Fora SP" ? "13:00" : "";
+        entry.exit2 = loc === "Fora SP" ? "18:00" : "";
+
+        // Também salva no cache local para visibilidade persistente
+        setLocalOverrides(prev => ({
+            ...prev,
+            [entry.id]: {
+                isTravelOut: true,
+                isTravelReturn: false,
+                isAutoFilled: true
+            }
+        }));
+    }
+
     onUpdateEntry?.(entry);
     setEntries((prev) => [...prev, entry]);
   };
@@ -142,11 +166,30 @@ const TimeRegistrationTab = ({
   };
 
 
+  const getTravelInfo = (entry: TimeEntry) => {
+    // Busca a solicitação correspondente
+    const req = requests.find(r => 
+        r.personId === entry.personId && 
+        r.jobId === entry.jobId && 
+        (r.startDate === entry.date || r.endDate === entry.date)
+    );
+    if (!req) return null;
+    
+    // REGRA FORA SP: Primeiro dia é SEMPRE IDA
+    if (req.location === "Fora SP" && entry.date === req.startDate) {
+        return { type: 'outbound', label: `Ida`, location: "Fora SP", travelTime: req.travelTime };
+    }
+
+    // REGRA DENTRO SP: Só considera IDA se houver travelTime preenchido (viagem de transporte)
+    if (req.location === "Dentro SP" && entry.date === req.startDate && req.travelTime) {
+        return { type: 'outbound', label: `Ida`, location: "Dentro SP", travelTime: req.travelTime };
+    }
+
+    return null;
+  };
+
   const getPersonName = (id: string) =>
     people.find((p) => p.id === id)?.name || "—";
-
-  const getJobName = (id: string) =>
-    jobs.find((j) => j.id === id)?.name || "—";
 
   const autofillRow = (entry: TimeEntry, forceType?: 'outbound' | 'return') => {
     const travel = getTravelInfo(entry);
@@ -217,63 +260,125 @@ const TimeRegistrationTab = ({
     }));
   };
 
-  const getTravelInfo = (entry: TimeEntry) => {
-    const req = requests.find(r => r.personId === entry.personId && r.jobId === entry.jobId && (r.startDate === entry.date || r.endDate === entry.date));
-    if (!req) return null;
-    
-    // Agora reconhecemos Dentro SP se houver travelTime (partida de ônibus/transporte)
-    if (req.location === "Dentro SP" && !req.travelTime) return null;
+  const getJobName = (id: string) =>
+    jobs.find((j) => j.id === id)?.name || "—";
 
-    if (entry.date === req.startDate && req.travelTime) {
-        return { type: 'outbound', label: `Ida`, location: req.location || 'Dentro SP' };
-    } else if (entry.date === req.endDate && req.startDate !== req.endDate) {
-        return { type: 'return', label: `Volta`, location: req.location || 'Dentro SP' };
-    }
-    return null;
+  const toggleSort = () => {
+    setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
   };
 
-  const filteredEntries = entries.filter((e) => {
-    if (filterPerson !== "all" && e.personId !== filterPerson) return false;
-    if (filterJob !== "all" && e.jobId !== filterJob) return false;
-    if (filterDate && e.date !== filterDate) return false;
-    return true;
-  }).sort((a, b) => {
-      // Ordenação rigorosa por data, depois por nome da pessoa para evitar saltos (pulos)
-      if (a.date !== b.date) return a.date.localeCompare(b.date);
-      const nameA = getPersonName(a.personId);
-      const nameB = getPersonName(b.personId);
-      return nameA.localeCompare(nameB);
-  });
+  const filteredEntries = useMemo(() => {
+    return entries
+      .filter((e) => {
+        if (filterPerson !== "all" && e.personId !== filterPerson) return false;
+        if (filterJob !== "all" && e.jobId !== filterJob) return false;
+        if (filterDate && e.date !== filterDate) return false;
+        return true;
+      })
+      .sort((a, b) => {
+        // Primeiro por data respeitando o sentido (asc/desc)
+        const dateComp = sortOrder === 'asc' 
+            ? a.date.localeCompare(b.date) 
+            : b.date.localeCompare(a.date);
+        
+        if (dateComp !== 0) return dateComp;
+
+        // Segundo por nome (sempre asc para estabilidade)
+        const nameA = getPersonName(a.personId);
+        const nameB = getPersonName(b.personId);
+        return nameA.localeCompare(nameB);
+      });
+  }, [entries, filterPerson, filterJob, filterDate, sortOrder]);
 
   const exportToExcel = () => {
     const wb = XLSX.utils.book_new();
-    const rows: (string | number)[][] = [
-      ["REGISTRO DE HORAS"],
-      [],
-      ["Pessoa", "Job", "Data", "Entrada 1", "Saída 1", "Entrada 2", "Saída 2", "Entrada 3", "Saída 3", "Total Horas"],
+    const weekdays = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+    
+    // Cabeçalho exatamente como na imagem
+    const headers = [
+        "Nº JOB", 
+        "DESCRIÇÃO JOB \"MONTAGEM\"", 
+        "Nome", 
+        "", // Coluna D vazia
+        "Dia", 
+        "Dia da semana", 
+        "Entrada 1", 
+        "Saida 1", 
+        "Entrada 2", 
+        "Saida 2", 
+        "Entrada", 
+        "Saída 3", 
+        "TOTAL"
     ];
+
+    const rows: (string | number)[][] = [headers];
 
     const sortedForExport = [...filteredEntries].sort((a, b) => a.date.localeCompare(b.date));
 
     sortedForExport.forEach((entry) => {
+      const dateObj = new Date(entry.date + "T12:00:00"); 
+      const weekday = weekdays[dateObj.getDay()];
+      const formattedDate = entry.date?.includes("-") ? entry.date.split("-").reverse().join("/") : entry.date || "—";
+      
+      const jobFullName = getJobName(entry.jobId);
+      
+      // Lógica de separação: "2391A - MONTAGEM SMURF"
+      // Nº JOB: "2391A" (até o primeiro espaço)
+      // DESCRIÇÃO: "MONTAGEM SMURF" (após o primeiro " - ")
+      let numJob = entry.jobId; // Fallback
+      let descJob = jobFullName; // Fallback
+      
+      if (jobFullName.includes(" - ")) {
+          const parts = jobFullName.split(" - ");
+          numJob = parts[0].trim();
+          descJob = parts.slice(1).join(" - ").trim();
+      } else if (jobFullName.includes(" ")) {
+          const firstSpace = jobFullName.indexOf(" ");
+          numJob = jobFullName.substring(0, firstSpace).trim();
+          descJob = jobFullName.substring(firstSpace).trim();
+      }
+
+      // Formata o total como HH:MM:00
+      const totalFormatted = formatMinutes(calcTotalMinutes(entry)) + ":00";
+
       rows.push([
-        getPersonName(entry.personId),
-        getJobName(entry.jobId),
-        entry.date?.includes("-") ? entry.date.split("-").reverse().join("/") : entry.date || "—",
-        entry.entry1 || "—",
-        entry.exit1 || "—",
-        entry.entry2 || "—",
-        entry.exit2 || "—",
-        entry.entry3 || "—",
-        entry.exit3 || "—",
-        formatMinutes(calcTotalMinutes(entry)),
+        numJob, 
+        descJob, 
+        getPersonName(entry.personId), 
+        "", 
+        formattedDate, 
+        weekday, 
+        entry.entry1 || "",
+        entry.exit1 || "",
+        entry.entry2 || "",
+        entry.exit2 || "",
+        entry.entry3 || "",
+        entry.exit3 || "",
+        totalFormatted, 
       ]);
     });
 
     const ws = XLSX.utils.aoa_to_sheet(rows);
-    ws["!cols"] = [{ wch: 25 }, { wch: 25 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 12 }];
-    XLSX.utils.book_append_sheet(wb, ws, "Horas");
-    XLSX.writeFile(wb, "Registro_de_Horas.xlsx");
+    
+    // Ajuste de largura das colunas
+    ws["!cols"] = [
+        { wch: 10 }, // A: Nº Job
+        { wch: 35 }, // B: Descrição
+        { wch: 30 }, // C: Nome
+        { wch: 2 },  // D: Vazia
+        { wch: 12 }, // E: Dia
+        { wch: 12 }, // F: Dia da semana
+        { wch: 10 }, // G: E1
+        { wch: 10 }, // H: S1
+        { wch: 10 }, // I: E2
+        { wch: 10 }, // J: S2
+        { wch: 10 }, // K: E3
+        { wch: 10 }, // L: S3
+        { wch: 10 }  // M: Total
+    ];
+
+    XLSX.utils.book_append_sheet(wb, ws, "Registro de Horas");
+    XLSX.writeFile(wb, `Registro_Horas_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.xlsx`);
   };
 
 
@@ -361,6 +466,21 @@ const TimeRegistrationTab = ({
             className="h-8 text-xs tabular-nums"
           />
         </div>
+        <div className="flex gap-2">
+            <label className="text-2xs uppercase tracking-wider font-medium text-muted-foreground block mb-1.5 invisible">
+              Ordem
+            </label>
+            <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={toggleSort}
+                className="h-8 text-xs border-dashed"
+                title={sortOrder === 'asc' ? "Menor para maior" : "Maior para menor"}
+            >
+                {sortOrder === 'asc' ? <ArrowUpAZ className="h-4 w-4 mr-1" /> : <ArrowDownAZ className="h-4 w-4 mr-1" />}
+                Data {sortOrder === 'asc' ? "↑" : "↓"}
+            </Button>
+        </div>
         <div className="flex-1"></div>
         <Button onClick={exportToExcel} variant="outline" className="h-8 text-xs gap-1.5 shadow-sm">
           <Download className="h-3.5 w-3.5" />
@@ -399,10 +519,13 @@ const TimeRegistrationTab = ({
                 const total = calcTotalMinutes(entry);
                 const has6 = !!(entry.entry3 || entry.exit3);
                 
+                const local = localOverrides[entry.id];
                 const sysTravel = getTravelInfo(entry);
-                const isOut = entry.isTravelOut || localOverrides[entry.id]?.isTravelOut || sysTravel?.type === 'outbound';
-                const isRet = entry.isTravelReturn || localOverrides[entry.id]?.isTravelReturn || sysTravel?.type === 'return';
-                const isAutoFilled = entry.isAutoFilled || localOverrides[entry.id]?.isAutoFilled;
+                
+                // Prioridade total para o que você escolheu no cache local (marcar/desmarcar)
+                const isOut = local?.isTravelOut !== undefined ? local.isTravelOut : (entry.isTravelOut || sysTravel?.type === 'outbound');
+                const isRet = local?.isTravelReturn !== undefined ? local.isTravelReturn : (entry.isTravelReturn || sysTravel?.type === 'return');
+                const isAutoFilled = local?.isAutoFilled !== undefined ? local.isAutoFilled : entry.isAutoFilled;
 
                 const trClass = isOut 
                   ? "bg-orange-100/40 hover:bg-orange-100/60 border-l-8 border-l-orange-500" 
