@@ -2,7 +2,7 @@ import { useState, useMemo, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SearchableSelect } from "@/components/ui/searchable-select";
-import { CheckCircle2, FileDown, Filter, Info, Trash2, User } from "lucide-react";
+import { CheckCircle2, FileDown, Filter, Info, Trash2, User, ChevronDown, ChevronUp, Eye, EyeOff } from "lucide-react";
 import {
   type Person,
   type Job,
@@ -49,7 +49,20 @@ interface PersonStatement {
 
 const StatementTab = ({ people, jobs, requests, timeEntries, foodControl, confirmations, onUpdatePaymentConfirmation }: StatementTabProps) => {
   const [selectedJob, setSelectedJob] = useState("all");
+  const [expandedPeople, setExpandedPeople] = useState<Set<string>>(new Set());
   const statementRef = useRef<HTMLDivElement>(null);
+
+  const togglePerson = (id: string) => {
+    setExpandedPeople(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const expandAll = () => setExpandedPeople(new Set(personStatements.map(p => p.personId)));
+  const collapseAll = () => setExpandedPeople(new Set());
 
   const isRequestPaid = (requestId: string) => {
     return confirmations.some(c => 'id' in c && c.id === requestId && c.confirmed);
@@ -190,9 +203,17 @@ const StatementTab = ({ people, jobs, requests, timeEntries, foodControl, confir
             className="h-10 bg-background border-border shadow-sm text-sm"
           />
         </div>
-        <Button onClick={exportAsImage} className="gap-2 h-10 shadow-sm" variant="default">
-          <FileDown className="h-4 w-4" /> Exportar Extrato (PDF/Print)
-        </Button>
+        <div className="flex gap-2">
+            <Button onClick={expandAll} variant="outline" size="sm" className="h-10 gap-2 border-dashed">
+                <Eye className="h-4 w-4" /> Abrir Todos
+            </Button>
+            <Button onClick={collapseAll} variant="outline" size="sm" className="h-10 gap-2 border-dashed">
+                <EyeOff className="h-4 w-4" /> Recolher Todos
+            </Button>
+            <Button onClick={exportAsImage} className="gap-2 h-10 shadow-sm" variant="default">
+                <FileDown className="h-4 w-4" /> Exportar Extrato (PDF/Print)
+            </Button>
+        </div>
       </div>
 
       <div ref={statementRef} className="space-y-8 print:space-y-6">
@@ -204,7 +225,10 @@ const StatementTab = ({ people, jobs, requests, timeEntries, foodControl, confir
         ) : (
           personStatements.map((ps) => (
             <Card key={ps.personId} className="overflow-hidden border-border shadow-md print:shadow-none print:border print:border-border break-inside-avoid">
-              <CardHeader className="bg-muted/30 border-b border-border py-4 print:bg-transparent">
+              <CardHeader 
+                className="bg-muted/30 border-b border-border py-4 print:bg-transparent cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => togglePerson(ps.personId)}
+              >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shadow-inner print:border-none">
@@ -216,7 +240,10 @@ const StatementTab = ({ people, jobs, requests, timeEntries, foodControl, confir
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleSettlePerson(ps.personId)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSettlePerson(ps.personId);
+                          }}
                           className="h-7 px-2 text-[10px] uppercase font-black tracking-widest text-muted-foreground hover:text-green-600 hover:bg-green-600/10 gap-1.5 print:hidden group"
                           title="Marcar como Liquidado (Remove do Extrato)"
                         >
@@ -233,15 +260,28 @@ const StatementTab = ({ people, jobs, requests, timeEntries, foodControl, confir
                       </div>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <span className="text-2xs uppercase tracking-wider font-semibold text-muted-foreground block mb-0.5">Saldo Pendente</span>
-                    <span className={`text-xl font-black tabular-nums ${ps.balance >= 0 ? 'text-green-600' : 'text-destructive'}`}>
-                      {ps.balance >= 0 ? '+' : ''}{ps.balance.toFixed(2)}
-                    </span>
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <span className="text-2xs uppercase tracking-wider font-semibold text-muted-foreground block mb-0.5">Saldo Pendente</span>
+                      <span className={`text-xl font-black tabular-nums ${ps.balance >= 0 ? 'text-green-600' : 'text-destructive'}`}>
+                        {ps.balance >= 0 ? '+' : ''}{ps.balance.toFixed(2)}
+                      </span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        togglePerson(ps.personId);
+                      }}
+                      className="h-10 w-10 rounded-full hover:bg-muted print:hidden"
+                    >
+                      {expandedPeople.has(ps.personId) ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                    </Button>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="p-0">
+              <CardContent className={`p-0 transition-all duration-300 ${expandedPeople.has(ps.personId) || typeof window === 'undefined' ? 'block' : 'hidden print:block'}`}>
                 {/* Resumo principal: 3 colunas claras e diretas */}
                 <div className="grid grid-cols-3 divide-x divide-border border-b border-border">
                   <div className="p-5 text-center">
