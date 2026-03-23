@@ -25,69 +25,70 @@ export const JobImportDialog = () => {
   const parseExcel = (file: File): Promise<Job[]> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-
       reader.onerror = () => reject(new Error("Falha ao ler o arquivo."));
 
       reader.onload = (e) => {
         try {
           const data = new Uint8Array(e.target?.result as ArrayBuffer);
-
-          // raw: false → converte todos os valores para string (evita erros com números formatados)
-          // cellText: true → usa o texto formatado como aparece na célula
-          const workbook = XLSX.read(data, { type: "array", raw: false, cellText: true });
+          const workbook = XLSX.read(data, { type: "array" });
 
           if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
             return reject(new Error("Arquivo sem abas encontradas."));
           }
 
-          // Sempre usa a PRIMEIRA aba ("Cronograma" ou qualquer nome)
+          // Sempre usa a PRIMEIRA aba (ex: "Cronograma")
           const firstSheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[firstSheetName];
 
-          if (!worksheet) {
-            return reject(new Error(`Aba "${firstSheetName}" não pôde ser lida.`));
+          if (!worksheet || !worksheet["!ref"]) {
+            return reject(new Error(`Aba "${firstSheetName}" está vazia ou não pôde ser lida.`));
           }
 
-          // header: 1 → retorna array de arrays (controle total das colunas)
-          // defval: "" → células vazias viram "" em vez de undefined
-          const jsonData = XLSX.utils.sheet_to_json<string[]>(worksheet, {
-            header: 1,
-            defval: "",
-            raw: false,
-          });
+          // Lê o range total da planilha (ex: "A1:T100")
+          const range = XLSX.utils.decode_range(worksheet["!ref"]);
+          const totalRows = range.e.r; // última linha com dados
 
           const jobsToInsert: Job[] = [];
           const seenIds = new Set<string>();
 
-          // Detecta dinamicamente onde está o cabeçalho:
-          // procura a linha onde coluna A contém "JOB" (case insensitive).
-          // Tudo abaixo é dado real.
-          let dataStartIndex = 1; // fallback: pula só a primeira linha
+          // Função auxiliar: lê valor de uma célula como string
+          const getCellValue = (row: number, col: number): string => {
+            const cellAddress = XLSX.utils.encode_cell({ r: row, c: col });
+            const cell = worksheet[cellAddress];
+            if (!cell) return "";
+            // .v = valor raw (número, string, bool)
+            // .w = valor formatado (como aparece no Excel)
+            // Preferimos .v para job numbers numéricos (2526 → "2526"), .w como fallback
+            const raw = cell.v !== undefined ? String(cell.v) : (cell.w || "");
+            return raw.trim().replace(/\.0+$/, ""); // Remove .0 de números inteiros
+          };
 
-          for (let i = 0; i < Math.min(jsonData.length, 10); i++) {
-            const row = jsonData[i];
-            if (!row) continue;
-            const colA = String(row[0] || "").trim().toUpperCase();
-            const colB = String(row[1] || "").trim().toUpperCase();
+          // Detecta onde está o cabeçalho (linha com "JOB" na coluna A)
+          // Varre as primeiras 15 linhas
+          let dataStartRow = 1; // fallback: começa da 2ª linha (index 1)
+          let headerFound = false;
 
-            // Cabeçalho tipicamente tem "JOB" na coluna A e "N" ou "JOB" na coluna B
-            if (colA.includes("JOB") && colB.length > 0) {
-              dataStartIndex = i + 1;
+          for (let r = range.s.r; r <= Math.min(range.e.r, range.s.r + 14); r++) {
+            const colA = getCellValue(r, 0).toUpperCase();
+            if (colA === "JOB" || colA === "DESCRIÇÃO" || colA === "DESCRICAO") {
+              dataStartRow = r + 1; // dados começam na linha seguinte ao cabeçalho
+              headerFound = true;
               break;
             }
           }
 
-          for (let i = dataStartIndex; i < jsonData.length; i++) {
-            const row = jsonData[i];
-            if (!row) continue;
+          if (!headerFound) {
+            // Se não achou cabeçalho, começa do início
+            dataStartRow = range.s.r;
+          }
 
-            const description = String(row[0] || "").trim();
-            const jobNumber = String(row[1] || "").trim();
+          // Lê os dados linha a linha
+          for (let r = dataStartRow; r <= totalRows; r++) {
+            const description = getCellValue(r, 0); // Coluna A
+            const jobNumber = getCellValue(r, 1);   // Coluna B
 
-            // Pula linhas onde qualquer coluna essencial está vazia
             if (!description || !jobNumber) continue;
 
-            // Formato: "Número - Descrição"
             const fullName = `${jobNumber} - ${description}`;
 
             if (!seenIds.has(jobNumber)) {

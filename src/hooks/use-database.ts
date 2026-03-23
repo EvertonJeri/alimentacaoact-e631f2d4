@@ -386,19 +386,21 @@ export function useDatabase() {
 
   const clearAllJobs = useMutation({
     mutationFn: async () => {
+      // .not("id", "is", null) deleta todas as linhas onde id não é nulo (= todas)
       const { error } = await supabase
         .from("jobs")
         .delete()
-        .neq("id", "0"); // Delete all (id != '0' matches all string ids)
+        .not("id", "is", null);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["jobs"] });
       toast.success("Todos os Jobs foram removidos!");
     },
-    onError: (error) => {
+    onError: (error: unknown) => {
       console.error(error);
-      toast.error("Erro ao remover jobs.");
+      const msg = error instanceof Error ? error.message : String(error);
+      toast.error(`Erro ao remover jobs: ${msg}`);
     }
   });
 
