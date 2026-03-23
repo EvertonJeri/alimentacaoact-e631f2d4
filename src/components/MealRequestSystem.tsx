@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { toast } from "sonner";
+import { isHoliday, getHolidayName } from "@/lib/holidays";
 import {
   type Person,
   type Job,
@@ -36,6 +37,8 @@ interface MealRequestSystemProps {
   onUpdateRequest: (req: MealRequest) => void;
   onRemoveRequest: (id: string) => void;
   onUpdateTimeEntry?: (entry: TimeEntry) => void;
+  autoFillTravel?: boolean;
+  setAutoFillTravel?: (v: boolean) => void;
 }
 
 const MealRequestSystem = ({
@@ -48,6 +51,8 @@ const MealRequestSystem = ({
   onUpdateRequest,
   onRemoveRequest,
   onUpdateTimeEntry,
+  autoFillTravel = true,
+  setAutoFillTravel,
 }: MealRequestSystemProps) => {
   const [selectedJob, setSelectedJob] = useState("");
   const [location, setLocation] = useState<LocationType>("Dentro SP");
@@ -67,19 +72,51 @@ const MealRequestSystem = ({
   const handleAdd = () => {
     if (!selectedJob || !personId || !startDate || !endDate) return;
 
+    const dates = getDatesInRange(startDate, endDate);
+    
+    // VERIFICAÇÃO DE DUPLICIDADE (CONFLITO COM OUTRO JOB)
+    const conflict = requests.find(r => 
+      r.personId === personId && 
+      r.jobId !== selectedJob && 
+      dates.some(d => getDatesInRange(r.startDate, r.endDate).includes(d))
+    );
+
+    if (conflict) {
+      const conflictJob = jobs.find(j => j.id === conflict.jobId)?.name || 'Outro Projeto';
+      toast.error(`Ação bloqueada: esta pessoa já possui refeição no projeto [${conflictJob}] neste período!`, { duration: 6000 });
+      return;
+    }
+
     const person = people.find(p => p.id === personId);
     const overrides: Record<string, MealType[]> = {};
-    const dates = getDatesInRange(startDate, endDate);
     let hasOverride = false;
 
-    // Se é registrado e selecionou almoço, remove do solicitado de Seg a Sex
-    if (person?.isRegistered && meals.includes("almoco")) {
+    // Regra CLT: Remove almoço de Seg a Sex (exceto feriados) dentro de SP
+    if (person?.isRegistered && meals.includes("almoco") && location !== "Fora SP") {
       dates.forEach(date => {
-        if (!isWeekend(date)) {
+        if (!isWeekend(date) && !isHoliday(date)) {
           overrides[date] = meals.filter(m => m !== "almoco");
           hasOverride = true;
         }
       });
+    }
+
+    // Regra de Viagem: Aplica no dia de início se houver horário de viagem
+    if (travelTime) {
+      const offset = transportType === "aviao" ? 4 : 2;
+      const [h, m] = travelTime.split(":").map(Number);
+      const adjustedMinutes = (h * 60 + m) - (offset * 60);
+
+      const travelMeals: MealType[] = [];
+      // Café: deslocamento iniciado até 08:00
+      if (adjustedMinutes <= 8 * 60 && meals.includes("cafe")) travelMeals.push("cafe");
+      // Almoço: deslocamento iniciado até 12:00
+      if (adjustedMinutes <= 12 * 60 && meals.includes("almoco")) travelMeals.push("almoco");
+      // Janta: deslocamento iniciado até 20:00
+      if (adjustedMinutes <= 20 * 60 && meals.includes("janta")) travelMeals.push("janta");
+
+      overrides[startDate] = travelMeals;
+      hasOverride = true;
     }
 
     const newRequest: MealRequest = {
@@ -148,7 +185,7 @@ const MealRequestSystem = ({
   };
 
   const filtered = useMemo(() => {
-    if (!selectedJob) return requests || [];
+    if (!selectedJob) return [];
     return (requests || []).filter(r => r.jobId === selectedJob);
   }, [requests, selectedJob]);
 
@@ -282,7 +319,7 @@ const MealRequestSystem = ({
       <div className={`rounded-2xl border border-border overflow-hidden bg-card shadow-card transition-opacity`}>
         <div className="px-6 py-4 bg-muted/40 border-b border-border flex justify-between items-center">
             <h3 className="font-black uppercase text-[10px] tracking-widest text-muted-foreground">Refeições Programadas</h3>
-            <div className="flex gap-3 items-center">
+            <div className="flex gap-4 items-center">
               <span className="text-[9px] bg-primary/10 text-primary px-3 py-1 rounded-full font-black uppercase">{filtered.length} Ativos</span>
               <Button
                 onClick={handleSendAll}
@@ -364,22 +401,26 @@ const MealRequestSystem = ({
                                 ? (req.dailyOverrides![date] as MealType[])
                                 : [...(req.meals || [])];
                               const weekend = isWeekend(date);
-                              const dayTotal = activeMeals.reduce((s, m) => s + getMealValue(m, date, person), 0);
+                              const holiday = isHoliday(date);
+                              const holidayName = holiday ? getHolidayName(date) : "";
+                              const isWeekendOrHol = weekend || holiday;
+                              const dayTotal = activeMeals.reduce((s, m) => s + getMealValue(m, date, person, req.location), 0);
 
                               return (
                                 <div
                                   key={date}
-                                  className={`grid grid-cols-[1fr_repeat(3,80px)_80px] gap-2 items-center py-2 text-xs ${weekend ? 'bg-accent/30' : ''}`}
+                                  className={`grid grid-cols-[1fr_repeat(3,80px)_80px] gap-2 items-center py-2 text-xs ${isWeekendOrHol ? 'bg-accent/30' : ''}`}
                                 >
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-2 flex-wrap">
                                     <span className="font-bold tabular-nums text-foreground">{fDate(date)}</span>
-                                    <span className={`text-[9px] uppercase font-medium ${weekend ? 'text-accent-foreground font-black' : 'text-muted-foreground'}`}>
+                                    <span className={`text-[9px] uppercase font-medium flex gap-1 items-center ${isWeekendOrHol ? 'text-accent-foreground font-black' : 'text-muted-foreground'}`}>
                                       {dayOfWeek(date)}
+                                      {holiday && <span className="text-primary text-[8px] italic tracking-tight">({holidayName})</span>}
                                     </span>
                                   </div>
                                   {(["cafe", "almoco", "janta"] as MealType[]).map(meal => {
-                                    const val = getMealValue(meal, date, person);
-                                    const isFree = meal === "almoco" && person?.isRegistered && !weekend;
+                                    const val = getMealValue(meal, date, person, req.location);
+                                    const isFree = meal === "almoco" && person?.isRegistered && !isWeekendOrHol && req.location !== "Fora SP";
                                     const isActive = isFree ? false : activeMeals.includes(meal);
                                     
                                     return (

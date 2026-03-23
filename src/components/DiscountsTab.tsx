@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, ChevronRight, Check, Mail, Download } from "lucide-react";
+import { ChevronDown, ChevronRight, Check, Mail, Download, Bell } from "lucide-react";
+import { sendTeamsNotification, sendWhatsAppMessage, sendEmailNotification } from "@/lib/notifications";
+import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { Input } from "@/components/ui/input";
 
@@ -30,8 +32,8 @@ interface DiscountsTabProps {
   timeEntries: TimeEntry[];
   foodControl: FoodControlEntry[];
   confirmations: (DiscountConfirmation | PaymentConfirmation)[];
-  setConfirmations: (confs: any[]) => void;
-  onUpdateConfirmation?: (conf: any) => void;
+  setConfirmations: (confs: (DiscountConfirmation | PaymentConfirmation)[]) => void;
+  onUpdateConfirmation?: (conf: DiscountConfirmation) => void;
 }
 
 interface DiscountRow {
@@ -60,15 +62,10 @@ const DiscountsTab = ({
   const getPersonName = (id: string) => people.find((p) => p.id === id)?.name || "—";
   const getJobName = (id: string) => jobs.find((j) => j.id === id)?.name || "—";
 
-  // Filtra as solicitações garantindo que elas tenham saído do estágio "Draft"
+  // Mostra todas as solicitações, independente de timeEntry já registrada
   const registeredRequests = useMemo(() => {
-    return requests.filter((req) => {
-      const dates = getDatesInRange(req.startDate, req.endDate);
-      return dates.some((date) => 
-        timeEntries.some((e) => e.personId === req.personId && e.jobId === req.jobId && e.date === date)
-      );
-    });
-  }, [requests, timeEntries]);
+    return requests;
+  }, [requests]);
 
   const discounts = useMemo(() => {
     const rows: DiscountRow[] = [];
@@ -79,8 +76,7 @@ const DiscountsTab = ({
         const entry = timeEntries.find(
           (e) => e.personId === req.personId && e.jobId === req.jobId && e.date === date
         );
-        // Só há desconto viável se houver um registro (mesmo que vazio) vindo do MealRequestSystem
-        if (!entry) return;
+        // Avalia o dia mesmo sem registro de horas (ex: falta completa)
 
         const fc = foodControl.find(
           (f) => f.personId === req.personId && f.jobId === req.jobId && f.date === date
@@ -120,19 +116,58 @@ const DiscountsTab = ({
     });
   };
 
-  const isConfirmed = (personId: string) => (confirmations as any[]).find((c) => c.personId === personId)?.confirmed || false;
+  const isConfirmed = (personId: string) => confirmations.find((c) => 'personId' in c && c.personId === personId)?.confirmed || false;
 
-  const updatePaymentDate = (personId: string, date: string) => {
-    const updated: DiscountConfirmation = { personId, paymentDate: date, confirmed: !!date };
-    onUpdateConfirmation?.(updated);
+  const undoDiscount = (personId: string) => {
+    const unconfirmed: DiscountConfirmation = { personId, paymentDate: "", confirmed: false };
+    onUpdateConfirmation?.(unconfirmed);
 
-    const idx = (confirmations as any[]).findIndex((c) => c.personId === personId);
+    // Atualiza estado local imediatamente (sem esperar o banco)
+    const idx = confirmations.findIndex((c) => 'personId' in c && c.personId === personId);
     if (idx >= 0) {
       const copy = [...confirmations];
-      (copy as any[])[idx] = updated;
+      copy[idx] = unconfirmed;
+      setConfirmations(copy);
+    }
+    toast.info("Desconto desmarcado como pendente.", { duration: 3000 });
+  };
+
+  const updatePaymentDate = (personId: string, date: string) => {
+    if (!date) {
+      undoDiscount(personId);
+      return;
+    }
+
+    const personName = getPersonName(personId);
+    const personRows = discounts.filter(d => d.personId === personId);
+    const totalDesc = personRows.reduce((s, d) => s + d.total, 0);
+    const reasons = personRows.map(d => `${d.date?.includes("-") ? d.date.split("-").reverse().join("/") : d.date}: ${d.reason} (R$ ${d.total.toFixed(2)})`).join("\n");
+
+    const updated: DiscountConfirmation = { personId, paymentDate: date, confirmed: true };
+    onUpdateConfirmation?.(updated);
+
+    const idx = confirmations.findIndex((c) => 'personId' in c && c.personId === personId);
+    if (idx >= 0) {
+      const copy = [...confirmations];
+      copy[idx] = updated;
       setConfirmations(copy);
     } else {
       setConfirmations([...confirmations, updated]);
+    }
+
+    if (date) {
+      // ==== NOTIFICAÇÕES DE DESCONTO ====
+      const teamsMsg = `**⚠️ Desconto Aplicado**\n\n**Funcionário:** ${personName}\n**Total Descontado:** R$ ${totalDesc.toFixed(2)}\n**Data Registro:** ${date}\n\n**Detalhes:**\n${reasons}`;
+      sendTeamsNotification("⚠️ Desconto Aplicado – Sistema ACT", teamsMsg, "FF5733");
+
+      const waMsg = `⚠️ *Desconto Registrado - Sistema ACT*\n\n👤 Funcionário: ${personName}\n💸 Total: -R$ ${totalDesc.toFixed(2)}\n📅 Data: ${date}\n\n📝 Motivos:\n${reasons}`;
+      sendWhatsAppMessage(waMsg);
+
+      const emailSubject = `Desconto Aplicado – ${personName}`;
+      const emailBody = `Olá,\n\nInformamos o lançamento de desconto no Sistema ACT:\n\nFuncionário: ${personName}\nTotal Descontado: -R$ ${totalDesc.toFixed(2)}\nData: ${date}\n\nMotivos:\n${reasons}\n\nAtenciosamente,\nSistema ACT`;
+      sendEmailNotification(emailSubject, emailBody);
+
+      toast.success(`Desconto de ${personName} registrado! Notificações disparadas.`, { duration: 5000 });
     }
   };
 
@@ -192,7 +227,7 @@ const DiscountsTab = ({
             {Array.from(groupedByPerson.entries()).map(([personId, personDiscounts]) => {
               const personTotal = personDiscounts.reduce((s, d) => s + d.total, 0);
               const expanded = expandedPersons.has(personId);
-              const personConfirmation = (confirmations as any[]).find((c) => c.personId === personId);
+              const personConfirmation = confirmations.find((c) => 'personId' in c && c.personId === personId) as DiscountConfirmation | undefined;
               const confirmed = personConfirmation?.confirmed || false;
               const paymentDate = personConfirmation?.paymentDate || "";
 
@@ -207,8 +242,8 @@ const DiscountsTab = ({
                       {expanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
                       <span className="font-medium text-foreground">{getPersonName(personId)}</span>
                       {confirmed ? (
-                        <Badge className="text-2xs bg-green-100 text-green-700 hover:bg-green-100 border-green-200">
-                          {paymentDate?.includes("-") ? `Pago em ${paymentDate.split("-").reverse().join("/")}` : "Pago"}
+                        <Badge className="text-2xs bg-orange-100 text-orange-700 hover:bg-orange-100 border-orange-200">
+                          ✂️ {paymentDate?.includes("-") ? `Descontado em ${paymentDate.split("-").reverse().join("/")}` : "Descontado"}
                         </Badge>
                       ) : (
                         <Badge className="text-2xs bg-destructive text-destructive-foreground">
@@ -219,13 +254,24 @@ const DiscountsTab = ({
                     <div className="flex items-center gap-3">
                       <span className="tabular-nums font-bold text-destructive mr-2">-{personTotal.toFixed(2)}</span>
                       <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                        <label className="text-2xs text-muted-foreground whitespace-nowrap">Data Pgto:</label>
+                        <label className="text-2xs text-muted-foreground whitespace-nowrap">Data Desconto:</label>
                         <Input
                           type="date"
                           className="h-7 text-xs w-32 px-2"
                           value={paymentDate}
                           onChange={(e) => updatePaymentDate(personId, e.target.value)}
                         />
+                        {confirmed && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => undoDiscount(personId)}
+                            className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                            title="Desmarcar desconto"
+                          >
+                            Desfazer
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </div>

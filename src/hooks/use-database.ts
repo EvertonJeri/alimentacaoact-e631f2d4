@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { type Person, type Job, type TimeEntry, type MealRequest, type FoodControlEntry, type DiscountConfirmation, type PaymentConfirmation } from "@/lib/types";
+import { toast } from "sonner";
+import { type Person, type Job, type TimeEntry, type MealRequest, type FoodControlEntry, type DiscountConfirmation, type PaymentConfirmation, type MealType, type SystemSettings } from "@/lib/types";
+import { type Holiday } from "@/lib/holidays";
 
 export function useDatabase() {
   const queryClient = useQueryClient();
@@ -30,7 +32,7 @@ export function useDatabase() {
   const timeEntries = useQuery({
     queryKey: ["time_entries"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("time_entries").select("*");
+      const { data, error } = await supabase.from("time_entries").select("*").order("date", { ascending: false }).order("created_at", { ascending: false });
       if (error) throw error;
       return (data || []).map(e => ({
         id: e.id,
@@ -43,6 +45,9 @@ export function useDatabase() {
         exit2: e.exit2 || "",
         entry3: e.entry3 || "",
         exit3: e.exit3 || "",
+        isTravelOut: e.is_travel_out || false,
+        isTravelReturn: e.is_travel_return || false,
+        isAutoFilled: e.is_auto_filled || false,
       })) as TimeEntry[];
     },
   });
@@ -58,8 +63,8 @@ export function useDatabase() {
         jobId: req.job_id,
         startDate: req.start_date,
         endDate: req.end_date,
-        meals: (req.meals as any[]) || [],
-        dailyOverrides: req.daily_overrides as any,
+        meals: (req.meals as MealType[]) || [],
+        dailyOverrides: req.daily_overrides as Record<string, MealType[]> | undefined,
         location: req.location
       })) as MealRequest[];
     },
@@ -122,6 +127,38 @@ export function useDatabase() {
     },
   });
 
+  const systemSettings = useQuery({
+    queryKey: ["system_settings"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("system_settings").select("*").eq("id", "default").single();
+      if (error && error.code !== 'PGRST116') throw error;
+      
+      if (!data) return null;
+
+      return {
+        enableTeams: data.enable_teams,
+        teamsWebhookUrl: data.teams_webhook_url,
+        enableWhatsApp: data.enable_whatsapp,
+        managerWhatsApp: data.manager_whatsapp,
+        enableEmail: data.enable_email,
+        adminEmails: data.admin_emails,
+      } as SystemSettings;
+    },
+  });
+
+  const customHolidays = useQuery({
+    queryKey: ["custom_holidays"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("custom_holidays").select("*").order("date");
+      if (error) throw error;
+      return (data || []).map(h => ({
+        date: h.date,
+        name: h.name,
+        type: 'custom'
+      })) as Holiday[];
+    },
+  });
+
   // Mutations
   const updateFoodControl = useMutation({
     mutationFn: async (entry: FoodControlEntry) => {
@@ -147,14 +184,14 @@ export function useDatabase() {
     },
     onMutate: async (newEntry) => {
       await queryClient.cancelQueries({ queryKey: ["food_control"] });
-      const previous = queryClient.getQueryData(["food_control"]);
-      queryClient.setQueryData(["food_control"], (old: any[]) => {
+      const previous = queryClient.getQueryData<FoodControlEntry[]>(["food_control"]);
+      queryClient.setQueryData(["food_control"], (old: FoodControlEntry[] | undefined) => {
         const other = (old || []).filter(fc => !(fc.personId === newEntry.personId && fc.jobId === newEntry.jobId && fc.date === newEntry.date));
         return [...other, newEntry];
       });
       return { previous };
     },
-    onError: (err, newEntry, context: any) => {
+    onError: (err, newEntry, context: { previous?: FoodControlEntry[] } | undefined) => {
       if (context?.previous) {
         queryClient.setQueryData(["food_control"], context.previous);
       }
@@ -166,16 +203,40 @@ export function useDatabase() {
 
   const updateDiscountConfirmation = useMutation({
     mutationFn: async (conf: DiscountConfirmation) => {
-      const { error } = await supabase
-        .from("discount_confirmations")
-        .upsert({
-          person_id: conf.personId,
-          confirmed: conf.confirmed,
-          payment_date: conf.paymentDate
-        }, { onConflict: "person_id" });
-      if (error) throw error;
+      if (!conf.confirmed) {
+        // Desfazer: remove o registro completamente do banco
+        const { error } = await supabase
+          .from("discount_confirmations")
+          .delete()
+          .eq("person_id", conf.personId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("discount_confirmations")
+          .upsert({
+            person_id: conf.personId,
+            confirmed: conf.confirmed,
+            payment_date: conf.paymentDate || null
+          }, { onConflict: "person_id" });
+        if (error) throw error;
+      }
     },
-    onSuccess: () => {
+    onMutate: async (conf: DiscountConfirmation) => {
+      await queryClient.cancelQueries({ queryKey: ["discount_confirmations"] });
+      const previous = queryClient.getQueryData<DiscountConfirmation[]>(["discount_confirmations"]);
+      queryClient.setQueryData(["discount_confirmations"], (old: DiscountConfirmation[] | undefined) => {
+        const others = (old || []).filter(c => c.personId !== conf.personId);
+        if (!conf.confirmed) return others; // Desfazer: remove do cache local imediatamente
+        return [...others, conf];
+      });
+      return { previous };
+    },
+    onError: (_err: unknown, _conf: DiscountConfirmation, context: { previous?: DiscountConfirmation[] } | undefined) => {
+      if (context?.previous) {
+        queryClient.setQueryData(["discount_confirmations"], context.previous);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["discount_confirmations"] });
     },
   });
@@ -212,10 +273,31 @@ export function useDatabase() {
           exit2: entry.exit2 || null,
           entry3: entry.entry3 || null,
           exit3: entry.exit3 || null,
+          is_travel_out: entry.isTravelOut || false,
+          is_travel_return: entry.isTravelReturn || false,
+          is_auto_filled: entry.isAutoFilled || false,
         });
-      if (error) throw error;
+      if (error) {
+        console.error("Erro no Supabase:", error);
+        throw error;
+      }
     },
-    onSuccess: () => {
+    onMutate: async (newEntry) => {
+      await queryClient.cancelQueries({ queryKey: ["time_entries"] });
+      const previous = queryClient.getQueryData<TimeEntry[]>(["time_entries"]);
+      queryClient.setQueryData(["time_entries"], (old: TimeEntry[] | undefined) => {
+        const others = (old || []).filter(e => e.id !== newEntry.id);
+        return [...others, newEntry].sort((a, b) => a.date.localeCompare(b.date));
+      });
+      return { previous };
+    },
+    onError: (err: any, newEntry, context: { previous?: TimeEntry[] } | undefined) => {
+      if (context?.previous) {
+        queryClient.setQueryData(["time_entries"], context.previous);
+      }
+      toast.error(`Falha ao salvar no banco. Verifique se rodou o script SQL: ${err.message || "Erro desconhecido"}`);
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["time_entries"] });
     },
   });
@@ -264,13 +346,13 @@ export function useDatabase() {
     },
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: ["time_entries"] });
-      const previous = queryClient.getQueryData(["time_entries"]);
-      queryClient.setQueryData(["time_entries"], (old: any) => 
-        (old || []).filter((e: any) => e.id !== id)
+      const previous = queryClient.getQueryData<TimeEntry[]>(["time_entries"]);
+      queryClient.setQueryData(["time_entries"], (old: TimeEntry[] | undefined) => 
+        (old || []).filter((e) => e.id !== id)
       );
       return { previous };
     },
-    onError: (err, id, context: any) => {
+    onError: (err, id, context: { previous?: TimeEntry[] } | undefined) => {
       if (context?.previous) {
         queryClient.setQueryData(["time_entries"], context.previous);
       }
@@ -293,6 +375,47 @@ export function useDatabase() {
     },
   });
 
+  const updateSystemSettings = useMutation({
+    mutationFn: async (settings: SystemSettings) => {
+      const { error } = await supabase
+        .from("system_settings")
+        .upsert({
+          id: "default",
+          enable_teams: settings.enableTeams,
+          teams_webhook_url: settings.teamsWebhookUrl,
+          enable_whatsapp: settings.enableWhatsApp,
+          manager_whatsapp: settings.managerWhatsApp,
+          enable_email: settings.enableEmail,
+          admin_emails: settings.adminEmails,
+          updated_at: new Date().toISOString(),
+        });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["system_settings"] });
+    },
+  });
+
+  const updateCustomHolidays = useMutation({
+    mutationFn: async (holidays: Holiday[]) => {
+      // Primeiro remove todos os feriados customizados existentes para simplificar o sync
+      // Ou poderíamos fazer um merge, mas para feriados um delete/insert é mais limpo
+      await supabase.from("custom_holidays").delete().neq("date", "1900-01-01"); // Delete all
+
+      if (holidays.length > 0) {
+        const toInsert = holidays.map(h => ({
+          date: h.date,
+          name: h.name,
+        }));
+        const { error } = await supabase.from("custom_holidays").insert(toInsert);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["custom_holidays"] });
+    },
+  });
+
   return {
     people,
     jobs,
@@ -301,11 +424,15 @@ export function useDatabase() {
     foodControl,
     discountConfirmations,
     paymentConfirmations,
+    systemSettings,
+    customHolidays,
     updateFoodControl,
     updateDiscountConfirmation,
     updatePaymentConfirmation,
     updateTimeEntry,
     updateMealRequest,
+    updateSystemSettings,
+    updateCustomHolidays,
     removeMealRequest,
     removeTimeEntry,
     removePaymentConfirmation,

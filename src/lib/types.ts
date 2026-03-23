@@ -15,6 +15,9 @@ export interface TimeEntry {
   exit2: string;
   entry3: string; // dinner period (optional)
   exit3: string;
+  isTravelOut?: boolean;
+  isTravelReturn?: boolean;
+  isAutoFilled?: boolean;
 }
 
 export type MealType = "cafe" | "almoco" | "janta";
@@ -32,6 +35,22 @@ export interface MealRequest {
   transportType?: "onibus" | "aviao";
   travelTime?: string; // HH:mm
   dailyOverrides?: Record<string, MealType[]>;
+}
+
+export interface SystemSettings {
+  teamsWebhookUrl?: string;
+  managerWhatsApp: string;
+  adminEmails?: string; // Múltiplos e-mails separados por vírgula
+  enableTeams: boolean;
+  enableWhatsApp: boolean;
+  enableEmail: boolean;
+}
+
+export const DEFAULT_SETTINGS: SystemSettings = {
+  managerWhatsApp: "+5511991054800",
+  enableTeams: true,
+  enableWhatsApp: true,
+  enableEmail: true,
 }
 
 export interface FoodControlEntry {
@@ -126,12 +145,21 @@ export function getDatesInRange(start: string, end: string): string[] {
 
 export function isWeekend(dateStr: string): boolean {
   const d = new Date(dateStr + "T12:00:00");
-  return d.getDay() === 0 || d.getDay() === 6; // 0 is Sunday, 6 is Saturday
+  return d.getDay() === 0 || d.getDay() === 6;
 }
 
-export function getMealValue(meal: MealType, dateStr: string, person?: Person): number {
-  if (meal === "almoco" && person?.isRegistered && !isWeekend(dateStr)) {
-    return 0; // Almoço grátis para registrados de Seg a Sex
+import { isHoliday } from "@/lib/holidays";
+
+// Feriado tem mesma regra do final de semana para CLT (pago normalmente)
+export function isWeekendOrHoliday(dateStr: string): boolean {
+  return isWeekend(dateStr) || isHoliday(dateStr);
+}
+
+export function getMealValue(meal: MealType, dateStr: string, person?: Person, location?: string): number {
+  if (location === "Fora SP") return MEAL_VALUES[meal];
+  
+  if (meal === "almoco" && person?.isRegistered && !isWeekendOrHoliday(dateStr)) {
+    return 0; // Almoço grátis para CLT de Seg a Sex (exceto feriados e Fora de SP)
   }
   return MEAL_VALUES[meal];
 }
@@ -158,9 +186,9 @@ export function calculateDayDiscount(
   people: Person[]
 ): { discountCafe: number; discountAlmoco: number; discountJanta: number; total: number; reason: string } {
   const person = people.find((p) => p.id === req.personId);
-  const refCafe = getMealValue("cafe", date, person);
-  const refAlmoco = getMealValue("almoco", date, person);
-  const refJanta = getMealValue("janta", date, person);
+  const refCafe = getMealValue("cafe", date, person, req.location);
+  const refAlmoco = getMealValue("almoco", date, person, req.location);
+  const refJanta = getMealValue("janta", date, person, req.location);
 
   let discountCafe = 0;
   let discountAlmoco = 0;
@@ -190,7 +218,7 @@ export function calculateDayDiscount(
        usedJanta = u.janta;
     } else if (isTravelDay) {
        // Se não tem horas mas é dia de viagem, calculamos baseado no horário da viagem
-       const u = determineMealsUsed(undefined as any, req, date);
+       const u = determineMealsUsed(undefined, req, date);
        usedCafe = u.cafe;
        usedAlmoco = u.almoco;
        usedJanta = u.janta;
@@ -216,8 +244,9 @@ export function calculateDayDiscount(
     }
   }
 
-  // Se tem controle manual (Food Control), ele se sobrepõe
-  if (fc) {
+  // Se tem controle manual (Food Control), ele se sobrepõe apenas se houver registro de horas,
+  // ignorando controles 'órfãos' caso o registro de horas tenha sido apagado.
+  if (fc && entry) {
     if (dayMeals.includes("cafe") && !fc.usedCafe) discountCafe = refCafe;
     else if (dayMeals.includes("cafe") && fc.usedCafe) discountCafe = 0;
 
@@ -273,7 +302,7 @@ export function calculatePersonBalance(
 
         usedMeals.forEach(um => {
           if (um.used && !reqMeals.includes(um.type)) {
-            totalExtra += getMealValue(um.type, date, person);
+            totalExtra += getMealValue(um.type, date, person, req.location);
           }
         });
       }
@@ -296,8 +325,8 @@ export function determineMealsUsed(entry?: TimeEntry, req?: MealRequest, date?: 
     const adjustedMinutes = (h * 60 + m) - (offset * 60);
 
     if (adjustedMinutes <= 8 * 60) cafe = true;
-    if (adjustedMinutes <= 13 * 60) almoco = true;
-    if (adjustedMinutes <= 19 * 60) janta = true;
+    if (adjustedMinutes <= 12 * 60) almoco = true; // Sincronizado com pedido user
+    if (adjustedMinutes <= 20 * 60) janta = true;  // Sincronizado com pedido user (20:00)
     
     // Se tiver entrada real, ela pode adicionar refeições, mas não tirar as da viagem (regra de benefício)
     if (!entry) return { cafe, almoco, janta };
@@ -307,23 +336,30 @@ export function determineMealsUsed(entry?: TimeEntry, req?: MealRequest, date?: 
     const firstEntry = getFirstEntryTime(entry);
     const lastExit = getLastExitTime(entry);
     
-    if (String(firstEntry || "").includes(":")) {
-      const [h, m] = String(firstEntry).split(":").map(Number);
-      if (h < 8 || (h === 8 && m <= 0)) cafe = true; // Até 08:00
-    }
-    
-    // Almoço: intervalo ou 6h+
-    if (entry.entry1 && entry.exit1 && entry.entry2 && entry.exit2) {
+    // Regra Fora de SP: Se trabalhou o dia e está fora, ganha as 3 refeições
+    if (req?.location === "Fora SP" && calcTotalMinutes(entry) > 0) {
+      cafe = true;
       almoco = true;
-    } else if (calcTotalMinutes(entry) > 360) {
-      almoco = true;
+      janta = true;
+    } else {
+      if (String(firstEntry || "").includes(":")) {
+        const [h, m] = String(firstEntry).split(":").map(Number);
+        if (h < 8 || (h === 8 && m <= 0)) cafe = true; // Até 08:00
+      }
+      
+      // Almoço: intervalo ou 6h+
+      if (entry.entry1 && entry.exit1 && entry.entry2 && entry.exit2) {
+        almoco = true;
+      } else if (calcTotalMinutes(entry) > 360) {
+        almoco = true;
+      }
+      
+      if (String(lastExit || "").includes(":")) {
+        const [h] = String(lastExit).split(":").map(Number);
+        if (h >= 19) janta = true; // Após 19h
+      }
+      if (entry.entry3 || entry.exit3) janta = true;
     }
-    
-    if (String(lastExit || "").includes(":")) {
-      const [h] = String(lastExit).split(":").map(Number);
-      if (h >= 19) janta = true; // Após 19h
-    }
-    if (entry.entry3 || entry.exit3) janta = true;
   }
 
   return { cafe, almoco, janta };

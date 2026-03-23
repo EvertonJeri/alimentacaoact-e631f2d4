@@ -16,6 +16,7 @@ import {
   getDatesInRange,
   determineMealsUsed,
   getMealValue,
+  isWeekendOrHoliday,
 } from "@/lib/types";
 
 interface FoodControlTabProps {
@@ -48,6 +49,8 @@ const FoodControlTab = ({
     return requests;
   }, [requests]);
 
+  const isPersonRegistered = (id: string) => people.find((p) => p.id === id)?.isRegistered || false;
+
   const rows = useMemo(() => {
     const result: (FoodControlEntry & { key: string })[] = [];
 
@@ -58,31 +61,44 @@ const FoodControlTab = ({
           (e) => e.personId === req.personId && e.jobId === req.jobId && e.date === date
         );
 
+        if (!entry) return; // Só aparece no controle após o envio para registro
+
         const key = `${req.personId}-${req.jobId}-${date}`;
         const existing = foodControl.find(
           (fc) => fc.personId === req.personId && fc.jobId === req.jobId && fc.date === date
         );
 
+        const dayOverrides = req.dailyOverrides as Record<string, string[]> | undefined;
+        const dayMeals = dayOverrides?.[date] ?? req.meals;
+
+        if (!Array.isArray(dayMeals)) return;
+
+        const requestedCafe = dayMeals.includes("cafe");
+        const requestedAlmoco = dayMeals.includes("almoco");
+        const requestedJanta = dayMeals.includes("janta");
+
         if (existing) {
-          result.push({ ...existing, key });
+          result.push({ 
+            ...existing, 
+            key,
+            requestedCafe,
+            requestedAlmoco,
+            requestedJanta
+          });
         } else {
           let used = { cafe: false, almoco: false, janta: false };
           if (entry) {
             used = determineMealsUsed(entry, req, date);
           }
-          const dayOverrides = req.dailyOverrides as Record<string, string[]> | undefined;
-          const dayMeals = dayOverrides?.[date] ?? req.meals;
-
-          if (!Array.isArray(dayMeals)) return;
 
           result.push({
             key,
             personId: req.personId,
             jobId: req.jobId,
             date,
-            requestedCafe: dayMeals.includes("cafe"),
-            requestedAlmoco: dayMeals.includes("almoco"),
-            requestedJanta: dayMeals.includes("janta"),
+            requestedCafe,
+            requestedAlmoco,
+            requestedJanta,
             usedCafe: used.cafe,
             usedAlmoco: used.almoco,
             usedJanta: used.janta,
@@ -91,7 +107,7 @@ const FoodControlTab = ({
       });
     });
 
-    return result.sort((a, b) => a.date.localeCompare(b.date) || a.personId.localeCompare(b.personId));
+    return result.sort((a, b) => b.date.localeCompare(a.date) || a.personId.localeCompare(b.personId));
   }, [registeredRequests, timeEntries, foodControl]);
 
   const updateUsed = (personId: string, jobId: string, date: string, field: "usedCafe" | "usedAlmoco" | "usedJanta", value: boolean) => {
@@ -197,7 +213,13 @@ const FoodControlTab = ({
                     {row.requestedCafe ? <Badge className="text-2xs opacity-60">✓</Badge> : <span className="text-muted-foreground/30">—</span>}
                   </td>
                   <td className="text-center px-1 py-2">
-                    {row.requestedAlmoco ? <Badge className="text-2xs opacity-60">✓</Badge> : <span className="text-muted-foreground/30">—</span>}
+                    {isPersonRegistered(row.personId) && !isWeekendOrHoliday(row.date) ? (
+                      <Badge className="text-[10px] bg-primary/10 text-primary hover:bg-primary/20 border-primary/20" title="Garantido por Regra CLT">✓*</Badge>
+                    ) : row.requestedAlmoco ? (
+                      <Badge className="text-2xs opacity-60">✓</Badge>
+                    ) : (
+                      <span className="text-muted-foreground/30">—</span>
+                    )}
                   </td>
                   <td className="text-center px-1 py-2">
                     {row.requestedJanta ? <Badge className="text-2xs opacity-60">✓</Badge> : <span className="text-muted-foreground/30">—</span>}

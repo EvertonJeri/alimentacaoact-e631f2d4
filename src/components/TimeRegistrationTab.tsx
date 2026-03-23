@@ -3,7 +3,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SearchableSelect } from "@/components/ui/searchable-select";
-import { Plus, Trash2, Filter, Download } from "lucide-react";
+import { Plus, Trash2, Filter, Download, Plane, Zap, ArrowRight, ArrowLeft } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import * as XLSX from "xlsx";
 import {
   type Person,
@@ -11,6 +13,7 @@ import {
   type TimeEntry,
   calcTotalMinutes,
   formatMinutes,
+  type MealRequest,
 } from "@/lib/types";
 
 const emptyEntry = (personId: string, jobId: string, date: string): TimeEntry => ({
@@ -24,6 +27,9 @@ const emptyEntry = (personId: string, jobId: string, date: string): TimeEntry =>
   exit2: "",
   entry3: "",
   exit3: "",
+  isTravelOut: false,
+  isTravelReturn: false,
+  isAutoFilled: false,
 });
 
 interface TimeRegistrationTabProps {
@@ -33,9 +39,22 @@ interface TimeRegistrationTabProps {
   jobs: Job[];
   onUpdateEntry?: (entry: TimeEntry) => void;
   onRemoveEntry?: (id: string) => void;
+  requests?: MealRequest[];
+  autoFillTravel?: boolean;
+  setAutoFillTravel?: (v: boolean) => void;
 }
 
-const TimeRegistrationTab = ({ entries, setEntries, people, jobs, onUpdateEntry, onRemoveEntry }: TimeRegistrationTabProps) => {
+const TimeRegistrationTab = ({ 
+  entries, 
+  setEntries, 
+  people, 
+  jobs, 
+  onUpdateEntry, 
+  onRemoveEntry, 
+  requests,
+  autoFillTravel,
+  setAutoFillTravel
+}: TimeRegistrationTabProps) => {
 
   const [selectedPerson, setSelectedPerson] = useState("");
   const [selectedJob, setSelectedJob] = useState("");
@@ -50,19 +69,40 @@ const TimeRegistrationTab = ({ entries, setEntries, people, jobs, onUpdateEntry,
 
   const addEntry = () => {
     if (!selectedPerson || !selectedJob) return;
+
+    // VERIFICAÇÃO DE DUPLICIDADE (CONFLITO COM OUTRO JOB)
+    const conflict = entries.find(e => 
+      e.personId === selectedPerson && 
+      e.date === selectedDate && 
+      e.jobId !== selectedJob
+    );
+
+    if (conflict) {
+      const conflictJob = jobs.find(j => j.id === conflict.jobId)?.name || 'Outro Projeto';
+      alert(`Alerta: Esta pessoa já possui registro de horas no Projeto [${conflictJob}] nesta data! Ação cancelada.`);
+      return;
+    }
+
     const entry = emptyEntry(selectedPerson, selectedJob, selectedDate);
     onUpdateEntry?.(entry);
     setEntries((prev) => [...prev, entry]);
   };
 
-  const updateField = (id: string, field: keyof TimeEntry, value: string) => {
+  const updateField = (id: string, field: keyof TimeEntry, value: any) => {
     const entry = entries.find(e => e.id === id);
     if (!entry) return;
-    const updated = { ...entry, [field]: value };
+    
+    // Se o usuário mexer em qualquer horário, removemos o sinalizador de auto-preenchimento (cor vermelha)
+    const timeFields = ["entry1", "exit1", "entry2", "exit2", "entry3", "exit3"];
+    const isAutoFilled = timeFields.includes(field as string) ? false : entry.isAutoFilled;
+
+    const updated = { ...entry, [field]: value, isAutoFilled };
     onUpdateEntry?.(updated);
-    setEntries((prev) =>
-      prev.map((e) => (e.id === id ? updated : e))
-    );
+    if (setEntries) {
+      setEntries((prev) =>
+        prev.map((e) => (e.id === id ? updated : e))
+      );
+    }
   };
 
   const removeEntry = (id: string) => {
@@ -79,6 +119,54 @@ const TimeRegistrationTab = ({ entries, setEntries, people, jobs, onUpdateEntry,
   const getJobName = (id: string) =>
     jobs.find((j) => j.id === id)?.name || "—";
 
+  const autofillRow = (entry: TimeEntry, forceType?: 'outbound' | 'return') => {
+    let entry1 = "08:00";
+    let exit1 = "12:00";
+    let entry2 = "13:00";
+    let exit2 = "18:00";
+    let isTravelOut = entry.isTravelOut;
+    let isTravelReturn = entry.isTravelReturn;
+
+    if (forceType === 'outbound' || (entry.isTravelOut && !forceType)) {
+      isTravelOut = true;
+      isTravelReturn = false;
+      // Regra de Ida: geralmente começa no projeto/viagem e termina no horário padrão se for o dia todo
+      // Mas o usuário quer preenchimento automático, vamos usar o padrão
+    } else if (forceType === 'return' || (entry.isTravelReturn && !forceType)) {
+      isTravelReturn = true;
+      isTravelOut = false;
+    }
+
+    const updated: TimeEntry = {
+      ...entry,
+      entry1,
+      exit1,
+      entry2,
+      exit2,
+      isTravelOut,
+      isTravelReturn,
+      isAutoFilled: true
+    };
+    
+    onUpdateEntry?.(updated);
+    if (setEntries) {
+      setEntries((prev) => prev.map((e) => (e.id === entry.id ? updated : e)));
+    }
+  };
+
+  const getTravelInfo = (entry: TimeEntry) => {
+    if (!requests) return null;
+    const req = requests.find(r => r.personId === entry.personId && r.jobId === entry.jobId && (r.startDate === entry.date || r.endDate === entry.date));
+    if (!req || req.location !== "Fora SP") return null;
+
+    if (entry.date === req.startDate && req.travelTime) {
+      return { type: 'outbound', label: `Ida` };
+    } else if (entry.date === req.endDate && req.startDate !== req.endDate) {
+      return { type: 'return', label: `Volta` };
+    }
+    return null;
+  };
+
   const filteredEntries = entries.filter((e) => {
     if (filterPerson !== "all" && e.personId !== filterPerson) return false;
     if (filterJob !== "all" && e.jobId !== filterJob) return false;
@@ -94,7 +182,9 @@ const TimeRegistrationTab = ({ entries, setEntries, people, jobs, onUpdateEntry,
       ["Pessoa", "Job", "Data", "Entrada 1", "Saída 1", "Entrada 2", "Saída 2", "Entrada 3", "Saída 3", "Total Horas"],
     ];
 
-    filteredEntries.forEach((entry) => {
+    const sortedForExport = [...filteredEntries].sort((a, b) => a.date.localeCompare(b.date));
+
+    sortedForExport.forEach((entry) => {
       rows.push([
         getPersonName(entry.personId),
         getJobName(entry.jobId),
@@ -222,6 +312,7 @@ const TimeRegistrationTab = ({ entries, setEntries, people, jobs, onUpdateEntry,
               <th className="text-center px-2 py-2.5 text-2xs uppercase tracking-wider font-medium text-muted-foreground">Entrada 3</th>
               <th className="text-center px-2 py-2.5 text-2xs uppercase tracking-wider font-medium text-muted-foreground">Saída 3</th>
               <th className="text-center px-3 py-2.5 text-2xs uppercase tracking-wider font-medium text-primary">Total</th>
+              <th className="text-center px-3 py-2.5 text-2xs uppercase tracking-wider font-medium text-muted-foreground">Preenchimento</th>
               <th className="px-2 py-2.5"></th>
             </tr>
           </thead>
@@ -236,8 +327,9 @@ const TimeRegistrationTab = ({ entries, setEntries, people, jobs, onUpdateEntry,
               filteredEntries.map((entry) => {
                 const total = calcTotalMinutes(entry);
                 const has6 = !!(entry.entry3 || entry.exit3);
+                const travel = getTravelInfo(entry);
                 return (
-                  <tr key={entry.id} className="hover:bg-muted/30 transition-colors">
+                  <tr key={entry.id} className={`hover:bg-muted/30 transition-colors ${travel?.type === 'outbound' ? 'bg-orange-50/40' : travel?.type === 'return' ? 'bg-blue-50/40' : ''}`}>
                     <td className="px-3 py-2 font-medium text-foreground whitespace-nowrap">
                       {getPersonName(entry.personId)}
                     </td>
@@ -245,7 +337,49 @@ const TimeRegistrationTab = ({ entries, setEntries, people, jobs, onUpdateEntry,
                       {getJobName(entry.jobId)}
                     </td>
                     <td className="px-3 py-2 tabular-nums text-muted-foreground whitespace-nowrap">
-                      {entry.date?.includes("-") ? entry.date.split("-").reverse().join("/") : entry.date || "—"}
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold">{entry.date?.includes("-") ? entry.date.split("-").reverse().join("/") : entry.date || "—"}</span>
+                        </div>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              const nextState = !entry.isTravelOut;
+                              if (nextState) {
+                                autofillRow(entry, 'outbound');
+                              } else {
+                                updateField(entry.id, 'isTravelOut', false);
+                              }
+                            }}
+                            className={`h-5 px-1.5 text-[8px] font-black border gap-1 shadow-sm ${entry.isTravelOut ? 'bg-orange-600 text-white border-orange-700 hover:bg-orange-700' : 'bg-muted/30 text-muted-foreground border-border hover:bg-orange-50'}`}
+                          >
+                            <ArrowRight className="h-2 w-2" /> IDA
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              const nextState = !entry.isTravelReturn;
+                              if (nextState) {
+                                autofillRow(entry, 'return');
+                              } else {
+                                updateField(entry.id, 'isTravelReturn', false);
+                              }
+                            }}
+                            className={`h-5 px-1.5 text-[8px] font-black border gap-1 shadow-sm ${entry.isTravelReturn ? 'bg-blue-600 text-white border-blue-700 hover:bg-blue-700' : 'bg-muted/30 text-muted-foreground border-border hover:bg-blue-50'}`}
+                          >
+                            <ArrowLeft className="h-2 w-2" /> VOLTA
+                          </Button>
+                        </div>
+                        {travel && !entry.isTravelOut && !entry.isTravelReturn && (
+                          <div className="flex items-center gap-1 opacity-50">
+                            <Plane className="h-2 w-2 text-muted-foreground" />
+                            <span className="text-[8px] font-bold text-muted-foreground uppercase">{travel.label} sugerida</span>
+                          </div>
+                        )}
+                      </div>
                     </td>
                     {(["entry1", "exit1", "entry2", "exit2", "entry3", "exit3"] as const).map(
                       (field) => (
@@ -254,18 +388,32 @@ const TimeRegistrationTab = ({ entries, setEntries, people, jobs, onUpdateEntry,
                             type="time"
                             value={entry[field]}
                             onChange={(e) => updateField(entry.id, field, e.target.value)}
-                            className="h-8 text-xs tabular-nums text-center w-[90px] mx-auto"
+                            className={`h-8 text-xs tabular-nums text-center w-[90px] mx-auto transition-colors ${entry.isAutoFilled ? "text-red-600 font-bold border-red-200 bg-red-50/30" : ""}`}
                           />
                         </td>
                       )
                     )}
-                    <td className="px-3 py-2 text-center">
-                      <span className={`tabular-nums font-semibold text-xs ${total > 0 ? "text-primary" : "text-muted-foreground"}`}>
-                        {formatMinutes(total)}
-                      </span>
-                      <span className="text-2xs text-muted-foreground ml-1">
-                        ({has6 ? "6 bat." : "4 bat."})
-                      </span>
+                    <td className="px-3 py-2 text-center text-xs">
+                      <div className="flex flex-col items-center gap-1">
+                        <span className={`tabular-nums font-semibold ${total > 0 ? "text-primary" : "text-muted-foreground"}`}>
+                          {formatMinutes(total)}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">
+                          ({has6 ? "6" : "4"} batidas)
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-2 py-2 text-center">
+                      <Button 
+                        onClick={() => autofillRow(entry)}
+                        size="sm"
+                        variant="ghost"
+                        className={`h-7 px-3 text-[10px] font-black border gap-1.5 transition-all active:scale-95 ${entry.isTravelOut ? 'bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100 shadow-sm' : entry.isTravelReturn ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 shadow-sm' : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted opacity-60 hover:opacity-100'}`}
+                        title={entry.isTravelOut ? "Preencher horário de IDA" : entry.isTravelReturn ? "Preencher horário de VOLTA" : "Preencher horário padrão 08-18h"}
+                      >
+                        {entry.isTravelOut ? <ArrowRight className="h-3 w-3" /> : entry.isTravelReturn ? <ArrowLeft className="h-3 w-3" /> : <Zap className="h-3 w-3" />}
+                        {entry.isTravelOut ? 'IDA' : entry.isTravelReturn ? 'VOLTA' : '08-18h'}
+                      </Button>
                     </td>
                     <td className="px-2 py-2">
                       <Button

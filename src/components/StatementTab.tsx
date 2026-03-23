@@ -1,9 +1,8 @@
 import { useState, useMemo, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SearchableSelect } from "@/components/ui/searchable-select";
-import { FileDown, Filter, Info, User } from "lucide-react";
+import { CheckCircle2, FileDown, Filter, Info, Trash2, User } from "lucide-react";
 import {
   type Person,
   type Job,
@@ -14,8 +13,11 @@ import {
   getMealValue,
   MEAL_LABELS,
   calculateDayDiscount,
+  type DiscountConfirmation,
+  type PaymentConfirmation,
 } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { toast } from "sonner";
 
 interface StatementTabProps {
   people: Person[];
@@ -23,26 +25,68 @@ interface StatementTabProps {
   requests: MealRequest[];
   timeEntries: TimeEntry[];
   foodControl: FoodControlEntry[];
+  confirmations: (DiscountConfirmation | PaymentConfirmation)[];
+  onUpdatePaymentConfirmation?: (conf: PaymentConfirmation) => void; // Adicionado
 }
 
-const StatementTab = ({ people, jobs, requests, timeEntries, foodControl }: StatementTabProps) => {
+interface StatementDetail {
+  date: string;
+  type: 'desconto' | 'extra';
+  reason: string;
+  value: number;
+  jobId: string;
+  projectName?: string;
+}
+
+interface PersonStatement {
+  personId: string;
+  totalRequested: number;
+  totalUsed: number;
+  balance: number;
+  details: StatementDetail[];
+  jobIds: Set<string>;
+}
+
+const StatementTab = ({ people, jobs, requests, timeEntries, foodControl, confirmations, onUpdatePaymentConfirmation }: StatementTabProps) => {
   const [selectedJob, setSelectedJob] = useState("all");
   const statementRef = useRef<HTMLDivElement>(null);
 
-  // Mostra todas as solicitações, independente de timeEntry já registrada
-  const registeredRequests = requests.filter((req) => {
-    const dates = getDatesInRange(req.startDate, req.endDate);
-    return dates.some((date) => timeEntries.some((e) => e.personId === req.personId && e.date === date));
-  });
+  const isRequestPaid = (requestId: string) => {
+    return confirmations.some(c => 'id' in c && c.id === requestId && c.confirmed);
+  };
 
-  const filteredRequests = useMemo(() => {
-    return selectedJob === "all" ? registeredRequests : registeredRequests.filter(r => r.jobId === selectedJob);
-  }, [registeredRequests, selectedJob]);
+  const handleSettlePerson = (personId: string) => {
+    // 1. Encontra todas as solicitações pendentes dessa pessoa
+    const pending = requests.filter(r => r.personId === personId && !isRequestPaid(r.id));
+    
+    if (pending.length === 0) {
+      toast.info("Não existem pendências ativas para remover.");
+      return;
+    }
+
+    if (onUpdatePaymentConfirmation) {
+      pending.forEach(req => {
+        onUpdatePaymentConfirmation({
+          id: req.id,
+          type: 'request',
+          confirmed: true,
+          paymentDate: new Date().toISOString().split("T")[0]
+        });
+      });
+      toast.success("Conta liquidada! O funcionário sumirá do extrato em instantes.", { duration: 5000 });
+    }
+  };
 
   const personStatements = useMemo(() => {
-    const data: Record<string, any> = {};
+    const data: Record<string, PersonStatement> = {};
 
-    filteredRequests.forEach(req => {
+    requests.forEach(req => {
+      const isCurrentJob = selectedJob === "all" || req.jobId === selectedJob;
+      const isPaid = isRequestPaid(req.id);
+      
+      const person = people.find(p => p.id === req.personId);
+      if (!person) return;
+
       if (!data[req.personId]) {
         data[req.personId] = {
           personId: req.personId,
@@ -53,10 +97,9 @@ const StatementTab = ({ people, jobs, requests, timeEntries, foodControl }: Stat
           jobIds: new Set()
         };
       }
-      
-      data[req.personId].jobIds.add(req.jobId);
-      const person = people.find(p => p.id === req.personId);
+
       const dates = getDatesInRange(req.startDate, req.endDate);
+      const projectName = jobs.find(j => j.id === req.jobId)?.name || 'Outro Projeto';
 
       dates.forEach(date => {
         const entry = timeEntries.find(e => e.personId === req.personId && e.jobId === req.jobId && e.date === date);
@@ -65,58 +108,66 @@ const StatementTab = ({ people, jobs, requests, timeEntries, foodControl }: Stat
         const reqMeals = (req.dailyOverrides?.[date] ?? req.meals) || [];
         if (!Array.isArray(reqMeals)) return;
 
-        // 1. Calcula os Descontos baseados na regra central (calculateDayDiscount)
-        if (entry) {
-          const dayCalc = calculateDayDiscount(req, date, entry, fc, people);
-          if (dayCalc.total > 0) {
-             data[req.personId].balance -= dayCalc.total;
-             data[req.personId].details.push({
-               date,
-               type: 'desconto',
-               reason: dayCalc.reason,
-               value: -dayCalc.total,
-               jobId: req.jobId
-             });
-          }
+        // A. LANÇAR VALOR SOLICITADO (Apenas se PENDENTE e do Job selecionado)
+        if (isCurrentJob && !isPaid) {
+          data[req.personId].jobIds.add(req.jobId);
+          reqMeals.forEach(m => {
+            data[req.personId].totalRequested += getMealValue(m, date, person);
+          });
         }
 
-        // 2. Registra o Valor Total Solicitado (para fins de exibição no extrato)
-        reqMeals.forEach(m => {
-          data[req.personId].totalRequested += getMealValue(m, date, person);
-        });
+        // B. LANÇAR DESCONTOS (Apenas se PENDENTE, independente do Job)
+        if (!isPaid) {
+          if (entry || date < new Date().toISOString().split("T")[0]) {
+             const dayCalc = calculateDayDiscount(req, date, entry || undefined, fc, people);
+             if (dayCalc.total > 0) {
+                data[req.personId].balance -= dayCalc.total;
+                data[req.personId].details.push({
+                  date,
+                  type: 'desconto',
+                  reason: dayCalc.reason,
+                  value: -dayCalc.total,
+                  jobId: req.jobId,
+                  projectName: projectName
+                });
+             }
+          }
 
-        // 3. Adicionais (Extras): Utilizados mas não solicitados
-        if (fc) {
-          const usedMeals: { type: 'cafe' | 'almoco' | 'janta'; used: boolean }[] = [
-            { type: 'cafe', used: fc.usedCafe },
-            { type: 'almoco', used: fc.usedAlmoco },
-            { type: 'janta', used: fc.usedJanta }
-          ];
+          if (fc) {
+            const usedMeals: { type: 'cafe' | 'almoco' | 'janta'; used: boolean }[] = [
+              { type: 'cafe', used: fc.usedCafe },
+              { type: 'almoco', used: fc.usedAlmoco },
+              { type: 'janta', used: fc.usedJanta }
+            ];
 
-          usedMeals.forEach(um => {
-            if (um.used && !reqMeals.includes(um.type)) {
-              const val = getMealValue(um.type, date, person);
-              data[req.personId].balance += val;
-              data[req.personId].details.push({
-                date,
-                type: 'extra',
-                reason: `${MEAL_LABELS[um.type]} utilizado mas não solicitado`,
-                value: val,
-                jobId: req.jobId
-              });
-            }
-          });
+            usedMeals.forEach(um => {
+              if (um.used && !reqMeals.includes(um.type as any)) {
+                const val = getMealValue(um.type as any, date, person);
+                if (val > 0) {
+                  data[req.personId].balance += val;
+                  data[req.personId].details.push({
+                    date,
+                    type: 'extra',
+                    reason: `${MEAL_LABELS[um.type as any]} extra (não solicitado)`,
+                    value: val,
+                    jobId: req.jobId,
+                    projectName: projectName
+                  });
+                }
+              }
+            });
+          }
         }
       });
     });
 
-    // Calcula o total consumido final para cada pessoa
-    Object.values(data).forEach((ps: any) => {
-      ps.totalUsed = ps.totalRequested + ps.balance;
-    });
-
-    return Object.values(data);
-  }, [filteredRequests, foodControl, people, timeEntries]);
+    return Object.values(data)
+      .map(ps => {
+         ps.totalUsed = ps.totalRequested + ps.balance;
+         return ps;
+      })
+      .filter(ps => (ps.totalRequested !== 0 || ps.balance !== 0) && (selectedJob === "all" || ps.jobIds.has(selectedJob)));
+  }, [requests, foodControl, people, timeEntries, confirmations, selectedJob, jobs]);
 
   const exportAsImage = () => {
     window.print();
@@ -126,7 +177,7 @@ const StatementTab = ({ people, jobs, requests, timeEntries, foodControl }: Stat
   const getJobName = (id: string) => jobs.find(j => j.id === id)?.name || "—";
 
   return (
-    <div className="space-y-6 print:p-0">
+    <div className="space-y-6 print:space-y-4">
       <div className="flex flex-wrap gap-4 items-end p-4 rounded-xl border border-border bg-muted/30 print:hidden">
         <div className="flex-1 min-w-[240px]">
           <label className="text-2xs uppercase tracking-wider font-semibold text-muted-foreground block mb-2 px-1 flex items-center gap-2">
@@ -144,25 +195,37 @@ const StatementTab = ({ people, jobs, requests, timeEntries, foodControl }: Stat
         </Button>
       </div>
 
-      <div ref={statementRef} className="space-y-8 print:space-y-12">
+      <div ref={statementRef} className="space-y-8 print:space-y-6">
         {personStatements.length === 0 ? (
-          <div className="text-center py-20 border border-dashed border-border rounded-2xl bg-muted/10">
+          <div className="text-center py-20 border border-dashed border-border rounded-2xl bg-muted/10 print:hidden">
             <Info className="h-8 w-8 text-muted-foreground mx-auto mb-3 opacity-20" />
-            <p className="text-muted-foreground text-sm font-medium">Nenhum dado encontrado para gerar extrato.</p>
+            <p className="text-muted-foreground text-sm font-medium">Nenhum dado pendente encontrado.</p>
           </div>
         ) : (
-          personStatements.map((ps: any) => (
-            <Card key={ps.personId} className="overflow-hidden border-border shadow-md print:shadow-none print:border-none">
-              <CardHeader className="bg-muted/30 border-b border-border py-4">
+          personStatements.map((ps) => (
+            <Card key={ps.personId} className="overflow-hidden border-border shadow-md print:shadow-none print:border print:border-border break-inside-avoid">
+              <CardHeader className="bg-muted/30 border-b border-border py-4 print:bg-transparent">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shadow-inner">
+                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shadow-inner print:border-none">
                       <User className="h-5 w-5" />
                     </div>
                     <div>
-                      <CardTitle className="text-lg font-bold text-foreground">{getPersonName(ps.personId)}</CardTitle>
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="text-lg font-bold text-foreground">{getPersonName(ps.personId)}</CardTitle>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleSettlePerson(ps.personId)}
+                          className="h-7 px-2 text-[10px] uppercase font-black tracking-widest text-muted-foreground hover:text-green-600 hover:bg-green-600/10 gap-1.5 print:hidden group"
+                          title="Marcar como Liquidado (Remove do Extrato)"
+                        >
+                          <CheckCircle2 className="h-3.5 w-3.5 group-hover:scale-110 transition-transform" />
+                          Liquidado (Remover)
+                        </Button>
+                      </div>
                       <div className="flex gap-2 mt-1">
-                        {Array.from(ps.jobIds as Set<string>).map(jid => (
+                        {Array.from(ps.jobIds).map(jid => (
                           <Badge key={jid} variant="outline" className="text-[10px] font-medium opacity-70">
                             {getJobName(jid)}
                           </Badge>
@@ -171,7 +234,7 @@ const StatementTab = ({ people, jobs, requests, timeEntries, foodControl }: Stat
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="text-2xs uppercase tracking-wider font-semibold text-muted-foreground block mb-0.5">Saldo Final</span>
+                    <span className="text-2xs uppercase tracking-wider font-semibold text-muted-foreground block mb-0.5">Saldo Pendente</span>
                     <span className={`text-xl font-black tabular-nums ${ps.balance >= 0 ? 'text-green-600' : 'text-destructive'}`}>
                       {ps.balance >= 0 ? '+' : ''}{ps.balance.toFixed(2)}
                     </span>
@@ -179,37 +242,45 @@ const StatementTab = ({ people, jobs, requests, timeEntries, foodControl }: Stat
                 </div>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="grid grid-cols-3 divide-x divide-border border-b border-border bg-background/50">
-                  <div className="p-4 text-center">
-                    <span className="text-2xs uppercase tracking-wider font-semibold text-muted-foreground block mb-1">Total Solicitado</span>
-                    <span className="font-bold tabular-nums text-foreground">R$ {ps.totalRequested.toFixed(2)}</span>
+                {/* Resumo principal: 3 colunas claras e diretas */}
+                <div className="grid grid-cols-3 divide-x divide-border border-b border-border">
+                  <div className="p-5 text-center">
+                    <span className="text-2xs uppercase tracking-wider font-semibold text-muted-foreground block mb-2">Total Solicitado</span>
+                    <span className="text-xl font-black tabular-nums text-foreground">R$ {ps.totalRequested.toFixed(2)}</span>
+                    <p className="text-[9px] text-muted-foreground mt-1 italic">Refeições pedidas</p>
                   </div>
-                  <div className="p-4 text-center">
-                    <span className="text-2xs uppercase tracking-wider font-semibold text-muted-foreground block mb-1">Total Consumido</span>
-                    <span className="font-bold tabular-nums text-foreground">R$ {ps.totalUsed.toFixed(2)}</span>
-                  </div>
-                  <div className="p-4 text-center">
-                    <span className="text-2xs uppercase tracking-wider font-semibold text-muted-foreground block mb-1">Diferença</span>
-                    <span className={`font-bold tabular-nums ${ps.balance >= 0 ? 'text-green-600' : 'text-destructive'}`}>
-                      R$ {ps.balance.toFixed(2)}
+                  <div className="p-5 text-center">
+                    <span className="text-2xs uppercase tracking-wider font-semibold text-muted-foreground block mb-2">Descontos Pendentes</span>
+                    <span className={`text-xl font-black tabular-nums ${ps.balance < 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                      {ps.balance < 0 ? `-R$ ${Math.abs(ps.balance).toFixed(2)}` : 'Nenhum'}
                     </span>
+                    <p className="text-[9px] text-muted-foreground mt-1 italic">{ps.details.filter(d => d.type === 'desconto').length} ocorrência(s)</p>
+                  </div>
+                  <div className="p-5 text-center bg-primary/5 print:bg-transparent">
+                    <span className="text-2xs uppercase tracking-wider font-semibold text-primary block mb-2">✅ Valor Final a Pagar</span>
+                    <span className="text-xl font-black tabular-nums text-primary">
+                      R$ {(ps.totalRequested + ps.balance).toFixed(2)}
+                    </span>
+                    <p className="text-[9px] text-primary/60 mt-1 italic font-bold">Enviar este valor</p>
                   </div>
                 </div>
 
                 {ps.details.length > 0 ? (
                   <div className="p-4">
-                    <h4 className="text-xs uppercase tracking-widest font-black text-muted-foreground mb-4 flex items-center gap-2">
-                       Justificativa dos Lançamentos
+                    <h4 className="text-xs uppercase tracking-widest font-black text-muted-foreground mb-4 flex items-center gap-2 border-b border-border pb-2">
+                       Memória de Cálculo (Lançamentos em Aberto)
                     </h4>
                     <div className="space-y-2">
-                      {ps.details.map((d: any, idx: number) => (
-                        <div key={idx} className="flex items-center justify-between text-sm py-2 px-3 rounded-lg border border-border bg-muted/10 hover:bg-muted/30 transition-colors">
-                          <div className="flex items-center gap-3">
-                            <span className="text-2xs tabular-nums text-muted-foreground bg-background px-2 py-0.5 rounded border border-border">
-                              {d.date?.includes("-") ? d.date.split("-").reverse().join("/") : d.date || "—"}
-                            </span>
-                            <span className="font-medium text-foreground">{d.reason}</span>
-                            <span className="text-[10px] text-muted-foreground">({getJobName(d.jobId)})</span>
+                      {ps.details.map((d, idx) => (
+                        <div key={idx} className="flex items-center justify-between text-sm py-2 px-3 rounded-lg border border-border bg-muted/10 hover:bg-muted/30 transition-colors print:bg-transparent">
+                          <div className="flex flex-col">
+                            <div className="flex items-center gap-3">
+                              <span className="text-2xs tabular-nums text-muted-foreground bg-background px-2 py-0.5 rounded border border-border print:border-border">
+                                {d.date?.includes("-") ? d.date.split("-").reverse().join("/") : d.date || "—"}
+                              </span>
+                              <span className="font-medium text-foreground">{d.reason}</span>
+                            </div>
+                            <span className="text-[9px] text-muted-foreground mt-1 uppercase font-bold tracking-tighter italic">Projeto Original: {d.projectName}</span>
                           </div>
                           <span className={`font-bold tabular-nums ${d.type === 'desconto' ? 'text-destructive' : 'text-green-600'}`}>
                             {d.value >= 0 ? '+' : ''}{d.value.toFixed(2)}
@@ -220,7 +291,7 @@ const StatementTab = ({ people, jobs, requests, timeEntries, foodControl }: Stat
                   </div>
                 ) : (
                   <div className="p-8 text-center text-sm text-muted-foreground italic opacity-60">
-                    Nenhuma divergência encontrada. Consumo 100% conforme solicitado.
+                    Nenhuma divergência ou desconto pendente encontrado.
                   </div>
                 )}
               </CardContent>
@@ -228,14 +299,6 @@ const StatementTab = ({ people, jobs, requests, timeEntries, foodControl }: Stat
           ))
         )}
       </div>
-      
-      <style>{`
-        @media print {
-          body * { visibility: hidden; }
-          .print-area, .print-area * { visibility: visible; }
-          .print-area { position: absolute; left: 0; top: 0; width: 100%; }
-        }
-      `}</style>
     </div>
   );
 };

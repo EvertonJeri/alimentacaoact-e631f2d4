@@ -4,7 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SearchableSelect } from "@/components/ui/searchable-select";
-import { Check, ChevronDown, ChevronRight, Filter, Undo2, Trash2 } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, Filter, Undo2, Trash2, MessageSquare, Mail } from "lucide-react";
+import { sendTeamsNotification, sendWhatsAppMessage, sendEmailNotification } from "@/lib/notifications";
+import { toast } from "sonner";
 import {
   type Person,
   type Job,
@@ -80,7 +82,7 @@ const PaymentTab = ({
   };
 
   const getConfirmation = (id: string) => {
-    return (confirmations as any[]).find((c) => c.id === id) as PaymentConfirmation | undefined;
+    return confirmations.find((c) => 'id' in c && c.id === id) as PaymentConfirmation | undefined;
   };
 
   const confirmPayment = (id: string, type: "request" | "job", paymentDate: string) => {
@@ -89,14 +91,13 @@ const PaymentTab = ({
     if (type === "request") {
       const req = requests.find(r => r.id === id);
       if (req) {
-        // Evaluate deduction auto-abatimento
+        const personName = getPersonName(req.personId);
+        const jobName = getJobName(req.jobId);
+        const total = calcRequestTotal(req);
+
         const personBalance = calculatePersonBalance(req.personId, requests, foodControl, confirmations, people, timeEntries);
         if (personBalance < 0 && onUpdateDiscountConfirmation) {
-          onUpdateDiscountConfirmation({
-            personId: req.personId,
-            confirmed: true,
-            paymentDate
-          });
+          onUpdateDiscountConfirmation({ personId: req.personId, confirmed: true, paymentDate });
         }
 
         const jobReqs = registeredRequests.filter(r => r.jobId === req.jobId);
@@ -104,7 +105,49 @@ const PaymentTab = ({
         if (otherReqsConfirmed) {
           onUpdateConfirmation({ id: `job-${req.jobId}`, type: "job", paymentDate, confirmed: true });
         }
+
+        // ==== NOTIFICAÇÕES (Pagamento Individual) ====
+        const teamsMsg = `**✅ Pagamento Confirmado**\n\n**Funcionário:** ${personName}\n**Projeto:** ${jobName}\n**Data de Pagamento:** ${paymentDate}\n**Valor:** R$ ${total.toFixed(2)}`;
+        sendTeamsNotification("✅ Pagamento Confirmado – Sistema ACT", teamsMsg, "00B050");
+
+        const waMsg = `✅ *Pagamento Confirmado - Sistema ACT*\n\n👤 Funcionário: ${personName}\n🏗️ Projeto: ${jobName}\n📅 Data: ${paymentDate}\n💰 Valor: R$ ${total.toFixed(2)}`;
+        sendWhatsAppMessage(waMsg);
+
+        const emailSubject = `Pagamento Confirmado – ${personName} – ${jobName}`;
+        const emailBody = `Olá,\n\nInformamos que o pagamento abaixo foi confirmado no Sistema ACT:\n\nFuncionário: ${personName}\nProjeto: ${jobName}\nData de Pagamento: ${paymentDate}\nValor Total: R$ ${total.toFixed(2)}\n\nAtenciosamente,\nSistema ACT`;
+        sendEmailNotification(emailSubject, emailBody);
+
+        toast.success(`Pagamento de ${personName} confirmado! Notificações disparadas.`, { duration: 5000 });
       }
+    }
+
+    if (type === "job") {
+      // Extrai o jobId do id composto "job-XXXX"
+      const jobId = id.replace("job-", "");
+      const jobName = getJobName(jobId);
+      const jobReqs = registeredRequests.filter(r => r.jobId === jobId);
+
+      // Monta resumo de todos os funcionários do job
+      const lines = jobReqs.map(r => {
+        const name = getPersonName(r.personId);
+        const val = calcRequestTotal(r);
+        return { name, val };
+      });
+      const totalJob = lines.reduce((s, l) => s + l.val, 0);
+      const listText = lines.map(l => `• ${l.name}: R$ ${l.val.toFixed(2)}`).join("\n");
+
+      // ==== NOTIFICAÇÕES (Pagamento por Job) ====
+      const teamsMsg = `**✅ Pagamento Integral do Projeto**\n\n**Projeto:** ${jobName}\n**Data:** ${paymentDate}\n**Total Pago:** R$ ${totalJob.toFixed(2)}\n\n**Funcionários:**\n${listText}`;
+      sendTeamsNotification("✅ Pagamento Integral do Projeto – Sistema ACT", teamsMsg, "00B050");
+
+      const waMsg = `✅ *Pagamento Integral do Projeto - Sistema ACT*\n\n🏗️ Projeto: ${jobName}\n📅 Data: ${paymentDate}\n💰 Total: R$ ${totalJob.toFixed(2)}\n\n👥 Equipe:\n${listText}`;
+      sendWhatsAppMessage(waMsg);
+
+      const emailSubject = `Pagamento Integral do Projeto – ${jobName}`;
+      const emailBody = `Olá,\n\nInformamos que o pagamento integral do projeto abaixo foi confirmado no Sistema ACT:\n\nProjeto: ${jobName}\nData de Pagamento: ${paymentDate}\nTotal Pago: R$ ${totalJob.toFixed(2)}\n\nFuncionários:\n${listText}\n\nAtenciosamente,\nSistema ACT`;
+      sendEmailNotification(emailSubject, emailBody);
+
+      toast.success(`Pagamento integral do projeto ${jobName} confirmado! Notificações disparadas.`, { duration: 5000 });
     }
   };
 

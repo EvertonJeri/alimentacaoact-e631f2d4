@@ -1,4 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { setGlobalCustomHolidays } from "@/lib/holidays";
+import { setGlobalSettings } from "@/lib/notifications";
 import { 
   SidebarProvider, 
   Sidebar, 
@@ -18,7 +20,8 @@ import {
   CreditCard, 
   FileText, 
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Settings
 } from "lucide-react";
 import TimeRegistrationTab from "@/components/TimeRegistrationTab";
 import MealRequestTab from "@/components/MealRequestSystem";
@@ -26,6 +29,7 @@ import FoodControlTab from "@/components/FoodControlTab";
 import DiscountsTab from "@/components/DiscountsTab";
 import PaymentTab from "@/components/PaymentTab";
 import StatementTab from "@/components/StatementTab";
+import { SettingsTab } from "@/components/SettingsTab";
 import { useDatabase } from "@/hooks/use-database";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -46,9 +50,25 @@ const Index = () => {
     removeMealRequest,
     removeTimeEntry,
     removePaymentConfirmation,
+    systemSettings,
+    customHolidays,
   } = useDatabase();
 
+  // Sync Global states (Holidays and Notifications settings) when data arrives from database
+  useEffect(() => {
+    if (systemSettings.data) {
+      setGlobalSettings(systemSettings.data);
+    }
+  }, [systemSettings.data]);
+
+  useEffect(() => {
+    if (customHolidays.data) {
+      setGlobalCustomHolidays(customHolidays.data);
+    }
+  }, [customHolidays.data]);
+
   const [activePage, setActivePage] = useState("horas");
+  const [autoFillTravel, setAutoFillTravel] = useState(true);
 
   const isLoading = people.isLoading || jobs.isLoading || timeEntries.isLoading || mealRequests.isLoading;
   const isError = people.error || jobs.error || timeEntries.error || mealRequests.error;
@@ -101,6 +121,9 @@ const Index = () => {
             onRemoveEntry={(id) => removeTimeEntry.mutate(id)}
             people={peopleData}
             jobs={jobsData}
+            requests={mealRequestsData}
+            autoFillTravel={autoFillTravel}
+            setAutoFillTravel={setAutoFillTravel}
           />
         );
       case "refeicoes":
@@ -115,6 +138,8 @@ const Index = () => {
             onUpdateRequest={(req) => updateMealRequest.mutate(req)}
             onRemoveRequest={(id) => removeMealRequest.mutate(id)}
             onUpdateTimeEntry={(entry) => updateTimeEntry.mutate(entry)}
+            autoFillTravel={autoFillTravel}
+            setAutoFillTravel={setAutoFillTravel}
           />
         );
       case "pagamento":
@@ -140,6 +165,8 @@ const Index = () => {
             requests={mealRequestsData}
             timeEntries={timeEntriesData}
             foodControl={foodControlData}
+            confirmations={allConfirmations}
+            onUpdatePaymentConfirmation={(conf) => updatePaymentConfirmation.mutate(conf)}
           />
         );
       case "controle":
@@ -166,6 +193,8 @@ const Index = () => {
             onUpdateConfirmation={(conf) => updateDiscountConfirmation.mutate(conf)}
           />
         );
+      case "configuracoes":
+        return <SettingsTab />;
       default:
         return <div>Selecione uma página no menu lateral.</div>;
     }
@@ -178,11 +207,12 @@ const Index = () => {
     { id: "controle", label: "Controle Alimentar", icon: UtensilsCrossed },
     { id: "descontos", label: "Descontos", icon: AlertTriangle },
     { id: "extrato", label: "Extrato Geral", icon: FileText },
+    { id: "configuracoes", label: "Configurações do Sistema", icon: Settings },
   ];
 
   return (
     <SidebarProvider>
-      <Sidebar variant="inset" className="border-r border-border bg-muted/20">
+      <Sidebar variant="inset" className="border-r border-border bg-muted/20 print:hidden">
         <SidebarHeader className="h-16 flex items-center px-6 border-b border-border bg-background">
           <h2 className="text-sm font-black uppercase tracking-widest text-primary">Sistema ACT</h2>
         </SidebarHeader>
@@ -205,7 +235,7 @@ const Index = () => {
       </Sidebar>
       <SidebarInset>
         <div className="flex min-h-screen flex-col bg-background">
-          <header className="sticky top-0 z-20 flex shrink-0 items-center justify-between border-b border-border bg-background/80 px-6 py-4 backdrop-blur-sm">
+          <header className="sticky top-0 z-20 flex shrink-0 items-center justify-between border-b border-border bg-background/80 px-6 py-4 backdrop-blur-sm print:hidden">
             <div className="flex items-center gap-4">
               <SidebarTrigger className="-ml-1" />
               <div className="h-4 w-px bg-border hidden sm:block" />
@@ -223,7 +253,7 @@ const Index = () => {
             </div>
           </header>
 
-          <main className="flex-1 w-full max-w-7xl mx-auto px-6 py-8 animate-in fade-in duration-500">
+          <main className="flex-1 w-full max-w-7xl mx-auto px-6 py-8 animate-in fade-in duration-500 print:p-0 print:max-w-none">
             {renderContent()}
           </main>
         </div>
