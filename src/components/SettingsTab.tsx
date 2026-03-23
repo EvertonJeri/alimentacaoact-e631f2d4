@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Bell, CalendarDays, Mail, Plus, Save, Settings, Share2, ShieldCheck, Smartphone, Trash2, MessageSquare } from "lucide-react";
+import { Bell, CalendarDays, Mail, Plus, Save, Settings, Share2, ShieldCheck, Smartphone, Trash2, MessageSquare, FileUp } from "lucide-react";
 import { toast } from "sonner";
+import { JobImportDialog } from "./JobImportDialog";
 import { type SystemSettings, DEFAULT_SETTINGS } from "@/lib/types";
 import {
   BRAZIL_NATIONAL_HOLIDAYS,
@@ -19,7 +20,8 @@ export const SettingsTab = () => {
     systemSettings, 
     customHolidays: dbHolidays, 
     updateSystemSettings, 
-    updateCustomHolidays 
+    updateCustomHolidays,
+    clearAllJobs
   } = useDatabase();
 
   const [settings, setSettings] = useState<SystemSettings>(DEFAULT_SETTINGS);
@@ -154,6 +156,36 @@ export const SettingsTab = () => {
                 <span className="text-muted-foreground">Abrange todos os destinatários em um único envio ao confirmar pagamento ou desconto.</span>
               </div>
             </div>
+          </CardContent>
+        </Card>
+        
+        {/* DATA MANAGEMENT */}
+        <Card className="border-border shadow-md md:col-span-2">
+          <CardHeader className="bg-muted/30 border-b border-border">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-yellow-100 rounded-lg text-yellow-600">
+                <FileUp className="h-5 w-5" />
+              </div>
+              <div>
+                <CardTitle className="text-sm font-bold uppercase tracking-tight">Gestão de Jobs Automática</CardTitle>
+                <CardDescription className="text-xs mt-1">Importe sua planilha de Jobs (Coluna A = Descrição, Coluna B = Número) ou limpe os registros atuais.</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-6 flex gap-4 flex-wrap">
+            <JobImportDialog />
+            <Button 
+                variant="destructive" 
+                className="gap-2 font-bold uppercase tracking-widest text-[10px] h-9"
+                onClick={() => {
+                    if (window.confirm("Tem certeza que deseja apagar TODOS os jobs atuais? Esta ação não pode ser desfeita.")) {
+                        clearAllJobs.mutate();
+                    }
+                }}
+                disabled={clearAllJobs.isPending}
+            >
+              <Trash2 className="h-3.5 w-3.5" /> {clearAllJobs.isPending ? "Limpando..." : "Limpar Todos os Jobs"}
+            </Button>
           </CardContent>
         </Card>
 

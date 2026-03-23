@@ -187,21 +187,27 @@ export type Database = {
       people: {
         Row: {
           created_at: string | null
+          department: string | null
           id: string
           is_registered: boolean | null
           name: string
+          pix: string | null
         }
         Insert: {
           created_at?: string | null
+          department?: string | null
           id?: string
           is_registered?: boolean | null
           name: string
+          pix?: string | null
         }
         Update: {
           created_at?: string | null
+          department?: string | null
           id?: string
           is_registered?: boolean | null
           name?: string
+          pix?: string | null
         }
         Relationships: []
       }

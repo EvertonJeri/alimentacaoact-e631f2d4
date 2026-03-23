@@ -276,7 +276,8 @@ const MealRequestSystem = ({
               <SearchableSelect
                 options={(people || []).map(p => ({
                   value: p.id,
-                  label: p.isRegistered ? `${p.name} (CLT)` : p.name
+                  label: p.isRegistered ? `(CLT) ${p.name}` : p.name,
+                  description: `${p.department || "Geral"} • ${p.isRegistered ? "CLT" : "Avulso"}`
                 }))}
                 value={personId}
                 onValueChange={setPersonId}
@@ -395,8 +396,13 @@ const MealRequestSystem = ({
                         {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-black text-foreground text-sm uppercase tracking-tight">{pName(req.personId)}</p>
-                        <p className="text-[9px] text-muted-foreground uppercase font-medium">{req.location || 'Local Não Definido'}</p>
+                        <p className="font-black text-foreground text-sm uppercase tracking-tight">
+                          {person?.isRegistered && <span className="text-muted-foreground mr-1 opacity-70">(CLT)</span>}
+                          {pName(req.personId)}
+                        </p>
+                        <p className="text-[9px] text-muted-foreground uppercase font-medium">
+                          {person?.department || "Geral"} • {req.location || 'Local Não Definido'}
+                        </p>
                       </div>
                       <div className="text-xs tabular-nums font-bold text-muted-foreground hidden sm:block">
                         {fDate(req.startDate)} <span className="mx-1 text-muted-foreground/30">→</span> {fDate(req.endDate)}

@@ -271,6 +271,7 @@ const PaymentTab = ({
 
               <div className="divide-y divide-border">
                 {jobReqs.map((req) => {
+                  const person = people.find((p) => p.id === req.personId);
                   const conf = getConfirmation(req.id);
                   const isPaid = conf?.confirmed;
                   const paymentDate = conf?.paymentDate || new Date().toISOString().split("T")[0];
@@ -316,10 +317,16 @@ const PaymentTab = ({
                           </Button>
                           <div>
                             <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+                              {person?.isRegistered && <span className="text-muted-foreground font-black text-[10px]">(CLT)</span>}
                               {getPersonName(req.personId)}
                               {isPaid && <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">✓ Pago</Badge>}
                             </p>
-                            <p className="text-xs text-muted-foreground">
+                            {person?.pix && (
+                              <p className="text-[10px] text-primary font-bold uppercase tracking-widest leading-none mt-1">
+                                <span className="opacity-60 font-medium">PIX:</span> {person.pix}
+                              </p>
+                            )}
+                            <p className="text-[10px] text-muted-foreground mt-1">
                               {req.startDate?.includes("-") ? req.startDate.split("-").reverse().join("/") : "—"} — {req.endDate?.includes("-") ? req.endDate.split("-").reverse().join("/") : "—"}
                             </p>
                           </div>

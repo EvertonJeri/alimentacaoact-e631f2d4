@@ -393,7 +393,8 @@ const TimeRegistrationTab = ({
           <SearchableSelect
             options={people.map(p => ({ 
               value: p.id, 
-              label: `${p.name} ${p.isRegistered ? "(Registrado)" : ""}` 
+              label: p.isRegistered ? `(CLT) ${p.name}` : p.name,
+              description: `${p.department || "Geral"} • ${p.isRegistered ? "CLT" : "Avulso"}` 
             }))}
             value={selectedPerson}
             onValueChange={setSelectedPerson}
@@ -438,7 +439,14 @@ const TimeRegistrationTab = ({
             Filtrar Pessoa
           </label>
           <SearchableSelect
-            options={[{ value: "all", label: "Todas" }, ...people.map(p => ({ value: p.id, label: p.name }))]}
+            options={[
+              { value: "all", label: "Todas" }, 
+              ...people.map(p => ({ 
+                value: p.id, 
+                label: p.isRegistered ? `(CLT) ${p.name}` : p.name,
+                description: `${p.department || "Geral"} • ${p.isRegistered ? "CLT" : "Avulso"}`
+              }))
+            ]}
             value={filterPerson}
             onValueChange={setFilterPerson}
             className="h-8 text-xs"
@@ -536,7 +544,15 @@ const TimeRegistrationTab = ({
                 return (
                   <tr key={entry.id} className={`transition-colors ${trClass}`}>
                     <td className="px-3 py-2 font-medium text-foreground whitespace-nowrap">
-                      {getPersonName(entry.personId)}
+                      <div className="flex flex-col">
+                        <span className="flex items-center gap-1">
+                          {people.find(p => p.id === entry.personId)?.isRegistered && <span className="text-muted-foreground mr-1 opacity-70">(CLT)</span>}
+                          {getPersonName(entry.personId)}
+                        </span>
+                        <span className="text-[9px] text-muted-foreground uppercase leading-none mt-1 opacity-70">
+                          {people.find(p => p.id === entry.personId)?.department || "Geral"}
+                        </span>
+                      </div>
                     </td>
                     <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap max-w-[180px] truncate">
                       {getJobName(entry.jobId)}

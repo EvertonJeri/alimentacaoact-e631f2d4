@@ -15,7 +15,9 @@ export function useDatabase() {
       return (data || []).map(p => ({
         id: p.id,
         name: p.name,
-        isRegistered: p.is_registered
+        isRegistered: p.is_registered,
+        department: p.department,
+        pix: p.pix
       })) as Person[];
     },
   });
@@ -368,6 +370,37 @@ export function useDatabase() {
       queryClient.invalidateQueries({ queryKey: ["payment_confirmations"] });
     },
   });
+  
+  const bulkInsertJobs = useMutation({
+    mutationFn: async (jobsToInsert: Job[]) => {
+      const { data, error } = await supabase
+        .from("jobs")
+        .upsert(jobsToInsert.map(j => ({ id: j.id, name: j.name })), { onConflict: "id" });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["jobs"] });
+    },
+  });
+
+  const clearAllJobs = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("jobs")
+        .delete()
+        .neq("id", "0"); // Delete all (id != '0' matches all string ids)
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["jobs"] });
+      toast.success("Todos os Jobs foram removidos!");
+    },
+    onError: (error) => {
+      console.error(error);
+      toast.error("Erro ao remover jobs.");
+    }
+  });
 
   const updateSystemSettings = useMutation({
     mutationFn: async (settings: SystemSettings) => {
@@ -427,6 +460,8 @@ export function useDatabase() {
     updateMealRequest,
     updateSystemSettings,
     updateCustomHolidays,
+    bulkInsertJobs,
+    clearAllJobs,
     removeMealRequest,
     removeTimeEntry,
     removePaymentConfirmation,

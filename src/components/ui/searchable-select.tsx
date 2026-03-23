@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/popover"
 
 interface SearchableSelectProps {
-  options: { value: string; label: string }[]
+  options: { value: string; label: string; description?: string }[]
   placeholder?: string
   searchPlaceholder?: string
   emptyMessage?: string
@@ -47,13 +47,20 @@ export function SearchableSelect({
           role="combobox"
           aria-expanded={open}
           disabled={disabled}
-          className={cn("w-full justify-between font-normal", className)}
+          className={cn("w-full justify-between font-normal h-11", className)}
         >
-          <span className="truncate">
-            {value
-              ? options.find((option) => option.value === value)?.label
-              : placeholder}
-          </span>
+          <div className="flex flex-col items-start truncate overflow-hidden">
+            <span className="truncate w-full font-medium">
+              {value
+                ? options.find((option) => option.value === value)?.label
+                : placeholder}
+            </span>
+            {value && options.find((option) => option.value === value)?.description && (
+              <span className="text-[9px] text-muted-foreground uppercase leading-none mt-0.5">
+                {options.find((option) => option.value === value)?.description}
+              </span>
+            )}
+          </div>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -66,20 +73,29 @@ export function SearchableSelect({
               {(options || []).map((option) => (
                 <CommandItem
                   key={option.value}
-                  value={option.label}
+                  value={`${option.label} ${option.description || ""}`}
                   onSelect={() => {
-                    // We directly use the value from our option
                     onValueChange(option.value)
                     setOpen(false)
                   }}
+                  className="flex flex-col items-start py-2"
                 >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      value === option.value ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  {option.label}
+                  <div className="flex items-center w-full">
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4 shrink-0",
+                        value === option.value ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                    <div className="flex flex-col min-w-0">
+                      <span className="font-semibold text-xs leading-none">{option.label}</span>
+                      {option.description && (
+                        <span className="text-[9px] text-muted-foreground uppercase mt-1 leading-none">
+                          {option.description}
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </CommandItem>
               ))}
             </CommandGroup>
