@@ -141,6 +141,12 @@ export function useDatabase() {
         managerWhatsApp: data.manager_whatsapp,
         enableEmail: data.enable_email,
         adminEmails: data.admin_emails,
+        financeWhatsApp: data.finance_whatsapp,
+        financeEmails: data.finance_emails,
+        hrWhatsApp: data.hr_whatsapp,
+        hrEmails: data.hr_emails,
+        discountAlertDate: data.discount_alert_date,
+        discountAutoSend: data.discount_auto_send,
       } as SystemSettings;
     },
   });
@@ -441,6 +447,12 @@ export function useDatabase() {
           manager_whatsapp: settings.managerWhatsApp,
           enable_email: settings.enableEmail,
           admin_emails: settings.adminEmails,
+          finance_whatsapp: settings.financeWhatsApp,
+          finance_emails: settings.financeEmails,
+          hr_whatsapp: settings.hrWhatsApp,
+          hr_emails: settings.hrEmails,
+          discount_alert_date: settings.discountAlertDate,
+          discount_auto_send: settings.discountAutoSend,
           updated_at: new Date().toISOString(),
         });
       if (error) throw error;
