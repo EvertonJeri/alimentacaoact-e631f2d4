@@ -117,11 +117,13 @@ export function useDatabase() {
     queryFn: async () => {
       const { data, error } = await supabase.from("payment_confirmations").select("*");
       if (error) throw error;
-      return (data || []).map(c => ({
+      return (data || []).map((c: any) => ({
         id: c.id,
         type: c.type,
         paymentDate: c.payment_date,
-        confirmed: c.confirmed
+        confirmed: c.confirmed,
+        applyBalance: c.apply_balance,
+        appliedBalance: c.applied_balance
       })) as PaymentConfirmation[];
     },
   });
@@ -254,8 +256,10 @@ export function useDatabase() {
           id: conf.id,
           type: conf.type,
           payment_date: conf.paymentDate,
-          confirmed: conf.confirmed
-        }, { onConflict: "id" });
+          confirmed: conf.confirmed,
+          apply_balance: conf.applyBalance,
+          applied_balance: conf.appliedBalance
+        } as any, { onConflict: "id" });
       if (error) throw error;
     },
     onSuccess: () => {
