@@ -144,18 +144,29 @@ export const PersonImportDialog = () => {
         const isReg = mod.toLowerCase().includes("registrado") || mod.toLowerCase().includes("contratado") || mod.toLowerCase().includes("clt");
 
         const lowerName = name.toLowerCase();
-        
+
         const newEntry = {
-            p: { name, department: dept, isRegistered: isReg, pix: cPix },
+            p: { name: name.trim(), department: dept, isRegistered: isReg, pix: cPix },
             sit
         };
 
         const existing = peopleToInsertMap.get(lowerName);
         if (!existing) {
           peopleToInsertMap.set(lowerName, newEntry);
-        } else if (existing.sit !== "ativo" && sit === "ativo") {
-          // Sobrescreve a versão inativa se encontrarmos uma versão ativa
-          peopleToInsertMap.set(lowerName, newEntry);
+        } else {
+          // Se vamos sobrepor com uma versão ativa
+          if (existing.sit !== "ativo" && sit === "ativo") {
+            // Se o ativo estiver sem PIX, tenta pegar do inativo!
+            if (!newEntry.p.pix && existing.p.pix) {
+                newEntry.p.pix = existing.p.pix;
+            }
+            peopleToInsertMap.set(lowerName, newEntry);
+          } else {
+            // Se já tem um ativo registrado (ou ambos são inativos), apenas absorve o PIX caso esteja faltando
+            if (!existing.p.pix && newEntry.p.pix) {
+                existing.p.pix = newEntry.p.pix;
+            }
+          }
         }
       }
 
