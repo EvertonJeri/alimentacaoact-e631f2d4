@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronRight, Check, Mail, Download, Bell } from "lucide-react";
-import { sendTeamsNotification, sendWhatsAppMessage, sendEmailNotification } from "@/lib/notifications";
+import { sendTeamsNotification, sendWhatsAppMessage, sendEmailNotification, notifyHRDiscounts, checkDiscountAlertDate } from "@/lib/notifications";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { Input } from "@/components/ui/input";
