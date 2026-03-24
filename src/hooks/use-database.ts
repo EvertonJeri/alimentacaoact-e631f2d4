@@ -446,19 +446,63 @@ export function useDatabase() {
         return String(e);
       };
 
-      const toUpsert = peopleToInsert.map(p => ({
-        name: p.name,
-        department: p.department || null,
-        is_registered: p.isRegistered,
-        pix: p.pix || null,
-      }));
+      // Trazemos as pessoas que ja existem no banco
+      const { data: existing, error: fetchErr } = await supabase.from("people").select("id, name");
+      if (fetchErr) throw new Error(getErrMsg(fetchErr));
+      
+      const existingDb = existing || [];
 
-      // Upsert delegando o controle de duplicidade para o Supabase (chave única)
-      const chunkSize = 50;
-      for (let i = 0; i < toUpsert.length; i += chunkSize) {
-        const chunk = toUpsert.slice(i, i + chunkSize);
-        const { error } = await supabase.from("people").upsert(chunk, { onConflict: "name" });
-        if (error) throw new Error(getErrMsg(error));
+      const toUpdate: any[] = [];
+      const toInsert: any[] = [];
+
+      for (const p of peopleToInsert) {
+          const pNameLower = p.name.trim().toLowerCase();
+          
+          // Busca correspondência (exato ou parcial/fuzzy)
+          let match = existingDb.find(dbP => dbP.name.trim().toLowerCase() === pNameLower);
+          
+          if (!match) {
+              // Fuzzy match: Se o nome do excel for substring do nome no DB (ex: "Jose Augusto" em "Jose Augusto Silva Ferreira")
+              // ou vice-versa, nós ligamos um ao outro.
+              const possibleMatches = existingDb.filter(dbP => {
+                  const dbNameLower = dbP.name.trim().toLowerCase();
+                  return dbNameLower.includes(pNameLower) || pNameLower.includes(dbNameLower);
+              });
+              
+              // Só assumimos a correspondência se houver UM único match parcial, pra evitar fundir pessoas erradas.
+              if (possibleMatches.length === 1) {
+                  match = possibleMatches[0];
+              }
+          }
+
+          const baseData = {
+              department: p.department || null,
+              is_registered: p.isRegistered,
+              pix: p.pix || null,
+          };
+
+          if (match) {
+              toUpdate.push({ id: match.id, ...baseData }); // NAO alteramos o nome original do DB
+          } else {
+              toInsert.push({ name: p.name.trim(), ...baseData });
+          }
+      }
+
+      // Executa os UPDATES
+      for (const item of toUpdate) {
+          const { id, ...data } = item;
+          const { error } = await supabase.from("people").update(data).eq("id", id);
+          if (error) throw new Error(getErrMsg(error));
+      }
+
+      // Executa os INSERTS
+      if (toInsert.length > 0) {
+          const chunkSize = 50;
+          for (let i = 0; i < toInsert.length; i += chunkSize) {
+              const chunk = toInsert.slice(i, i + chunkSize);
+              const { error } = await supabase.from("people").insert(chunk);
+              if (error) throw new Error(getErrMsg(error));
+          }
       }
     },
     onSuccess: () => {
