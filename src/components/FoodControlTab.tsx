@@ -52,11 +52,26 @@ const FoodControlTab = ({
   const isPersonRegistered = (id: string) => people.find((p) => p.id === id)?.isRegistered || false;
 
   const rows = useMemo(() => {
+    const processedKeys = new Set<string>();
     const result: (FoodControlEntry & { key: string })[] = [];
+    
+    // Filtramos entradas duplicadas para evitar linhas repetidas no controle
+    const uniqueEntries: TimeEntry[] = [];
+    timeEntries.forEach(e => {
+      const key = `${e.personId}-${e.jobId}-${e.date}`;
+      if (processedKeys.has(key)) {
+        // Se já existe uma, mas esta nova for de viagem, ela ganha a vez (substitui)
+        if (e.isTravelOut || e.isTravelReturn) {
+          const idx = uniqueEntries.findIndex(ue => `${ue.personId}-${ue.jobId}-${ue.date}` === key);
+          if (idx >= 0) uniqueEntries[idx] = e;
+        }
+        return;
+      }
+      processedKeys.add(key);
+      uniqueEntries.push(e);
+    });
 
-    timeEntries.forEach((entry) => {
-        // A aba de Controle Alimentar é agora um ESPELHO TOTAL do Registro de Horas (Ponto)
-        // Não aplicamos mais a 'Linha Fantasma' aqui, conforme solicitado (mostrar todas as linhas).
+    uniqueEntries.forEach((entry) => {
         if (!entry) return;
 
         // Procurar solicitação de refeição associada

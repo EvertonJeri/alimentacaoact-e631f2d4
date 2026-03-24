@@ -74,16 +74,19 @@ const MealRequestSystem = ({
 
     const dates = getDatesInRange(startDate, endDate);
     
-    // VERIFICAÇÃO DE DUPLICIDADE (CONFLITO COM OUTRO JOB)
+    // VERIFICAÇÃO DE DUPLICIDADE (CONFLITO COM OUTRO JOB OU JÁ EXISTENTE NO MESMO JOB)
     const conflict = requests.find(r => 
       r.personId === personId && 
-      r.jobId !== selectedJob && 
       dates.some(d => getDatesInRange(r.startDate, r.endDate).includes(d))
     );
-
+    
     if (conflict) {
-      const conflictJob = jobs.find(j => j.id === conflict.jobId)?.name || 'Outro Projeto';
-      toast.error(`Ação bloqueada: esta pessoa já possui refeição no projeto [${conflictJob}] neste período!`, { duration: 6000 });
+      if (conflict.jobId === selectedJob) {
+        toast.error("Ateção: Esta pessoa já possui uma solicitação de refeição para este período neste mesmo projeto!", { duration: 6000 });
+      } else {
+        const conflictJob = jobs.find(j => j.id === conflict.jobId)?.name || 'Outro Projeto';
+        toast.error(`Ação bloqueada: esta pessoa já possui refeição no projeto [${conflictJob}] neste período!`, { duration: 6000 });
+      }
       return;
     }
 

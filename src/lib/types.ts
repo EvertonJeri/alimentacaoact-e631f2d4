@@ -310,11 +310,16 @@ export function calculatePersonBalance(
   const personConfs = confirmations.filter(c => ('id' in c && requests.find(r => r.id === c.id)?.personId === personId) || ('personId' in c && c.personId === personId));
 
   let walletBalance = 0;
+  const processedDaysReq = new Set<string>();
 
   // 1. Somar todo o valor bruto que o funcionário GANHOU (Créditos das solicitações)
   personRequests.forEach(req => {
     const dates = getDatesInRange(req.startDate, req.endDate);
     dates.forEach(date => {
+        const dayKey = `${req.jobId}-${date}`;
+        if (processedDaysReq.has(dayKey)) return;
+        processedDaysReq.add(dayKey);
+
         const dayMeals = (req.dailyOverrides?.[date] ?? req.meals) || [];
         dayMeals.forEach(m => {
             walletBalance += getMealValue(m, date, person, req.location);
@@ -322,11 +327,18 @@ export function calculatePersonBalance(
     });
   });
 
+  const processedDaysDisc = new Set<string>();
   // 2. Abater os DESCONTOS por faltas ou inconsistências (Débitos)
   personRequests.forEach(req => {
     const dates = getDatesInRange(req.startDate, req.endDate);
     dates.forEach(date => {
-      const entry = timeEntries.find(e => e.personId === personId && e.jobId === req.jobId && e.date === date);
+      const dayKey = `${req.jobId}-${date}`;
+      if (processedDaysDisc.has(dayKey)) return;
+      processedDaysDisc.add(dayKey);
+
+      const entries = timeEntries.filter(e => e.personId === personId && e.jobId === req.jobId && e.date === date);
+      const entry = entries.find(e => e.isTravelOut || e.isTravelReturn) || entries[0];
+      
       const fc = foodControl.find(f => f.personId === personId && f.jobId === req.jobId && f.date === date);
       
       if (entry) {

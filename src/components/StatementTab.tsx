@@ -93,6 +93,7 @@ const StatementTab = ({ people, jobs, requests, timeEntries, foodControl, confir
   const personStatements = useMemo(() => {
     const data: Record<string, PersonStatement> = {};
 
+    const processedDays = new Set<string>();
     requests.forEach(req => {
       const isCurrentJob = selectedJob === "all" || req.jobId === selectedJob;
       const isPaid = isRequestPaid(req.id);
@@ -115,7 +116,15 @@ const StatementTab = ({ people, jobs, requests, timeEntries, foodControl, confir
       const projectName = jobs.find(j => j.id === req.jobId)?.name || 'Outro Projeto';
 
       dates.forEach(date => {
-        const entry = timeEntries.find(e => e.personId === req.personId && e.jobId === req.jobId && e.date === date);
+        // Chave de unicidade: Pessoa + Job + Dia
+        const dayKey = `${req.personId}-${req.jobId}-${date}`;
+        if (processedDays.has(dayKey)) return;
+        processedDays.add(dayKey);
+
+        // Busca a entrada, priorizando a que tem flags de viagem caso exista duplicidade no banco
+        const entries = timeEntries.filter(e => e.personId === req.personId && e.jobId === req.jobId && e.date === date);
+        const entry = entries.find(e => e.isTravelOut || e.isTravelReturn) || entries[0];
+        
         const fc = foodControl.find(f => f.personId === req.personId && f.jobId === req.jobId && f.date === date);
         
         const reqMeals = (req.dailyOverrides?.[date] ?? req.meals) || [];

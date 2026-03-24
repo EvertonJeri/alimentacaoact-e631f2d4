@@ -121,16 +121,19 @@ const TimeRegistrationTab = ({
   const addEntry = () => {
     if (!selectedPerson || !selectedJob) return;
 
-    // VERIFICAÇÃO DE DUPLICIDADE (CONFLITO COM OUTRO JOB)
+    // VERIFICAÇÃO DE DUPLICIDADE (CONFLITO COM OUTRO JOB OU JÁ EXISTENTE NO MESMO JOB)
     const conflict = entries.find(e => 
       e.personId === selectedPerson && 
-      e.date === selectedDate && 
-      e.jobId !== selectedJob
+      e.date === selectedDate
     );
-
+    
     if (conflict) {
-      const conflictJob = jobs.find(j => j.id === conflict.jobId)?.name || 'Outro Projeto';
-      alert(`Alerta: Esta pessoa já possui registro de horas no Projeto [${conflictJob}] nesta data! Ação cancelada.`);
+      if (conflict.jobId === selectedJob) {
+        alert("Atenção: Esta pessoa já possui um registro de horas neste Projeto para a data selecionada.");
+      } else {
+        const conflictJob = jobs.find(j => j.id === conflict.jobId)?.name || 'Outro Projeto';
+        alert(`Alerta: Esta pessoa já possui registro de horas no Projeto [${conflictJob}] nesta data! Ação cancelada.`);
+      }
       return;
     }
 

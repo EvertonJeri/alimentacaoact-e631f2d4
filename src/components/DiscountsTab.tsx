@@ -94,20 +94,25 @@ const DiscountsTab = ({
 
   const discounts = useMemo(() => {
     const rows: DiscountRow[] = [];
+    const processedDays = new Set<string>();
 
     registeredRequests.forEach((req) => {
       const dates = getDatesInRange(req.startDate, req.endDate);
       dates.forEach((date) => {
-        const entry = timeEntries.find(
+        const dayKey = `${req.personId}-${req.jobId}-${date}`;
+        if (processedDays.has(dayKey)) return;
+        processedDays.add(dayKey);
+
+        const entries = timeEntries.filter(
           (e) => e.personId === req.personId && e.jobId === req.jobId && e.date === date
         );
-        // Avalia o dia mesmo sem registro de horas (ex: falta completa)
+        const entry = entries.find(e => e.isTravelOut || e.isTravelReturn) || entries[0];
 
         const fc = foodControl.find(
           (f) => f.personId === req.personId && f.jobId === req.jobId && f.date === date
         );
 
-        const dayCalc = calculateDayDiscount(req, date, entry, fc, people);
+        const dayCalc = calculateDayDiscount(req, date, entry || undefined, fc, people);
         
         if (dayCalc.total > 0) {
           rows.push({ personId: req.personId, jobId: req.jobId, date, ...dayCalc });
