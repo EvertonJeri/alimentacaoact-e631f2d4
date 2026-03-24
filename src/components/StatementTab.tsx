@@ -140,7 +140,12 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
 
     return Object.values(data)
       .map(ps => { ps.totalUsed = ps.totalRequested + ps.balance; return ps; })
-      .filter(ps => (selectedJob === "all" || ps.jobId === selectedJob) && (Math.abs(ps.balance) > 0.01 || ps.totalRequested > 0))
+      .filter(ps => {
+          const matchesJob = selectedJob === "all" || ps.jobId === selectedJob;
+          // Mostra apenas se houver solicitação ativa (evita poluição com saldos negativos de jobs antigos)
+          const hasActiveRequest = ps.totalRequested > 0;
+          return matchesJob && hasActiveRequest;
+      })
       .sort((a, b) => getPersonName(a.personId).localeCompare(getPersonName(b.personId)));
   }, [requests, foodControl, people, timeEntries, confirmations, selectedJob, jobs]);
 
