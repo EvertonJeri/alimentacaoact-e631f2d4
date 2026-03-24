@@ -250,15 +250,35 @@ export function useDatabase() {
 
   const updatePaymentConfirmation = useMutation({
     mutationFn: async (conf: PaymentConfirmation) => {
-      const { error } = await supabase
+      // Tenta salvar com todos os campos (compatível com schema novo)
+      const fullData: any = {
+        id: conf.id,
+        type: conf.type,
+        payment_date: conf.paymentDate,
+        confirmed: conf.confirmed,
+        apply_balance: conf.applyBalance,
+        applied_balance: conf.appliedBalance
+      };
+
+      const { error: fullError } = await supabase
         .from("payment_confirmations")
-        .upsert({
+        .upsert(fullData, { onConflict: "id" });
+
+      if (fullError) {
+        console.warn("Falha ao salvar colunas extras (apply_balance). Tentando salvamento básico...", fullError);
+        // Se falhou (provavelmente colunas não existem - erro 400), tenta o básico
+        const basicData = {
           id: conf.id,
           type: conf.type,
           payment_date: conf.paymentDate,
           confirmed: conf.confirmed
-        } as any, { onConflict: "id" });
-      if (error) throw error;
+        };
+        const { error: basicError } = await supabase
+          .from("payment_confirmations")
+          .upsert(basicData as any, { onConflict: "id" });
+        
+        if (basicError) throw basicError;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["payment_confirmations"] });

@@ -135,7 +135,14 @@ const PaymentTab = ({
         const retroBalance = totalWallet - currentReqNet;
         const finalValue = shouldApply ? Math.max(0, currentReqNet + retroBalance) : currentReqBruto;
 
-        onUpdateConfirmation({ id, type, paymentDate, confirmed: true });
+        onUpdateConfirmation({ 
+            id, 
+            type, 
+            paymentDate, 
+            confirmed: true,
+            applyBalance: shouldApply,
+            appliedBalance: shouldApply ? retroBalance : 0
+        });
 
         const personName = getPersonName(req.personId);
         const jobName = getJobName(req.jobId);
@@ -151,7 +158,19 @@ const PaymentTab = ({
       onUpdateConfirmation({ id: `job-${jobId}`, type: 'job', paymentDate, confirmed: true });
 
       jobReqs.forEach(req => {
-        onUpdateConfirmation({ id: req.id, type: 'request', paymentDate, confirmed: true });
+        const shouldApply = (applyBalanceMap[req.id] !== false);
+        const totalW = calculatePersonBalance(req.personId, requests, foodControl, confirmations, people, timeEntries);
+        const neto = calcRequestBruto(req) - getRequestDiscounts(req);
+        const retro = totalW - neto;
+
+        onUpdateConfirmation({ 
+            id: req.id, 
+            type: 'request', 
+            paymentDate, 
+            confirmed: true,
+            applyBalance: shouldApply,
+            appliedBalance: shouldApply ? retro : 0
+        });
       });
 
       toast.success(`Pagamento integral do projeto confirmado!`);
@@ -214,13 +233,18 @@ const PaymentTab = ({
                   const currentReqBruto = calcRequestBruto(req);
                   const discounts = getRequestDiscounts(req);
                   const currentReqNet = currentReqBruto - discounts;
+                  
+                  // Se já pago NO BANCO com apply_balance gravado, prioriza o banco. Senão, tenta o localStorage.
+                  const shouldApply = isPaid 
+                    ? (conf?.applyBalance !== undefined ? conf.applyBalance : ((applyBalanceMap[req.id] !== undefined) ? applyBalanceMap[req.id] : true))
+                    : ((applyBalanceMap[req.id] !== undefined) ? applyBalanceMap[req.id] : true);
+                  
+                  // Se já pago, usa o ajuste congelado se disponível. Senão, recalcula.
                   const totalWallet = calculatePersonBalance(req.personId, requests, foodControl, confirmations, people, timeEntries);
                   const retroBalance = totalWallet - currentReqNet;
-
-                  // LÓGICA DE PERSISTÊNCIA: Usa estado local com fallback de localStorage
-                  const shouldApply = (applyBalanceMap[req.id] !== undefined) ? applyBalanceMap[req.id] : true;
+                  const displayAdjustment = (isPaid && conf?.appliedBalance !== undefined) ? conf.appliedBalance : retroBalance;
                   
-                  const finalValue = shouldApply ? (currentReqNet + retroBalance) : currentReqBruto;
+                  const finalValue = shouldApply ? (currentReqNet + displayAdjustment) : currentReqBruto;
 
                   return (
                     <div key={req.id} className="p-4 bg-background">
@@ -243,11 +267,15 @@ const PaymentTab = ({
                               <p className="text-[10px] uppercase font-black text-muted-foreground/60 leading-none">Total Pix</p>
                               <p className="text-lg font-black tabular-nums">R$ {finalValue.toFixed(2)}</p>
                               <div className="flex flex-col items-end pt-1">
-                                {shouldApply && discounts > 0 && <span className="text-[10px] text-destructive line-through opacity-60">- R$ {discounts.toFixed(2)} [DESC. FALTA]</span>}
-                                {shouldApply && Math.abs(retroBalance) > 0.1 && (
-                                  <span className={`text-[10px] font-bold ${retroBalance < 0 ? 'text-destructive' : 'text-blue-600'}`}>
-                                    {retroBalance < 0 ? '' : '+'} R$ {retroBalance.toFixed(2)} [SALDO ANTERIOR]
-                                  </span>
+                                {shouldApply && (
+                                    <>
+                                        {discounts > 0 && <span className="text-[10px] text-destructive line-through opacity-60">- R$ {discounts.toFixed(2)} [DESC. FALTA]</span>}
+                                        {Math.abs(displayAdjustment) > 0.1 && (
+                                          <span className={`text-[10px] font-bold ${displayAdjustment < 0 ? 'text-destructive' : 'text-blue-600'}`}>
+                                            {displayAdjustment < 0 ? '' : '+'} R$ {displayAdjustment.toFixed(2)} [SALDO ANTERIOR]
+                                          </span>
+                                        )}
+                                    </>
                                 )}
                                 {!shouldApply && <span className="text-[10px] text-destructive font-black italic">SALDO/DESC. NÃO APLICADO</span>}
                               </div>
@@ -279,7 +307,7 @@ const PaymentTab = ({
                            <div className="flex flex-wrap gap-2">
                              {req.meals.map(m => <Badge key={m} variant="outline" className="text-[10px]">{MEAL_LABELS[m]}</Badge>)}
                            </div>
-                           <p className="text-xs text-muted-foreground mt-2 italic">Saldo Retroativo: R$ {retroBalance.toFixed(2)}</p>
+                           <p className="text-xs text-muted-foreground mt-2 italic">Saldo Retroativo Atual: R$ {retroBalance.toFixed(2)}</p>
                         </div>
                       )}
                     </div>
