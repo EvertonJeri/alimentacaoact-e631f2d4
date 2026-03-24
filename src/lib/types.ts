@@ -42,10 +42,16 @@ export interface MealRequest {
 export interface SystemSettings {
   teamsWebhookUrl?: string;
   managerWhatsApp: string;
-  adminEmails?: string; // Múltiplos e-mails separados por vírgula
+  adminEmails?: string;
   enableTeams: boolean;
   enableWhatsApp: boolean;
   enableEmail: boolean;
+  financeWhatsApp?: string;
+  financeEmails?: string;
+  hrWhatsApp?: string;
+  hrEmails?: string;
+  discountAlertDate?: number; // Dia do mês para alerta de desconto
+  discountAutoSend?: boolean; // Enviar automaticamente no dia
 }
 
 export const DEFAULT_SETTINGS: SystemSettings = {
@@ -53,6 +59,12 @@ export const DEFAULT_SETTINGS: SystemSettings = {
   enableTeams: true,
   enableWhatsApp: true,
   enableEmail: true,
+  financeWhatsApp: "",
+  financeEmails: "",
+  hrWhatsApp: "",
+  hrEmails: "",
+  discountAlertDate: 25,
+  discountAutoSend: false,
 }
 
 export interface FoodControlEntry {
