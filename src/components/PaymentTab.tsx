@@ -113,6 +113,7 @@ const PaymentTab = ({
         const retroBalance = totalWallet - currentReqNet;
         
         const appliedBalance = shouldApply ? retroBalance : 0;
+        const finalTotal = shouldApply ? Math.max(0, currentReqNet + retroBalance) : currentReqBruto;
 
         onUpdateConfirmation({ 
             id, 
@@ -122,8 +123,6 @@ const PaymentTab = ({
             applyBalance: shouldApply,
             appliedBalance: appliedBalance
         });
-
-        const finalTotal = currentReqNet + appliedBalance;
 
         const jobReqs = registeredRequests.filter(r => r.jobId === req.jobId);
         const otherReqsConfirmed = jobReqs.every(r => r.id === id || getConfirmation(r.id)?.confirmed);
