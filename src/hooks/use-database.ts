@@ -488,14 +488,17 @@ export function useDatabase() {
           }
       }
 
-      // Executa os UPDATES
-      for (const item of toUpdate) {
-          const { id, ...data } = item;
-          const { error } = await supabase.from("people").update(data).eq("id", id);
-          if (error) throw new Error(getErrMsg(error));
+      // Executa os UPDATES (em Lote/Chunks)
+      if (toUpdate.length > 0) {
+          const chunkSize = 50;
+          for (let i = 0; i < toUpdate.length; i += chunkSize) {
+              const chunk = toUpdate.slice(i, i + chunkSize);
+              const { error } = await supabase.from("people").upsert(chunk);
+              if (error) throw new Error(getErrMsg(error));
+          }
       }
 
-      // Executa os INSERTS
+      // Executa os INSERTS (em Lote/Chunks)
       if (toInsert.length > 0) {
           const chunkSize = 50;
           for (let i = 0; i < toInsert.length; i += chunkSize) {
