@@ -13,6 +13,7 @@ import {
   getMealValue,
   MEAL_LABELS,
   calculateDayDiscount,
+  calculatePersonBalance,
   type DiscountConfirmation,
   type PaymentConfirmation,
 } from "@/lib/types";
@@ -31,7 +32,7 @@ interface StatementTabProps {
 
 interface StatementDetail {
   date: string;
-  type: 'desconto' | 'extra';
+  type: 'desconto' | 'extra' | 'anterior' | 'pago';
   reason: string;
   value: number;
   jobId: string;
@@ -43,6 +44,7 @@ interface PersonStatement {
   jobId: string;
   startDate: string;
   endDate: string;
+  isPaid: boolean;
   totalRequested: number;
   totalUsed: number;
   balance: number;
@@ -57,19 +59,16 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
   const getPersonName = (id: string) => people.find(p => p.id === id)?.name || "—";
   const getJobName = (id: string) => jobs.find(j => j.id === id)?.name || "—";
 
-  const isRequestPaid = (requestId: string) => {
-    return (confirmations || []).some(c => 'id' in c && c.id === requestId && c.confirmed);
+  const getRequestConfirmation = (id: string) => {
+    return (confirmations || []).find(c => 'id' in c && c.id === id) as PaymentConfirmation | undefined;
   };
 
-  // Cálculo de extratos agrupado por Pessoa e Job
   const personStatements = useMemo(() => {
     const data: Record<string, PersonStatement> = {};
     const processedDays = new Set<string>();
 
     (requests || []).forEach(req => {
-      const isCurrentJob = selectedJob === "all" || req.jobId === selectedJob;
-      const isPaid = isRequestPaid(req.id);
-      
+      const isPaid = getRequestConfirmation(req.id)?.confirmed || (confirmations || []).some(c => c.id === `job-${req.jobId}` && c.confirmed);
       const person = people.find(p => p.id === req.personId);
       if (!person) return;
 
@@ -80,14 +79,12 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
           jobId: req.jobId,
           startDate: req.startDate || "2000-01-01",
           endDate: req.endDate || "2000-01-01",
+          isPaid: isPaid,
           totalRequested: 0,
           totalUsed: 0,
           balance: 0,
           details: []
         };
-      } else {
-          if (req.startDate && req.startDate < data[key].startDate) data[key].startDate = req.startDate;
-          if (req.endDate && req.endDate > data[key].endDate) data[key].endDate = req.endDate;
       }
 
       const dates = getDatesInRange(req.startDate, req.endDate);
@@ -98,55 +95,67 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
         if (processedDays.has(dayKey)) return;
         processedDays.add(dayKey);
 
-        const entries = timeEntries.filter(e => e.personId === req.personId && e.jobId === req.jobId && e.date === date);
-        const entry = entries.find(e => e.isTravelOut || e.isTravelReturn) || entries[0];
-        const fc = foodControl.find(f => f.personId === req.personId && f.jobId === req.jobId && f.date === date);
+        const entry = timeEntries.find(e => e.personId === req.personId && e.jobId === req.jobId && e.date === date);
+        const fc = foodControl.find(f => f.personId === req.personId && f.jobId === req.jobId && f.date === d);
         const reqMeals = (req.dailyOverrides?.[date] ?? req.meals) || [];
 
+        // Valor Bruto sempre soma
+        const dayValue = reqMeals.reduce((acc, m) => acc + getMealValue(m, date, person), 0);
+        data[key].totalRequested += dayValue;
+
+        // Se NÃO pago, calculamos descontos e extras para o Job
         if (!isPaid) {
-          if (isCurrentJob) {
-            reqMeals.forEach(m => {
-              data[key].totalRequested += getMealValue(m, date, person);
-            });
+          const dayCalc = calculateDayDiscount(req, date, entry || undefined, fc, people);
+          if (dayCalc.total > 0) {
+              data[key].balance -= dayCalc.total;
+              data[key].details.push({ date, type: 'desconto', reason: dayCalc.reason, value: -dayCalc.total, jobId: req.jobId, projectName });
           }
 
-          if (isCurrentJob || selectedJob === "all") {
-             const dayCalc = calculateDayDiscount(req, date, entry || undefined, fc, people);
-             if (dayCalc.total > 0) {
-                data[key].balance -= dayCalc.total;
-                data[key].details.push({
-                   date, type: 'desconto', reason: dayCalc.reason, value: -dayCalc.total, jobId: req.jobId, projectName
-                });
-             }
-
-             if (fc) {
-               const usedMeals: { type: 'cafe'|'almoco'|'janta', used: boolean }[] = [
-                 { type: 'cafe', used: fc.usedCafe }, { type: 'almoco', used: fc.usedAlmoco }, { type: 'janta', used: fc.usedJanta }
-               ];
-               usedMeals.forEach(um => {
-                 if (um.used && !reqMeals.includes(um.type as any)) {
-                   const val = getMealValue(um.type as any, date, person);
-                   if (val > 0) {
-                     data[key].balance += val;
-                     data[key].details.push({ date, type: 'extra', reason: `${MEAL_LABELS[um.type]} extra`, value: val, jobId: req.jobId, projectName });
-                   }
+          if (fc) {
+             ['cafe', 'almoco', 'janta'].forEach(m => {
+               const used = m === 'cafe' ? fc.usedCafe : m === 'almoco' ? fc.usedAlmoco : fc.usedJanta;
+               if (used && !reqMeals.includes(m as any)) {
+                 const v = getMealValue(m as any, date, person);
+                 if (v > 0) {
+                   data[key].balance += v;
+                   data[key].details.push({ date, type: 'extra', reason: `${MEAL_LABELS[m]} extra`, value: v, jobId: req.jobId, projectName });
                  }
-               });
-             }
+               }
+             });
           }
         }
       });
     });
 
-    return Object.values(data)
-      .map(ps => { ps.totalUsed = ps.totalRequested + ps.balance; return ps; })
-      .filter(ps => {
-          const matchesJob = selectedJob === "all" || ps.jobId === selectedJob;
-          // Mostra apenas se houver solicitação ativa (evita poluição com saldos negativos de jobs antigos)
-          const hasActiveRequest = ps.totalRequested > 0;
-          return matchesJob && hasActiveRequest;
-      })
-      .sort((a, b) => getPersonName(a.personId).localeCompare(getPersonName(b.personId)));
+    // Pós-processamento para Saldo Retroativo e Congelamento de Pagos
+    return Object.values(data).map(ps => {
+      const conf = getRequestConfirmation(ps.jobId) || getRequestConfirmation(ps.personId); // Simplified check
+      
+      if (ps.isPaid) {
+        // Se pago, mostramos o valor bruto original (como pedido pelo usuário para o caso do 598,00)
+        // A menos que tenhamos o value exato salvo. Usaremos o logic do PaymentTab: check localstorage fallback later?
+        // Aqui apenas mostramos o Bruto para manter a transparência do que foi solicitado.
+        ps.totalUsed = ps.totalRequested; 
+        ps.balance = 0;
+        ps.details = [{ date: ps.endDate, type: 'pago', reason: 'Pagamento Integral Realizado', value: ps.totalRequested, jobId: ps.jobId }];
+      } else {
+        // Se NÃO PAGO, injetamos o Saldo Acumulado (incluindo faltas de jobs passados que foram pagos mas sem descontos)
+        const totalWallet = calculatePersonBalance(ps.personId, requests, foodControl, confirmations, people, timeEntries);
+        
+        // O Saldo Retroativo é a diferença entre o que ele tem na carteira hoje e o Neto deste job
+        const thisJobNet = ps.totalRequested + ps.balance;
+        const retro = totalWallet - thisJobNet;
+
+        if (Math.abs(retro) > 0.1) {
+          ps.balance += retro;
+          ps.details.push({ date: ps.startDate, type: 'anterior', reason: 'Saldo Acumulado (Outros Jobs)', value: retro, jobId: ps.jobId });
+        }
+        ps.totalUsed = ps.totalRequested + ps.balance;
+      }
+      return ps;
+    })
+    .filter(ps => selectedJob === "all" || ps.jobId === selectedJob)
+    .sort((a, b) => b.isPaid ? -1 : 1); // Pendentes primeiro
   }, [requests, foodControl, people, timeEntries, confirmations, selectedJob, jobs]);
 
   const togglePerson = (id: string) => {
@@ -159,104 +168,99 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
   };
 
   const handleSettlePerson = (personId: string, jobId: string) => {
-    const pending = requests.filter(r => r.personId === personId && r.jobId === jobId && !isRequestPaid(r.id));
+    const pending = requests.filter(r => r.personId === personId && r.jobId === jobId && !getRequestConfirmation(r.id)?.confirmed);
     if (onUpdatePaymentConfirmation && pending.length > 0) {
       pending.forEach(req => onUpdatePaymentConfirmation({ id: req.id, type: 'request', confirmed: true, paymentDate: new Date().toISOString().split("T")[0] }));
-      toast.success("Conta liquidada para este job!");
+      toast.success("Liquidado!");
     }
   };
 
   return (
-    <div className="space-y-6 print:space-y-4">
-      <div className="flex flex-wrap gap-4 items-end p-4 rounded-xl border border-border bg-muted/30 print:hidden">
+    <div className="space-y-6">
+      <div className="flex flex-wrap gap-4 items-end p-4 rounded-xl border border-border bg-muted/30">
         <div className="flex-1 min-w-[240px]">
-          <label className="text-2xs uppercase tracking-wider font-semibold text-muted-foreground block mb-2 px-1 flex items-center gap-2">
-            <Filter className="h-3 w-3" /> Filtrar por Job
-          </label>
           <SearchableSelect
             options={[{ value: "all", label: "Todos os Jobs" }, ...jobs.map(j => ({ value: j.id, label: j.name }))]}
-            value={selectedJob} onValueChange={setSelectedJob} className="h-10 text-sm"
+            value={selectedJob} onValueChange={setSelectedJob}
           />
         </div>
         <div className="flex gap-2">
-            <Button onClick={() => setExpandedPeople(new Set(personStatements.map(ps => `${ps.personId}-${ps.jobId}`)))} variant="outline" size="sm" className="h-10">Abrir Todos</Button>
-            <Button onClick={() => setExpandedPeople(new Set())} variant="outline" size="sm" className="h-10">Recolher Todos</Button>
-            <Button onClick={() => window.print()} className="h-10">Exportar PDF</Button>
+            <Button onClick={() => setExpandedPeople(new Set(personStatements.map(ps => `${ps.personId}-${ps.jobId}`)))} variant="outline">Abrir Todos</Button>
+            <Button onClick={() => setExpandedPeople(new Set())} variant="outline">Recolher</Button>
+            <Button onClick={() => window.print()}>PDF</Button>
         </div>
       </div>
 
-      <div ref={statementRef} className="space-y-6">
-        {personStatements.length === 0 ? (
-          <div className="text-center py-20 border border-dashed border-border rounded-2xl bg-muted/10">
-            <p className="text-muted-foreground text-sm font-medium">Nenhum dado pendente encontrado.</p>
-          </div>
-        ) : (
-          personStatements.map((ps) => {
-            const key = `${ps.personId}-${ps.jobId}`;
-            const isExpanded = expandedPeople.has(key);
-            return (
-              <Card key={key} className="overflow-hidden border-border shadow-md print:shadow-none break-inside-avoid">
-                <CardHeader className="bg-muted/30 border-b border-border py-4 cursor-pointer" onClick={() => togglePerson(key)}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary border border-primary/20"><User className="h-5 w-5" /></div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <CardTitle className="text-lg font-bold">{getPersonName(ps.personId)}</CardTitle>
-                          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleSettlePerson(ps.personId, ps.jobId); }} className="h-7 text-[10px] font-black uppercase text-muted-foreground hover:text-green-600 gap-1.5"><CheckCircle2 className="h-3.5 w-3.5" /> Liquidar Job</Button>
-                        </div>
-                        <div className="flex flex-col gap-1 mt-1 text-[10px] text-muted-foreground font-bold uppercase">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="text-[9px] border-primary/30 text-primary">{getJobName(ps.jobId)}</Badge>
-                            <span className="ml-2 flex items-center gap-1"><Calendar className="h-3 w-3" /> {ps.startDate.split("-").reverse().join("/")} — {ps.endDate.split("-").reverse().join("/") || "—"}</span>
-                          </div>
-                        </div>
+      <div className="space-y-4">
+        {personStatements.map((ps) => {
+          const key = `${ps.personId}-${ps.jobId}`;
+          const isExpanded = expandedPeople.has(key);
+          return (
+            <Card key={key} className={`overflow-hidden ${ps.isPaid ? 'opacity-80 border-green-500/20' : 'border-border shadow-md'}`}>
+               <CardHeader className="py-3 px-4 flex-row items-center justify-between cursor-pointer space-y-0" onClick={() => togglePerson(key)}>
+                  <div className="flex items-center gap-3">
+                    <User className={`h-5 w-5 ${ps.isPaid ? 'text-green-600' : 'text-primary'}`} />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-sm tracking-tight">{getPersonName(ps.personId)}</span>
+                        {ps.isPaid ? (
+                           <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-100 py-0 text-[10px]">PAGO</Badge>
+                        ) : (
+                           <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleSettlePerson(ps.personId, ps.jobId); }} className="h-6 text-[9px] font-black uppercase hover:text-green-600">Liquidar</Button>
+                        )}
                       </div>
-                    </div>
-                    <div className="flex items-center gap-6">
-                        <div className="text-right">
-                          <span className="text-2xs uppercase tracking-wider font-semibold text-muted-foreground block">Ajuste Pendente</span>
-                          <span className={`text-lg font-black tabular-nums ${ps.balance >= 0 ? 'text-green-600' : 'text-destructive'}`}>R$ {ps.balance.toFixed(2)}</span>
-                        </div>
-                        {isExpanded ? <ChevronUp className="h-5 w-5 text-muted-foreground" /> : <ChevronDown className="h-5 w-5 text-muted-foreground" />}
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <Badge variant="outline" className="text-[9px] h-4">{getJobName(ps.jobId)}</Badge>
+                        <span className="text-[9px] text-muted-foreground font-medium uppercase tracking-tighter">
+                          {ps.startDate.split("-").reverse().join("/")} — {ps.endDate.split("-").reverse().join("/")}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </CardHeader>
-                {isExpanded && (
-                  <CardContent className="p-0">
-                    <div className="grid grid-cols-3 divide-x divide-border border-b border-border text-center">
-                      <div className="p-4">
-                        <span className="text-2xs uppercase text-muted-foreground block mb-1">Solicitado</span>
-                        <span className="text-base font-black">R$ {ps.totalRequested.toFixed(2)}</span>
-                      </div>
-                      <div className="p-4">
-                        <span className="text-2xs uppercase text-muted-foreground block mb-1">Total Ajustes</span>
-                        <span className={`text-base font-black ${ps.balance < 0 ? 'text-destructive' : 'text-green-600'}`}>R$ {ps.balance.toFixed(2)}</span>
-                      </div>
-                      <div className="p-4 bg-primary/5">
-                        <span className="text-2xs uppercase text-primary font-bold block mb-1">Valor Final</span>
-                        <span className="text-xl font-black text-primary font-mono">R$ {ps.totalUsed.toFixed(2)}</span>
-                      </div>
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                       <p className="text-[10px] uppercase font-black text-muted-foreground/60 leading-none">Total</p>
+                       <p className={`text-lg font-black tabular-nums leading-none mt-1 ${ps.isPaid ? 'text-green-600' : 'text-foreground'}`}>
+                         R$ {ps.totalUsed.toFixed(2)}
+                       </p>
                     </div>
-                    {ps.details.length > 0 && (
-                      <div className="p-4 space-y-2">
-                        {ps.details.map((d, index) => (
-                          <div key={index} className="flex justify-between items-center text-xs py-2 px-3 bg-muted/10 rounded-lg border border-border">
-                            <div className="flex items-center gap-3">
-                              <span className="text-[10px] tabular-nums bg-background px-1.5 py-0.5 rounded border border-border">{d.date.split("-").reverse().join("/")}</span>
-                              <span className="font-semibold">{d.reason}</span>
-                            </div>
-                            <span className={`font-bold ${d.value < 0 ? 'text-destructive' : 'text-green-600'}`}>R$ {d.value.toFixed(2)}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  </div>
+               </CardHeader>
+               {isExpanded && (
+                  <CardContent className="p-0 border-t border-border bg-muted/5">
+                    <div className="grid grid-cols-3 divide-x divide-border border-b border-border bg-background">
+                       <div className="p-3 text-center">
+                          <p className="text-[10px] uppercase text-muted-foreground font-bold">Solicitado</p>
+                          <p className="text-sm font-black">R$ {ps.totalRequested.toFixed(2)}</p>
+                       </div>
+                       <div className="p-3 text-center">
+                          <p className="text-[10px] uppercase text-muted-foreground font-bold">Ajustes</p>
+                          <p className={`text-sm font-black ${ps.balance < 0 ? 'text-destructive' : 'text-green-600'}`}>
+                            {ps.isPaid ? '—' : `R$ ${ps.balance.toFixed(2)}`}
+                          </p>
+                       </div>
+                       <div className="p-3 text-center bg-primary/5">
+                          <p className="text-[10px] uppercase text-primary font-bold">Valor {ps.isPaid ? 'Pago' : 'Final'}</p>
+                          <p className="text-base font-black text-primary">R$ {ps.totalUsed.toFixed(2)}</p>
+                       </div>
+                    </div>
+                    <div className="p-3 space-y-1">
+                       {ps.details.map((d, i) => (
+                         <div key={i} className="flex items-center justify-between text-[11px] py-1.5 border-b border-border/50 last:border-0 px-1">
+                            <span className="text-muted-foreground tabular-nums w-16">{d.date.split("-").reverse().join("/").slice(0,5)}</span>
+                            <span className="flex-1 font-medium">{d.reason}</span>
+                            <span className={`font-black ${d.value < 0 ? 'text-destructive' : 'text-green-600'}`}>
+                              {d.value > 0 ? '+' : ''}R$ {d.value.toFixed(2)}
+                            </span>
+                         </div>
+                       ))}
+                    </div>
                   </CardContent>
-                )}
-              </Card>
-            );
-          })
-        )}
+               )}
+            </Card>
+          );
+        })}
       </div>
     </div>
   );
