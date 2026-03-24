@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Bell, CalendarDays, Mail, Plus, Save, Settings, Share2, ShieldCheck, Smartphone, Trash2, MessageSquare, FileUp } from "lucide-react";
+import { Bell, CalendarDays, Mail, Plus, Save, Settings, Share2, ShieldCheck, Smartphone, Trash2, MessageSquare, FileUp, DollarSign, Users, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { JobImportDialog } from "./JobImportDialog";
 import { type SystemSettings, DEFAULT_SETTINGS } from "@/lib/types";
@@ -29,7 +29,6 @@ export const SettingsTab = () => {
   const [newHolidayDate, setNewHolidayDate] = useState("");
   const [newHolidayName, setNewHolidayName] = useState("");
 
-  // Sync state with database data when it loads
   useEffect(() => {
     if (systemSettings.data) {
       setSettings(systemSettings.data);
@@ -108,7 +107,7 @@ export const SettingsTab = () => {
           </CardContent>
         </Card>
 
-        {/* WHATSAPP */}
+        {/* WHATSAPP GERAL */}
         <Card className="border-border shadow-md">
           <CardHeader className="bg-muted/30 border-b border-border">
             <div className="flex items-center justify-between">
@@ -130,7 +129,7 @@ export const SettingsTab = () => {
           </CardContent>
         </Card>
 
-        {/* EMAIL */}
+        {/* EMAIL GERAL */}
         <Card className="border-border shadow-md md:col-span-2">
           <CardHeader className="bg-muted/30 border-b border-border">
             <div className="flex items-center justify-between">
@@ -158,7 +157,123 @@ export const SettingsTab = () => {
             </div>
           </CardContent>
         </Card>
-        
+
+        {/* FINANCEIRO - Notificações de Pagamento */}
+        <Card className="border-border shadow-md md:col-span-2 border-l-4 border-l-emerald-500">
+          <CardHeader className="bg-emerald-50/50 border-b border-border">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-emerald-100 rounded-lg text-emerald-600">
+                <DollarSign className="h-5 w-5" />
+              </div>
+              <div>
+                <CardTitle className="text-sm font-bold uppercase tracking-tight">Financeiro — Notificações de Pagamento</CardTitle>
+                <CardDescription className="text-xs mt-1">Quando houver nova informação na aba de pagamentos, esses contatos receberão o alerta automaticamente.</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-2xs uppercase font-black text-muted-foreground flex items-center gap-1.5">
+                <MessageSquare className="h-3 w-3 text-green-500" /> WhatsApp do Financeiro
+              </Label>
+              <Input 
+                placeholder="+55 11 99999-9999" 
+                value={settings.financeWhatsApp || ""} 
+                onChange={(e) => setSettings({ ...settings, financeWhatsApp: e.target.value })} 
+                className="bg-muted/20" 
+              />
+              <p className="text-[10px] text-muted-foreground italic">Número que receberá alertas de novos pagamentos.</p>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-2xs uppercase font-black text-muted-foreground flex items-center gap-1.5">
+                <Mail className="h-3 w-3 text-orange-500" /> E-mails do Financeiro
+              </Label>
+              <Input 
+                placeholder="financeiro@empresa.com.br" 
+                value={settings.financeEmails || ""} 
+                onChange={(e) => setSettings({ ...settings, financeEmails: e.target.value })} 
+                className="bg-muted/20" 
+              />
+              <p className="text-[10px] text-muted-foreground italic">Separar múltiplos e-mails por vírgula.</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* RH - Notificações de Descontos */}
+        <Card className="border-border shadow-md md:col-span-2 border-l-4 border-l-violet-500">
+          <CardHeader className="bg-violet-50/50 border-b border-border">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-violet-100 rounded-lg text-violet-600">
+                <Users className="h-5 w-5" />
+              </div>
+              <div>
+                <CardTitle className="text-sm font-bold uppercase tracking-tight">RH — Alertas de Descontos</CardTitle>
+                <CardDescription className="text-xs mt-1">Configure a data mensal para alerta de envio dos descontos ao RH e os contatos que receberão.</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-6 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-2xs uppercase font-black text-muted-foreground flex items-center gap-1.5">
+                  <MessageSquare className="h-3 w-3 text-green-500" /> WhatsApp do RH
+                </Label>
+                <Input 
+                  placeholder="+55 11 99999-9999" 
+                  value={settings.hrWhatsApp || ""} 
+                  onChange={(e) => setSettings({ ...settings, hrWhatsApp: e.target.value })} 
+                  className="bg-muted/20" 
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-2xs uppercase font-black text-muted-foreground flex items-center gap-1.5">
+                  <Mail className="h-3 w-3 text-orange-500" /> E-mails do RH
+                </Label>
+                <Input 
+                  placeholder="rh@empresa.com.br" 
+                  value={settings.hrEmails || ""} 
+                  onChange={(e) => setSettings({ ...settings, hrEmails: e.target.value })} 
+                  className="bg-muted/20" 
+                />
+                <p className="text-[10px] text-muted-foreground italic">Separar múltiplos e-mails por vírgula.</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+              <div className="space-y-2">
+                <Label className="text-2xs uppercase font-black text-muted-foreground flex items-center gap-1.5">
+                  <Clock className="h-3 w-3 text-violet-500" /> Dia do Mês para Alerta
+                </Label>
+                <Input 
+                  type="number"
+                  min={1}
+                  max={31}
+                  placeholder="25" 
+                  value={settings.discountAlertDate || 25} 
+                  onChange={(e) => setSettings({ ...settings, discountAlertDate: parseInt(e.target.value) || 25 })} 
+                  className="bg-muted/20 w-24" 
+                />
+                <p className="text-[10px] text-muted-foreground italic">No dia configurado, o sistema criará um alerta para envio dos descontos.</p>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-2xs uppercase font-black text-muted-foreground flex items-center gap-1.5">
+                  <Bell className="h-3 w-3 text-amber-500" /> Envio Automático
+                </Label>
+                <div className="flex items-center gap-3">
+                  <Switch 
+                    checked={settings.discountAutoSend || false} 
+                    onCheckedChange={(v) => setSettings({ ...settings, discountAutoSend: v })} 
+                  />
+                  <span className="text-xs text-muted-foreground">
+                    {settings.discountAutoSend 
+                      ? "O sistema enviará automaticamente no dia configurado" 
+                      : "Apenas alerta visual — envio manual"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* DATA MANAGEMENT */}
         <Card className="border-border shadow-md md:col-span-2">
           <CardHeader className="bg-muted/30 border-b border-border">
@@ -203,7 +318,6 @@ export const SettingsTab = () => {
             </div>
           </CardHeader>
           <CardContent className="pt-6 space-y-6">
-            {/* Adicionar Feriado Customizado */}
             <div className="flex gap-3 items-end">
               <div className="space-y-2 flex-1">
                 <Label className="text-2xs uppercase font-black text-muted-foreground">Data do Feriado</Label>
@@ -218,7 +332,6 @@ export const SettingsTab = () => {
               </Button>
             </div>
 
-            {/* Feriados Customizados */}
             {customHolidays.length > 0 && (
               <div>
                 <h4 className="text-xs uppercase font-black text-muted-foreground mb-3">Feriados Adicionados por Você</h4>
@@ -239,7 +352,6 @@ export const SettingsTab = () => {
               </div>
             )}
 
-            {/* Feriados Nacionais */}
             <div>
               <h4 className="text-xs uppercase font-black text-muted-foreground mb-3">Feriados Nacionais (Automáticos)</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-72 overflow-y-auto pr-1">
