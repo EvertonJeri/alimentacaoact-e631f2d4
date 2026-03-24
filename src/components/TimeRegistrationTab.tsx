@@ -42,6 +42,39 @@ const SAVE_OVERRIDES = (overrides: Record<string, any>) => {
     localStorage.setItem('time-reg-overrides', JSON.stringify(overrides));
 };
 
+const TimeInputCell = ({
+  initialValue,
+  onCommit,
+  className
+}: {
+  initialValue: string;
+  onCommit: (val: string) => void;
+  className?: string;
+}) => {
+  const [val, setVal] = useState(initialValue || "");
+
+  // Sync if external value changes (e.g., from autofill button)
+  useEffect(() => {
+    if (initialValue !== val) {
+        setVal(initialValue || "");
+    }
+  }, [initialValue]);
+
+  return (
+    <Input
+      type="time"
+      value={val}
+      onChange={(e) => setVal(e.target.value)}
+      onBlur={() => {
+        if (val !== (initialValue || "")) {
+          onCommit(val);
+        }
+      }}
+      className={className}
+    />
+  );
+};
+
 interface TimeRegistrationTabProps {
   entries: TimeEntry[];
   setEntries?: React.Dispatch<React.SetStateAction<TimeEntry[]>>;
@@ -195,10 +228,10 @@ const TimeRegistrationTab = ({
     const travel = getTravelInfo(entry);
     const loc = travel?.location || 'Dentro SP';
 
-    let entry1 = "08:00";
-    let exit1 = loc === "Fora SP" ? "12:00" : "10:00";
-    let entry2 = loc === "Fora SP" ? "13:00" : "";
-    let exit2 = loc === "Fora SP" ? "18:00" : "";
+    let entry1 = entry.entry1;
+    let exit1 = entry.exit1;
+    let entry2 = entry.entry2;
+    let exit2 = entry.exit2;
     
     // Tabela de overrides locais (é a nossa fonte de verdade atual/contorno)
     const current = localOverrides[entry.id] || {};
@@ -211,25 +244,31 @@ const TimeRegistrationTab = ({
         if (isTravelOut) { // Toggle off
             isTravelOut = false;
             isAutoFilled = false;
-            entry1 = ""; exit1 = ""; entry2 = ""; exit2 = "";
         } else {
             isTravelOut = true;
             isTravelReturn = false;
+            if (!entry1) entry1 = "08:00";
+            if (!exit1) exit1 = loc === "Fora SP" ? "12:00" : "10:00";
+            if (!entry2) entry2 = loc === "Fora SP" ? "13:00" : "";
+            if (!exit2) exit2 = loc === "Fora SP" ? "18:00" : "";
         }
     } else if (forceType === 'return') {
         if (isTravelReturn) { // Toggle off
             isTravelReturn = false;
             isAutoFilled = false;
-            entry1 = ""; exit1 = ""; entry2 = ""; exit2 = "";
         } else {
             isTravelOut = false;
             isTravelReturn = true;
+            if (!entry1) entry1 = "08:00";
+            if (!exit1) exit1 = loc === "Fora SP" ? "12:00" : "10:00";
+            if (!entry2) entry2 = loc === "Fora SP" ? "13:00" : "";
+            if (!exit2) exit2 = loc === "Fora SP" ? "18:00" : "";
         }
     } else {
         // Zap (automático padrão)
         if (loc === "Dentro SP") {
-            entry1 = "08:00"; exit1 = "10:00";
-            entry2 = ""; exit2 = "";
+            if (!entry1) entry1 = "08:00";
+            if (!exit1) exit1 = "10:00";
         }
     }
 
@@ -595,10 +634,9 @@ const TimeRegistrationTab = ({
                     {(["entry1", "exit1", "entry2", "exit2", "entry3", "exit3"] as const).map(
                       (field) => (
                         <td key={field} className="px-1 py-1.5">
-                          <Input
-                            type="time"
-                            value={entry[field]}
-                            onChange={(e) => updateField(entry.id, field, e.target.value)}
+                          <TimeInputCell
+                            initialValue={entry[field]}
+                            onCommit={(val) => updateField(entry.id, field, val)}
                             className={`h-8 text-xs tabular-nums text-center w-[90px] mx-auto transition-colors ${isAutoFilled ? "text-red-600 font-extrabold border-red-200 bg-red-400/10" : ""}`}
                           />
                         </td>

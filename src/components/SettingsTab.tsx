@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Bell, CalendarDays, Mail, Plus, Save, Settings, Share2, ShieldCheck, Smartphone, Trash2, MessageSquare, FileUp, DollarSign, Users, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { JobImportDialog } from "./JobImportDialog";
+import { PersonImportDialog } from "./PersonImportDialog";
 import { type SystemSettings, DEFAULT_SETTINGS } from "@/lib/types";
 import {
   BRAZIL_NATIONAL_HOLIDAYS,
@@ -282,13 +283,14 @@ export const SettingsTab = () => {
                 <FileUp className="h-5 w-5" />
               </div>
               <div>
-                <CardTitle className="text-sm font-bold uppercase tracking-tight">Gestão de Jobs Automática</CardTitle>
-                <CardDescription className="text-xs mt-1">Importe sua planilha de Jobs (Coluna A = Descrição, Coluna B = Número) ou limpe os registros atuais.</CardDescription>
+                <CardTitle className="text-sm font-bold uppercase tracking-tight">Gestão de Dados em Lote</CardTitle>
+                <CardDescription className="text-xs mt-1">Importe sua planilha de Funcionários ou Jobs, ou limpe os registros de Jobs atuais.</CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent className="pt-6 flex gap-4 flex-wrap">
             <JobImportDialog />
+            <PersonImportDialog />
             <Button 
                 variant="destructive" 
                 className="gap-2 font-bold uppercase tracking-widest text-[10px] h-9"

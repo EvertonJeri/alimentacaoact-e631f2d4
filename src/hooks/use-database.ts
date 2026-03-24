@@ -435,6 +435,42 @@ export function useDatabase() {
     }
   });
 
+  const bulkUpsertPeople = useMutation({
+    mutationFn: async (peopleToInsert: Omit<Person, "id">[]) => {
+      const getErrMsg = (e: unknown): string => {
+        if (!e) return "Erro desconhecido";
+        if (typeof e === "object") {
+          const obj = e as Record<string, unknown>;
+          return String(obj.message || obj.details || obj.hint || JSON.stringify(e));
+        }
+        return String(e);
+      };
+
+      const toUpsert = peopleToInsert.map(p => ({
+        name: p.name,
+        department: p.department || null,
+        is_registered: p.isRegistered,
+        pix: p.pix || null,
+      }));
+
+      // Upsert delegando o controle de duplicidade para o Supabase (chave única)
+      const chunkSize = 50;
+      for (let i = 0; i < toUpsert.length; i += chunkSize) {
+        const chunk = toUpsert.slice(i, i + chunkSize);
+        const { error } = await supabase.from("people").upsert(chunk, { onConflict: "name" });
+        if (error) throw new Error(getErrMsg(error));
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["people"] });
+    },
+    onError: (error: unknown) => {
+      const msg = error instanceof Error ? error.message : String(error);
+      toast.error(`Erro ao salvar Funcionários: ${msg}`);
+      console.error("bulkUpsertPeople error:", error);
+    },
+  });
+
   const updateSystemSettings = useMutation({
     mutationFn: async (settings: SystemSettings) => {
       const { error } = await supabase
@@ -501,6 +537,7 @@ export function useDatabase() {
     updateCustomHolidays,
     bulkInsertJobs,
     clearAllJobs,
+    bulkUpsertPeople,
     removeMealRequest,
     removeTimeEntry,
     removePaymentConfirmation,

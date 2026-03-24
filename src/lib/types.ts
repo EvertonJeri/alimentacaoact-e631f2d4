@@ -108,38 +108,7 @@ export const LOCATIONS: { value: LocationType; label: string }[] = [
   { value: "Fora SP", label: "Fora de SP" },
 ];
 
-export const SAMPLE_PEOPLE: Person[] = [
-  { id: "1", name: "Alexandre Augusto Teixeira", isRegistered: true, department: "PRODUÇÃO", pix: "294.572.068-00" },
-  { id: "2", name: "Alexandre Pereira de Lima", isRegistered: true, department: "Geral", pix: "379.084.538-80" },
-  { id: "3", name: "Anderson Gomes Nunes", isRegistered: true, department: "ACABAMENTO", pix: "270.290.078-08" },
-  { id: "4", name: "Andre dos Reis Santos", isRegistered: true, department: "ADMINISTRATIVO", pix: "417.190.318-19" },
-  { id: "5", name: "Antonio Paulo Teixeira", isRegistered: true, department: "ACABAMENTO", pix: "657.835.144-20" },
-  { id: "6", name: "Brenno Mendes de Sousa", isRegistered: true, department: "ROUTER", pix: "+5511974173064" },
-  { id: "7", name: "Bruno Alves de Moraes Sarmento Duarte", isRegistered: true, department: "ADMINISTRATIVO", pix: "426.133.928-51" },
-  { id: "8", name: "Carla Chimera Nardim", isRegistered: true, department: "ADMINISTRATIVO", pix: "CHIMERARIFAS@GMAIL.COM" },
-  { id: "9", name: "Carlos Alberto da Silva", isRegistered: true, department: "ALMOXARIFADO", pix: "112.117.198-20" },
-  { id: "10", name: "Cicero Manoel da Silva", isRegistered: true, department: "GERAL", pix: "+5511986240612" },
-  { id: "11", name: "Everton Simões Fernandes Teixeira", isRegistered: true, department: "ADMINISTRATIVO", pix: "+5588997053583" },
-  { id: "12", name: "Jessica de Souza Franco", isRegistered: true, department: "ADMINISTRATIVO", pix: "410.611.218-36" },
-  { id: "13", name: "Joao Luiz Madureira", isRegistered: true, department: "LAMINAÇÃO", pix: "+5511963924038" },
-  { id: "14", name: "Odair Jose Tomaz", isRegistered: true, department: "MARCENARIA", pix: "180.969.778-65" },
-  { id: "15", name: "Raphael Teixeira dos Santos", isRegistered: true, department: "ADMINISTRATIVO", pix: "teixeirarapha1983@gmail.com" },
-  { id: "16", name: "Adam de Pierre Pavan", isRegistered: false, department: "3D", pix: "62012753000174" },
-  { id: "17", name: "Ademilson Souza de Jesus", isRegistered: false, department: "ACABAMENTO", pix: "012.787.905-60" },
-  { id: "18", name: "Adilson Felix de Oliveira", isRegistered: false, department: "MARCENARIA", pix: "17.633.367/0001-45" },
-  { id: "19", name: "Adson Silva Costa", isRegistered: false, department: "ACABAMENTO", pix: "(38) 99963-8328" },
-  { id: "20", name: "Alan Lima dos Anjos", isRegistered: false, department: "ESCULTURA", pix: "(11) 98220-5793" },
-  { id: "21", name: "Alex Martiliano da Silva", isRegistered: false, department: "EQUIPE FELIPE", pix: "(11) 96234-1293 (Felipe)" },
-  { id: "22", name: "Alexandre Augusto Lacerda", isRegistered: false, department: "ADMINISTRATIVO", pix: "alexandrelacerd@gmail.com" },
-  { id: "23", name: "Anderson Pinheiro de Sá", isRegistered: false, department: "ACABAMENTO", pix: "+5511963616216" },
-  { id: "24", name: "Antonio Carlos Bezerra dos Santos", isRegistered: false, department: "MARCENARIA", pix: "+5511916496224" },
-  { id: "25", name: "Bruno Almeida da Silva", isRegistered: false, department: "Equipe Luiz", pix: "serralherialuana10@gmail.com" },
-  { id: "26", name: "Carlos Henrique Dias da Cruz", isRegistered: false, department: "MARCENARIA", pix: "c.h23283@gmail.com" },
-  { id: "27", name: "Cassiano Cabral da Silva", isRegistered: false, department: "MARCENARIA", pix: "+5511979557702" },
-  { id: "28", name: "Cristiano de Oliveira", isRegistered: false, department: "PINTURA", pix: "(11) 97779-2096" },
-  { id: "29", name: "Daniel Bartolo Felix", isRegistered: false, department: "LAMINAÇÃO", pix: "+5511933628042" },
-  { id: "30", name: "Diego Moreira Dias", isRegistered: false, department: "MARCENARIA", pix: "(11) 99477-4034" },
-];
+export const SAMPLE_PEOPLE: Person[] = [];
 export const SAMPLE_JOBS: Job[] = [];
 
 export const MEAL_LABELS: Record<MealType, string> = {

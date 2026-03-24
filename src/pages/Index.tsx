@@ -32,6 +32,7 @@ import StatementTab from "@/components/StatementTab";
 import { SettingsTab } from "@/components/SettingsTab";
 import { useDatabase } from "@/hooks/use-database";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
   const {
