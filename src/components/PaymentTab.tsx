@@ -184,6 +184,18 @@ const PaymentTab = ({
     }
   };
 
+  const updatePaymentDate = (id: string, type: "request" | "job", paymentDate: string) => {
+    const existing = getConfirmation(id);
+    onUpdateConfirmation({ 
+      id, 
+      type, 
+      paymentDate, 
+      confirmed: existing?.confirmed || false,
+      applyBalance: existing?.applyBalance,
+      appliedBalance: existing?.appliedBalance
+    });
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-3 items-end p-3 rounded-lg border border-border bg-muted/30">
@@ -215,7 +227,7 @@ const PaymentTab = ({
                 </div>
                 {!isJobPaid ? (
                   <div className="flex items-center gap-2">
-                    <Input type="date" className="h-9 text-xs w-40 px-3 flex-row-reverse" value={jobPaymentDate} onChange={(e) => onUpdateConfirmation({ id: `job-${jobId}`, type: 'job', paymentDate: e.target.value, confirmed: false })} />
+                    <Input type="date" className="h-9 text-xs w-40 px-3 flex-row-reverse" value={jobPaymentDate} onChange={(e) => updatePaymentDate(`job-${jobId}`, 'job', e.target.value)} />
                     <Button size="sm" className="h-9 bg-primary" onClick={() => confirmPayment(`job-${jobId}`, "job", jobPaymentDate)}>Confirmar Job</Button>
                   </div>
                 ) : (
@@ -234,21 +246,13 @@ const PaymentTab = ({
                   const discounts = getRequestDiscounts(req);
                   const currentReqNet = currentReqBruto - discounts;
                   
-                  // Se já pago NO BANCO com apply_balance gravado, prioriza o banco. Senão, tenta o localStorage.
-                  const shouldApply = isPaid 
-                    ? (conf?.applyBalance !== undefined ? conf.applyBalance : ((applyBalanceMap[req.id] !== undefined) ? applyBalanceMap[req.id] : true))
-                    : ((applyBalanceMap[req.id] !== undefined) ? applyBalanceMap[req.id] : true);
-                  
-                  // Se já pago, usa o ajuste congelado se disponível. Senão, recalcula.
-                  const totalWallet = calculatePersonBalance(req.personId, requests, foodControl, confirmations, people, timeEntries);
-                  const retroBalance = totalWallet - currentReqNet;
-                  const displayAdjustment = (isPaid && conf?.appliedBalance !== undefined) ? conf.appliedBalance : retroBalance;
-                  
-<<<<<<< HEAD
                   // Se já está pago: usa o estado CONGELADO do banco
                   // Se ainda não pago: usa o estado local (applyBalanceMap)
                   const frozenApply = isPaid ? (conf?.applyBalance !== false) : (applyBalanceMap[req.id] !== false);
                   
+                  const totalWallet = calculatePersonBalance(req.personId, requests, foodControl, confirmations, people, timeEntries);
+                  const retroBalance = totalWallet - currentReqNet;
+
                   const finalTotal = isPaid 
                     ? (frozenApply ? (currentReqNet + (conf?.appliedBalance || 0)) : currentReqBruto) 
                     : (frozenApply ? Math.max(0, currentReqNet + retroBalance) : currentReqBruto);
@@ -256,9 +260,6 @@ const PaymentTab = ({
                   const displayAdjustment = isPaid 
                     ? (frozenApply ? (conf?.appliedBalance || 0) : 0)
                     : (frozenApply ? retroBalance : 0);
-=======
-                  const finalValue = shouldApply ? (currentReqNet + displayAdjustment) : currentReqBruto;
->>>>>>> 4ab1f7e3b8e4492b86d5d4fad7b6299e63150cc4
 
                   return (
                     <div key={req.id} className="p-4 bg-background">
@@ -277,16 +278,15 @@ const PaymentTab = ({
                         </div>
 
                         <div className="flex items-center gap-6">
-<<<<<<< HEAD
                           <div className="text-right flex flex-col items-end gap-0.5">
                             <p className="text-[10px] uppercase tracking-widest font-black text-muted-foreground/60 leading-none">Total Pix</p>
                             <p className="text-base font-black tabular-nums tracking-tighter text-foreground leading-none">R$ {finalTotal.toFixed(2)}</p>
                             
                             <div className="flex flex-col items-end pt-1">
                               {/* Se Saldo ON: Mostra o desconto da montagem atual riscado */}
-                              {(frozenApply && currentReqDiscounts > 0) && (
+                              {(frozenApply && discounts > 0) && (
                                 <span className="text-[10px] text-destructive font-medium opacity-60 line-through">
-                                  - R$ {currentReqDiscounts.toFixed(2)} [DESC. FALTA]
+                                  - R$ {discounts.toFixed(2)} [DESC. FALTA]
                                 </span>
                               )}
                               
@@ -385,44 +385,9 @@ const PaymentTab = ({
                                 >
                                   <Undo2 className="h-4 w-4" />
                                 </Button>
-=======
-                           <div className="text-right">
-                              <p className="text-[10px] uppercase font-black text-muted-foreground/60 leading-none">Total Pix</p>
-                              <p className="text-lg font-black tabular-nums">R$ {finalValue.toFixed(2)}</p>
-                              <div className="flex flex-col items-end pt-1">
-                                {shouldApply && (
-                                    <>
-                                        {discounts > 0 && <span className="text-[10px] text-destructive line-through opacity-60">- R$ {discounts.toFixed(2)} [DESC. FALTA]</span>}
-                                        {Math.abs(displayAdjustment) > 0.1 && (
-                                          <span className={`text-[10px] font-bold ${displayAdjustment < 0 ? 'text-destructive' : 'text-blue-600'}`}>
-                                            {displayAdjustment < 0 ? '' : '+'} R$ {displayAdjustment.toFixed(2)} [SALDO ANTERIOR]
-                                          </span>
-                                        )}
-                                    </>
-                                )}
-                                {!shouldApply && <span className="text-[10px] text-destructive font-black italic">SALDO/DESC. NÃO APLICADO</span>}
->>>>>>> 4ab1f7e3b8e4492b86d5d4fad7b6299e63150cc4
                               </div>
-                           </div>
-                           <div className="flex items-center gap-2">
-                             {!isPaid ? (
-                               <>
-                                 <Button 
-                                    size="sm" 
-                                    variant={shouldApply ? "default" : "outline"} 
-                                    className={`h-8 text-[9px] font-black uppercase ${shouldApply ? "bg-blue-600 hover:bg-blue-700" : "bg-muted/20 text-muted-foreground"}`}
-                                    onClick={() => setApplyBalanceMap(prev => ({ ...prev, [req.id]: !shouldApply }))}
-                                  >
-                                    {shouldApply ? "APLICADO" : "NÃO APLICADO"}
-                                  </Button>
-                                  <Input type="date" className="h-10 text-xs w-36 px-2 flex-row-reverse" value={paymentDate} onChange={(e) => onUpdateConfirmation({ id: req.id, type: 'request', paymentDate: e.target.value, confirmed: false })} />
-                                  <Button size="sm" variant="outline" className="h-8" onClick={() => confirmPayment(req.id, "request", paymentDate)}>Confirmar</Button>
-                               </>
-                             ) : (
-                               <Button variant="ghost" size="sm" className="h-8 text-xs text-muted-foreground hover:text-destructive gap-1" onClick={() => removeConfirmation(req.id)}><Undo2 className="h-3 w-3" /> Estornar</Button>
-                             )}
-                             <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => { if (confirm("Apagar?")) onRemoveRequest?.(req.id); }}><Trash2 className="h-4 w-4" /></Button>
-                           </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                       {expandedRequests.has(req.id) && (

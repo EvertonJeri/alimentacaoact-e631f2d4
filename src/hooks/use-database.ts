@@ -111,6 +111,20 @@ export const useDatabase = () => {
     },
   });
 
+  const discountConfirmations = useQuery({
+    queryKey: ["discount_confirmations"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("discount_confirmations").select("*");
+      if (error) throw error;
+      return (data || []).map((c: any) => ({
+        id: c.id,
+        personId: c.person_id,
+        confirmed: c.confirmed,
+        paymentDate: c.payment_date
+      }));
+    },
+  });
+
   const systemSettings = useQuery({
     queryKey: ["system_settings"],
     queryFn: async () => {
@@ -210,22 +224,65 @@ export const useDatabase = () => {
         payment_date: conf.paymentDate,
         confirmed: conf.confirmed,
         apply_balance: conf.applyBalance,
-        applied_balance: conf.applied_balance
+        applied_balance: conf.appliedBalance
       };
 
       const { error } = await supabase.from("payment_confirmations").upsert(payload, { onConflict: "id" });
-      if (error) {
-        const { error: error2 } = await supabase.from("payment_confirmations").upsert({
-          id: conf.id,
-          type: conf.type,
-          payment_date: conf.paymentDate,
-          confirmed: conf.confirmed
-        } as any, { onConflict: "id" });
-        if (error2) throw error2;
-      }
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["payment_confirmations"] });
+    },
+  });
+
+  const deletePaymentConfirmation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("payment_confirmations").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["payment_confirmations"] });
+    },
+  });
+
+  const updateDiscountConfirmation = useMutation({
+    mutationFn: async (conf: any) => {
+      const { error } = await supabase.from("discount_confirmations").upsert({
+        id: conf.id || crypto.randomUUID(),
+        person_id: conf.personId,
+        confirmed: conf.confirmed,
+        payment_date: conf.paymentDate
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["discount_confirmations"] });
+    },
+  });
+
+  const updateTimeEntry = useMutation({
+    mutationFn: async (entry: TimeEntry) => {
+      const { error } = await supabase
+        .from("time_entries")
+        .upsert({
+          id: entry.id,
+          person_id: entry.personId,
+          job_id: entry.jobId,
+          date: entry.date,
+          entry1: entry.entry1 || null,
+          exit1: entry.exit1 || null,
+          entry2: entry.entry2 || null,
+          exit2: entry.exit2 || null,
+          entry3: entry.entry3 || null,
+          exit3: entry.exit3 || null,
+          is_travel_out: entry.isTravelOut,
+          is_travel_return: entry.isTravelReturn,
+          is_auto_filled: entry.isAutoFilled,
+        } as any, { onConflict: "id" });
+      if (error) throw error;
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["time_entries"] });
     },
   });
 
@@ -358,10 +415,14 @@ export const useDatabase = () => {
     timeEntries,
     foodControl,
     paymentConfirmations,
+    discountConfirmations,
     systemSettings,
     customHolidays,
     updateSystemSettings,
     updatePaymentConfirmation,
+    deletePaymentConfirmation,
+    updateDiscountConfirmation,
+    updateTimeEntry,
     updateTimeEntries,
     deleteTimeEntry,
     updateMealRequest,

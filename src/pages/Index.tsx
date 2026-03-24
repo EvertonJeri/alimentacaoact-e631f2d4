@@ -39,7 +39,7 @@ const Index = () => {
     people,
     jobs,
     timeEntries,
-    mealRequests,
+    requests: mealRequests,
     foodControl,
     discountConfirmations,
     paymentConfirmations,
@@ -48,9 +48,9 @@ const Index = () => {
     updatePaymentConfirmation,
     updateTimeEntry,
     updateMealRequest,
-    removeMealRequest,
-    removeTimeEntry,
-    removePaymentConfirmation,
+    deleteMealRequest: removeMealRequest,
+    deleteTimeEntry: removeTimeEntry,
+    deletePaymentConfirmation: removePaymentConfirmation,
     systemSettings,
     customHolidays,
   } = useDatabase();
@@ -139,6 +139,7 @@ const Index = () => {
             onUpdateRequest={(req) => updateMealRequest.mutate(req)}
             onRemoveRequest={(id) => removeMealRequest.mutate(id)}
             onUpdateTimeEntry={(entry) => updateTimeEntry.mutate(entry)}
+            onNavigateToPayment={() => setActivePage("pagamento")}
             autoFillTravel={autoFillTravel}
             setAutoFillTravel={setAutoFillTravel}
           />

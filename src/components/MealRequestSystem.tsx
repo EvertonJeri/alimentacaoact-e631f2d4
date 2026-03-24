@@ -27,6 +27,16 @@ import {
   type PaymentConfirmation,
 } from "@/lib/types";
 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { notifyFinancePayment } from "@/lib/notifications";
+
 interface MealRequestSystemProps {
   people: Person[];
   jobs: Job[];
@@ -37,6 +47,7 @@ interface MealRequestSystemProps {
   onUpdateRequest: (req: MealRequest) => void;
   onRemoveRequest: (id: string) => void;
   onUpdateTimeEntry?: (entry: TimeEntry) => void;
+  onNavigateToPayment?: () => void;
   autoFillTravel?: boolean;
   setAutoFillTravel?: (v: boolean) => void;
 }
@@ -51,6 +62,7 @@ const MealRequestSystem = ({
   onUpdateRequest,
   onRemoveRequest,
   onUpdateTimeEntry,
+  onNavigateToPayment,
   autoFillTravel = true,
   setAutoFillTravel,
 }: MealRequestSystemProps) => {
@@ -63,11 +75,40 @@ const MealRequestSystem = ({
   const [endDate, setEndDate] = useState(new Date().toISOString().split("T")[0]);
   const [meals, setMeals] = useState<MealType[]>(["cafe", "almoco", "janta"]);
   const [expandedRequests, setExpandedRequests] = useState<Set<string>>(new Set());
+  const [showFinanceDialog, setShowFinanceDialog] = useState(false);
 
   const balance = useMemo(() => {
     if (!personId || !people || !requests) return 0;
     return calculatePersonBalance(personId, requests, foodControl, confirmations, people, timeEntries);
   }, [personId, requests, foodControl, confirmations, people, timeEntries]);
+
+  const filtered = useMemo(() => {
+    if (!selectedJob) return [];
+    return (requests || []).filter(r => r.jobId === selectedJob);
+  }, [requests, selectedJob]);
+
+  const financeSummary = useMemo(() => {
+    if (filtered.length === 0) return { total: 0, count: 0 };
+    let total = 0;
+    filtered.forEach(req => {
+        const days = getDatesInRange(req.startDate, req.endDate);
+        const person = people.find(p => p.id === req.personId);
+        total += (days || []).reduce((acc, d) => {
+          const activeMeals = (req.dailyOverrides?.[d] ?? req.meals) as MealType[];
+          return acc + (Array.isArray(activeMeals) ? activeMeals.reduce((sum, m) => sum + getMealValue(m, d, person), 0) : 0);
+        }, 0);
+    });
+    return { total, count: filtered.length };
+  }, [filtered, people]);
+
+  const handleConfirmFinance = async () => {
+    const jobName = jobs.find(j => j.id === selectedJob)?.name || "—";
+    const details = `🏗️ PROJETO: ${jobName}\n👥 PROFISSIONAIS: ${financeSummary.count}\n💰 VALOR TOTAL: R$ ${financeSummary.total.toFixed(2)}`;
+    
+    await notifyFinancePayment(details);
+    setShowFinanceDialog(false);
+    if (onNavigateToPayment) onNavigateToPayment();
+  };
 
   const handleAdd = () => {
     if (!selectedJob || !personId || !startDate || !endDate || !location) return;
@@ -94,9 +135,6 @@ const MealRequestSystem = ({
     const overrides: Record<string, MealType[]> = {};
     let hasOverride = false;
 
-    // Removemos a desmarcação automática do almoço CLT para que ele apareça na lista mas com valor 0.
-    // Isso evita confusão visual para o usuário.
-
     // Regra de Viagem: Aplica no dia de início se houver horário de viagem
     if (travelTime) {
       const offset = transportType === "aviao" ? 4 : 2;
@@ -104,11 +142,8 @@ const MealRequestSystem = ({
       const adjustedMinutes = (h * 60 + m) - (offset * 60);
 
       const travelMeals: MealType[] = [];
-      // Café: deslocamento iniciado até 08:00
       if (adjustedMinutes <= 8 * 60 && meals.includes("cafe")) travelMeals.push("cafe");
-      // Almoço: deslocamento iniciado até 12:00
       if (adjustedMinutes <= 12 * 60 && meals.includes("almoco")) travelMeals.push("almoco");
-      // Janta: deslocamento iniciado até 20:00
       if (adjustedMinutes <= 20 * 60 && meals.includes("janta")) travelMeals.push("janta");
 
       overrides[startDate] = travelMeals;
@@ -141,7 +176,6 @@ const MealRequestSystem = ({
       dates.forEach((date, idx) => {
         const existing = timeEntries.find(e => e.personId === req.personId && e.jobId === req.jobId && e.date === date);
         if (!existing && onUpdateTimeEntry) {
-          // Valores padrão baseados na localização e se é o primeiro dia (Ida)
           let entry1 = "";
           let exit1 = "";
           let entry2 = "";
@@ -150,18 +184,15 @@ const MealRequestSystem = ({
           let isTravelReturn = false;
           let isAutoFilled = false;
 
-          // REGRA DE IDA AUTOMÁTICA (Primeiro Dia)
           const isFirstDay = idx === 0;
           
           if (isFirstDay) {
             if (req.location === "Fora SP") {
-                // Fora SP sempre preenche IDA no primeiro dia
                 isTravelOut = true;
                 isAutoFilled = true;
                 entry1 = "08:00"; exit1 = "12:00"; 
                 entry2 = "13:00"; exit2 = "18:00";
             } else if (req.location === "Dentro SP" && req.travelTime) {
-                // Dentro SP só preenche se houver horário de viagem (transporte)
                 isTravelOut = true;
                 isAutoFilled = true;
                 entry1 = "08:00"; exit1 = "10:00";
@@ -180,7 +211,6 @@ const MealRequestSystem = ({
             isAutoFilled
           });
 
-          // Sincroniza cache local para persistir as flags visuais
           const saved = localStorage.getItem('time-reg-overrides');
           const overrides = saved ? JSON.parse(saved) : {};
           overrides[id] = { isTravelOut, isTravelReturn, isAutoFilled };
@@ -192,6 +222,7 @@ const MealRequestSystem = ({
     });
 
     toast.success(`${filtered.length} solicitação(ões) processadas. ${createdCount > 0 ? `${createdCount} dia(s) criados no Registro de Horas!` : 'Todas as datas já constavam no Registro de Horas!'}`, { duration: 5000 });
+    setShowFinanceDialog(true);
   };
 
   const toggleExpanded = (id: string) => {
@@ -218,11 +249,6 @@ const MealRequestSystem = ({
     onUpdateRequest({ ...req, dailyOverrides: currentOverrides });
   };
 
-  const filtered = useMemo(() => {
-    if (!selectedJob) return [];
-    return (requests || []).filter(r => r.jobId === selectedJob);
-  }, [requests, selectedJob]);
-
   const pName = (id: string) => (people || []).find(p => p.id === id)?.name || "—";
   const jName = (id: string) => (jobs || []).find(j => j.id === id)?.name || "—";
   const fDate = (d: string) => (d && d.includes("-") ? d.split("-").reverse().join("/") : d || "—");
@@ -235,272 +261,302 @@ const MealRequestSystem = ({
   };
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto py-2 animate-in fade-in duration-500">
-      {/* HEADER E CONFIGURAÇÃO DE JOB */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-5 rounded-2xl border border-border bg-card shadow-sm">
-        <div className="space-y-2">
-          <Label className="text-2xs uppercase tracking-widest font-black text-primary flex items-center gap-2">
-            <Utensils className="h-3 w-3" /> Selecionar Job de Montagem
-          </Label>
-          <SearchableSelect
-            options={(jobs || []).map(j => ({ value: j.id, label: j.name }))}
-            value={selectedJob}
-            onValueChange={setSelectedJob}
-            placeholder="Escolha o projeto..."
-          />
-        </div>
-        <div className="space-y-2">
-          <Label className="text-2xs uppercase tracking-widest font-black text-muted-foreground mr-1">
-            Local das Refeições <span className="text-destructive">*</span>
-          </Label>
-          <Select value={location} onValueChange={setLocation}>
-            <SelectTrigger><SelectValue placeholder="Selecione o Local..." /></SelectTrigger>
-            <SelectContent>
-              {LOCATIONS.map(loc => (
-                <SelectItem key={loc.value} value={loc.value}>{loc.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {/* FORMULÁRIO DE ADIÇÃO */}
-      <div className={`rounded-2xl border border-border p-6 shadow-lg space-y-6 ring-1 ring-primary/5 transition-opacity bg-muted/10`}>
-        <div className="flex items-center justify-between border-b border-border pb-4">
-            <h2 className="text-sm font-black text-foreground uppercase tracking-widest">Registrar Novas Refeições</h2>
-            <div className="flex items-center gap-2 text-2xs text-muted-foreground italic">
-              <Calendar className="h-3 w-3" /> Configurando Job: {jName(selectedJob)}
-            </div>
+    <>
+      <div className="space-y-6 max-w-6xl mx-auto py-2 animate-in fade-in duration-500">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-5 rounded-2xl border border-border bg-card shadow-sm">
+          <div className="space-y-2">
+            <Label className="text-2xs uppercase tracking-widest font-black text-primary flex items-center gap-2">
+              <Utensils className="h-3 w-3" /> Selecionar Job de Montagem
+            </Label>
+            <SearchableSelect
+              options={(jobs || []).map(j => ({ value: j.id, label: j.name }))}
+              value={selectedJob}
+              onValueChange={setSelectedJob}
+              placeholder="Escolha o projeto..."
+            />
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-3">
-              <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Pessoa no Projeto</Label>
-              <SearchableSelect
-                options={(people || []).map(p => ({
-                  value: p.id,
-                  label: p.isRegistered ? `(CLT) ${p.name}` : p.name,
-                  description: `${p.department || "Geral"} • ${p.isRegistered ? "CLT" : "Avulso"}`
-                }))}
-                value={personId}
-                onValueChange={setPersonId}
-                placeholder="Selecione o profissional..."
-              />
-              {personId && balance !== 0 && (
-                <div className={`p-3 rounded-lg border text-xs flex items-center justify-between gap-2 shadow-inner transition-all ${balance < 0 ? 'bg-destructive/5 border-destructive/20 text-destructive' : 'bg-primary/5 border-primary/20 text-primary'}`}>
-                  <div className="flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4" />
-                    <span className="font-bold">Saldo: R$ {balance.toFixed(2)}</span>
-                  </div>
-                  <span className="font-black uppercase tracking-tighter text-[9px] px-2 py-0.5 rounded-full bg-background/50 border border-current">
-                    {balance < 0 ? 'Débito' : 'Crédito'}
-                  </span>
-                </div>
-              )}
-            </div>
-            
-            <div className="space-y-3">
-              <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Regimes de Refeição</Label>
-              <div className="flex gap-6 p-3 border rounded-xl bg-background/60 backdrop-blur-sm">
-                {(["cafe", "almoco", "janta"] as MealType[]).map(m => (
-                  <div key={m} className="flex items-center gap-3">
-                    <Checkbox
-                      id={`meal-${m}`}
-                      checked={meals.includes(m)}
-                      onCheckedChange={(checked) => {
-                        if (checked) setMeals([...meals, m]);
-                        else setMeals(meals.filter(x => x !== m));
-                      }}
-                    />
-                    <Label htmlFor={`meal-${m}`} className="text-xs font-bold cursor-pointer select-none">{MEAL_LABELS[m]}</Label>
-                  </div>
+          <div className="space-y-2">
+            <Label className="text-2xs uppercase tracking-widest font-black text-muted-foreground mr-1">
+              Local das Refeições <span className="text-destructive">*</span>
+            </Label>
+            <Select value={location} onValueChange={setLocation}>
+              <SelectTrigger><SelectValue placeholder="Selecione o Local..." /></SelectTrigger>
+              <SelectContent>
+                {LOCATIONS.map(loc => (
+                  <SelectItem key={loc.value} value={loc.value}>{loc.label}</SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className={`rounded-2xl border border-border p-6 shadow-lg space-y-6 ring-1 ring-primary/5 transition-opacity bg-muted/10`}>
+          <div className="flex items-center justify-between border-b border-border pb-4">
+              <h2 className="text-sm font-black text-foreground uppercase tracking-widest">Registrar Novas Refeições</h2>
+              <div className="flex items-center gap-2 text-2xs text-muted-foreground italic">
+                <Calendar className="h-3 w-3" /> Configurando Job: {jName(selectedJob)}
               </div>
             </div>
-          </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-3">
+                <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Pessoa no Projeto</Label>
+                <SearchableSelect
+                  options={(people || []).map(p => ({
+                    value: p.id,
+                    label: p.isRegistered ? `(CLT) ${p.name}` : p.name,
+                    description: `${p.department || "Geral"} • ${p.isRegistered ? "CLT" : "Avulso"}`
+                  }))}
+                  value={personId}
+                  onValueChange={setPersonId}
+                  placeholder="Selecione o profissional..."
+                />
+                {personId && balance !== 0 && (
+                  <div className={`p-3 rounded-lg border text-xs flex items-center justify-between gap-2 shadow-inner transition-all ${balance < 0 ? 'bg-destructive/5 border-destructive/20 text-destructive' : 'bg-primary/5 border-primary/20 text-primary'}`}>
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="h-4 w-4" />
+                      <span className="font-bold">Saldo: R$ {balance.toFixed(2)}</span>
+                    </div>
+                    <span className="font-black uppercase tracking-tighter text-[9px] px-2 py-0.5 rounded-full bg-background/50 border border-current">
+                      {balance < 0 ? 'Débito' : 'Crédito'}
+                    </span>
+                  </div>
+                )}
+              </div>
+              
+              <div className="space-y-3">
+                <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Regimes de Refeição</Label>
+                <div className="flex gap-6 p-3 border rounded-xl bg-background/60 backdrop-blur-sm">
+                  {(["cafe", "almoco", "janta"] as MealType[]).map(m => (
+                    <div key={m} className="flex items-center gap-3">
+                      <Checkbox
+                        id={`meal-${m}`}
+                        checked={meals.includes(m)}
+                        onCheckedChange={(checked) => {
+                          if (checked) setMeals([...meals, m]);
+                          else setMeals(meals.filter(x => x !== m));
+                        }}
+                      />
+                      <Label htmlFor={`meal-${m}`} className="text-xs font-bold cursor-pointer select-none">{MEAL_LABELS[m]}</Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end pt-2">
-            <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Data Início</Label>
-              <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="h-11 bg-background" />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Data Término</Label>
-              <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="h-11 bg-background" />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Transporte</Label>
-              <Select value={transportType} onValueChange={(v) => setTransportType(v as "onibus" | "aviao")}>
-                <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="onibus">🚌 Ônibus</SelectItem>
-                  <SelectItem value="aviao">✈️ Avião</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Hora Viagem</Label>
-              <Input type="time" value={travelTime} onChange={e => setTravelTime(e.target.value)} className="h-11 bg-background" />
-            </div>
-            <Button
-              onClick={handleAdd}
-              disabled={!selectedJob || !personId || !startDate || !endDate || !location}
-              className={`h-11 w-full font-black uppercase tracking-widest transition-all shadow-md active:scale-[0.98] ${
-                (!selectedJob || !personId || !startDate || !endDate || !location)
-                ? "bg-muted text-muted-foreground opacity-50 cursor-not-allowed"
-                : "bg-foreground text-background hover:bg-foreground/90"
-              }`}
-            >
-              <Plus className="h-4 w-4 mr-2" /> Adicionar
-            </Button>
-          </div>
-        </div>
-
-      {/* LISTA COM EXPANSÃO */}
-      <div className={`rounded-2xl border border-border overflow-hidden bg-card shadow-card transition-opacity`}>
-        <div className="px-6 py-4 bg-muted/40 border-b border-border flex justify-between items-center">
-            <h3 className="font-black uppercase text-[10px] tracking-widest text-muted-foreground">Refeições Programadas</h3>
-            <div className="flex gap-4 items-center">
-              <span className="text-[9px] bg-primary/10 text-primary px-3 py-1 rounded-full font-black uppercase">{filtered.length} Ativos</span>
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end pt-2">
+              <div className="space-y-2">
+                <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Data Início</Label>
+                <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="h-11 bg-background" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Data Término</Label>
+                <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="h-11 bg-background" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Transporte</Label>
+                <Select value={transportType} onValueChange={(v) => setTransportType(v as "onibus" | "aviao")}>
+                  <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="onibus">🚌 Ônibus</SelectItem>
+                    <SelectItem value="aviao">✈️ Avião</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Hora Viagem</Label>
+                <Input type="time" value={travelTime} onChange={e => setTravelTime(e.target.value)} className="h-11 bg-background" />
+              </div>
               <Button
-                onClick={handleSendAll}
-                disabled={filtered.length === 0}
-                size="sm"
-                className="bg-primary text-primary-foreground font-black uppercase text-[10px] tracking-widest h-8 px-4"
+                onClick={handleAdd}
+                disabled={!selectedJob || !personId || !startDate || !endDate || !location}
+                className={`h-11 w-full font-black uppercase tracking-widest transition-all shadow-md active:scale-[0.98] ${
+                  (!selectedJob || !personId || !startDate || !endDate || !location)
+                  ? "bg-muted text-muted-foreground opacity-50 cursor-not-allowed"
+                  : "bg-foreground text-background hover:bg-foreground/90"
+                }`}
               >
-                <Send className="h-3 w-3 mr-1.5" /> Enviar para Registro
+                <Plus className="h-4 w-4 mr-2" /> Adicionar
               </Button>
             </div>
           </div>
 
-          <div className="divide-y divide-border">
-            {filtered.length === 0 ? (
-              <div className="px-6 py-16 text-center text-muted-foreground italic tracking-widest text-xs opacity-60">
-                Nenhuma solicitação ativa para este job.
+        <div className={`rounded-2xl border border-border overflow-hidden bg-card shadow-card transition-opacity`}>
+          <div className="px-6 py-4 bg-muted/40 border-b border-border flex justify-between items-center">
+              <h3 className="font-black uppercase text-[10px] tracking-widest text-muted-foreground">Refeições Programadas</h3>
+              <div className="flex gap-4 items-center">
+                <span className="text-[9px] bg-primary/10 text-primary px-3 py-1 rounded-full font-black uppercase">{filtered.length} Ativos</span>
+                <Button
+                  onClick={handleSendAll}
+                  disabled={filtered.length === 0}
+                  size="sm"
+                  className="bg-primary text-primary-foreground font-black uppercase text-[10px] tracking-widest h-8 px-4"
+                >
+                  <Send className="h-3 w-3 mr-1.5" /> Enviar para Registro
+                </Button>
               </div>
-            ) : (
-              filtered.map(req => {
-                const days = getDatesInRange(req.startDate, req.endDate);
-                const person = people.find(p => p.id === req.personId);
-                const totalCost = (days || []).reduce((acc, d) => {
-                  const activeMeals = (req.dailyOverrides?.[d] ?? req.meals) as MealType[];
-                  return acc + (Array.isArray(activeMeals) ? activeMeals.reduce((sum, m) => sum + getMealValue(m, d, person), 0) : 0);
-                }, 0);
-                const isExpanded = expandedRequests.has(req.id);
+            </div>
 
-                return (
-                  <div key={req.id}>
-                    {/* Row principal - clicável */}
-                    <div
-                      className="flex items-center gap-4 px-6 py-4 hover:bg-muted/30 transition-all cursor-pointer group"
-                      onClick={() => toggleExpanded(req.id)}
-                    >
-                      <div className="text-muted-foreground">
-                        {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-black text-foreground text-sm uppercase tracking-tight">
-                          {person?.isRegistered && <span className="text-muted-foreground mr-1 opacity-70">(CLT)</span>}
-                          {pName(req.personId)}
-                        </p>
-                        <p className="text-[9px] text-muted-foreground uppercase font-medium">
-                          {person?.department || "Geral"} • {req.location || 'Local Não Definido'}
-                        </p>
-                      </div>
-                      <div className="text-xs tabular-nums font-bold text-muted-foreground hidden sm:block">
-                        {fDate(req.startDate)} <span className="mx-1 text-muted-foreground/30">→</span> {fDate(req.endDate)}
-                      </div>
-                      <div className="flex gap-1.5 flex-wrap hidden md:flex">
-                        {(req.meals || []).map(m => (
-                          <span key={m} className="px-2 py-0.5 rounded-md border border-border text-[9px] uppercase font-black bg-muted text-foreground tracking-tighter">
-                            {MEAL_LABELS[m] || m}
-                          </span>
-                        ))}
-                      </div>
-                      <div className="font-black tabular-nums text-foreground tracking-tight text-base min-w-[100px] text-right">
-                        R$ {totalCost.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => { e.stopPropagation(); onRemoveRequest(req.id); }}
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg shrink-0"
+            <div className="divide-y divide-border">
+              {filtered.length === 0 ? (
+                <div className="px-6 py-16 text-center text-muted-foreground italic tracking-widest text-xs opacity-60">
+                  Nenhuma solicitação ativa para este job.
+                </div>
+              ) : (
+                filtered.map(req => {
+                  const days = getDatesInRange(req.startDate, req.endDate);
+                  const person = people.find(p => p.id === req.personId);
+                  const totalCost = (days || []).reduce((acc, d) => {
+                    const activeMeals = (req.dailyOverrides?.[d] ?? req.meals) as MealType[];
+                    return acc + (Array.isArray(activeMeals) ? activeMeals.reduce((sum, m) => sum + getMealValue(m, d, person), 0) : 0);
+                  }, 0);
+                  const isExpanded = expandedRequests.has(req.id);
+
+                  return (
+                    <div key={req.id}>
+                      <div
+                        className="flex items-center gap-4 px-6 py-4 hover:bg-muted/30 transition-all cursor-pointer group"
+                        onClick={() => toggleExpanded(req.id)}
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
+                        <div className="text-muted-foreground">
+                          {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-black text-foreground text-sm uppercase tracking-tight">
+                            {person?.isRegistered && <span className="text-muted-foreground mr-1 opacity-70">(CLT)</span>}
+                            {pName(req.personId)}
+                          </p>
+                          <p className="text-[9px] text-muted-foreground uppercase font-medium">
+                            {person?.department || "Geral"} • {req.location || 'Local Não Definido'}
+                          </p>
+                        </div>
+                        <div className="text-xs tabular-nums font-bold text-muted-foreground hidden sm:block">
+                          {fDate(req.startDate)} <span className="mx-1 text-muted-foreground/30">→</span> {fDate(req.endDate)}
+                        </div>
+                        <div className="flex gap-1.5 flex-wrap hidden md:flex">
+                          {(req.meals || []).map(m => (
+                            <span key={m} className="px-2 py-0.5 rounded-md border border-border text-[9px] uppercase font-black bg-muted text-foreground tracking-tighter">
+                              {MEAL_LABELS[m] || m}
+                            </span>
+                          ))}
+                        </div>
+                        <div className="font-black tabular-nums text-foreground tracking-tight text-base min-w-[100px] text-right">
+                          R$ {totalCost.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => { e.stopPropagation(); onRemoveRequest(req.id); }}
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg shrink-0"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
 
-                    {/* Detalhe expandido por dia */}
-                    {isExpanded && (
-                      <div className="bg-muted/20 border-t border-border">
-                        <div className="px-6 py-3">
-                          <div className="grid grid-cols-[1fr_repeat(3,80px)_80px] gap-2 text-[9px] uppercase tracking-widest font-black text-muted-foreground pb-2 border-b border-border">
-                            <span>Dia</span>
-                            <span className="text-center">Café</span>
-                            <span className="text-center">Almoço</span>
-                            <span className="text-center">Janta</span>
-                            <span className="text-right">Total</span>
-                          </div>
-                          <div className="divide-y divide-border/50 max-h-[400px] overflow-y-auto">
-                            {(days || []).map(date => {
-                              const activeMeals: MealType[] = Array.isArray(req.dailyOverrides?.[date])
-                                ? (req.dailyOverrides![date] as MealType[])
-                                : [...(req.meals || [])];
-                              const weekend = isWeekend(date);
-                              const holiday = isHoliday(date);
-                              const holidayName = holiday ? getHolidayName(date) : "";
-                              const isWeekendOrHol = weekend || holiday;
-                              const dayTotal = activeMeals.reduce((s, m) => s + getMealValue(m, date, person, req.location), 0);
+                      {isExpanded && (
+                        <div className="bg-muted/20 border-t border-border">
+                          <div className="px-6 py-3">
+                            <div className="grid grid-cols-[1fr_repeat(3,80px)_80px] gap-2 text-[9px] uppercase tracking-widest font-black text-muted-foreground pb-2 border-b border-border">
+                              <span>Dia</span>
+                              <span className="text-center">Café</span>
+                              <span className="text-center">Almoço</span>
+                              <span className="text-center">Janta</span>
+                              <span className="text-right">Total</span>
+                            </div>
+                            <div className="divide-y divide-border/50 max-h-[400px] overflow-y-auto">
+                              {(days || []).map(date => {
+                                const activeMeals: MealType[] = Array.isArray(req.dailyOverrides?.[date])
+                                  ? (req.dailyOverrides![date] as MealType[])
+                                  : [...(req.meals || [])];
+                                const weekend = isWeekend(date);
+                                const holiday = isHoliday(date);
+                                const holidayName = holiday ? getHolidayName(date) : "";
+                                const isWeekendOrHol = weekend || holiday;
+                                const dayTotal = activeMeals.reduce((s, m) => s + getMealValue(m, date, person, req.location), 0);
 
-                              return (
-                                <div
-                                  key={date}
-                                  className={`grid grid-cols-[1fr_repeat(3,80px)_80px] gap-2 items-center py-2 text-xs ${isWeekendOrHol ? 'bg-accent/30' : ''}`}
-                                >
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <span className="font-bold tabular-nums text-foreground">{fDate(date)}</span>
-                                    <span className={`text-[9px] uppercase font-medium flex gap-1 items-center ${isWeekendOrHol ? 'text-accent-foreground font-black' : 'text-muted-foreground'}`}>
-                                      {dayOfWeek(date)}
-                                      {holiday && <span className="text-primary text-[8px] italic tracking-tight">({holidayName})</span>}
-                                    </span>
+                                return (
+                                  <div
+                                    key={date}
+                                    className={`grid grid-cols-[1fr_repeat(3,80px)_80px] gap-2 items-center py-2 text-xs ${isWeekendOrHol ? 'bg-accent/30' : ''}`}
+                                  >
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <span className="font-bold tabular-nums text-foreground">{fDate(date)}</span>
+                                      <span className={`text-[9px] uppercase font-medium flex gap-1 items-center ${isWeekendOrHol ? 'text-accent-foreground font-black' : 'text-muted-foreground'}`}>
+                                        {dayOfWeek(date)}
+                                        {holiday && <span className="text-primary text-[8px] italic tracking-tight">({holidayName})</span>}
+                                      </span>
+                                    </div>
+                                    {(["cafe", "almoco", "janta"] as MealType[]).map(meal => {
+                                      const val = getMealValue(meal, date, person, req.location);
+                                      const isFree = meal === "almoco" && person?.isRegistered && !isWeekendOrHol;
+                                      const isActive = isFree ? false : activeMeals.includes(meal);
+                                      
+                                      return (
+                                        <div key={meal} className="flex flex-col items-center gap-0.5">
+                                          <Checkbox
+                                            checked={isActive}
+                                            onCheckedChange={() => toggleDayMeal(req, date, meal)}
+                                            disabled={isFree}
+                                            className="h-5 w-5"
+                                          />
+                                          <span className={`text-[9px] tabular-nums ${isFree ? 'text-primary font-bold' : 'text-muted-foreground'}`}>
+                                            {isFree ? 'N/A' : (isActive ? `R$${val.toFixed(0)}` : '—')}
+                                          </span>
+                                        </div>
+                                      );
+                                    })}
+                                    <div className="text-right font-bold tabular-nums text-foreground">
+                                      R$ {dayTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                    </div>
                                   </div>
-                                  {(["cafe", "almoco", "janta"] as MealType[]).map(meal => {
-                                    const val = getMealValue(meal, date, person, req.location);
-                                    // Regra CLT: Almoço grátis (R$0) de seg-sex, independente do local
-                                    const isFree = meal === "almoco" && person?.isRegistered && !isWeekendOrHol;
-                                    const isActive = isFree ? false : activeMeals.includes(meal);
-                                    
-                                    return (
-                                      <div key={meal} className="flex flex-col items-center gap-0.5">
-                                        <Checkbox
-                                          checked={isActive}
-                                          onCheckedChange={() => toggleDayMeal(req, date, meal)}
-                                          disabled={isFree}
-                                          className="h-5 w-5"
-                                        />
-                                        <span className={`text-[9px] tabular-nums ${isFree ? 'text-primary font-bold' : 'text-muted-foreground'}`}>
-                                          {isFree ? 'N/A' : (isActive ? `R$${val.toFixed(0)}` : '—')}
-                                        </span>
-                                      </div>
-                                    );
-                                  })}
-                                  <div className="text-right font-bold tabular-nums text-foreground">
-                                    R$ {dayTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                  </div>
-                                </div>
-                              );
-                            })}
+                                );
+                              })}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })
-            )}
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
-        </div>
-    </div>
+      </div>
+
+      <Dialog open={showFinanceDialog} onOpenChange={setShowFinanceDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Send className="h-5 w-5 text-primary" /> Confirmar Envio ao Financeiro
+            </DialogTitle>
+            <DialogDescription>
+              O registro de horas foi gerado com sucesso para o projeto <strong>{jName(selectedJob)}</strong>. 
+              Deseja notificar o financeiro e prosseguir para a tela de pagamentos?
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="bg-muted/30 p-4 rounded-xl border border-border space-y-3">
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-muted-foreground">Profissionais no Projeto:</span>
+              <span className="font-bold">{financeSummary.count}</span>
+            </div>
+            <div className="flex justify-between items-center text-base">
+              <span className="text-muted-foreground font-medium">Valor Total Estimado:</span>
+              <span className="font-black text-primary">R$ {financeSummary.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+            </div>
+          </div>
+
+          <DialogFooter className="flex flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setShowFinanceDialog(false)} className="flex-1">
+              Depois
+            </Button>
+            <Button onClick={handleConfirmFinance} className="flex-1 bg-primary">
+              Enviar Agora
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 
