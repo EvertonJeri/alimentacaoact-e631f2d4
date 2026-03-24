@@ -290,19 +290,17 @@ const PaymentTab = ({
                   const currentReqNet = currentReqBruto - currentReqDiscounts;
                   const retroBalance = totalWallet - currentReqNet;
                   
-                  const shouldApply = applyBalanceMap[req.id] !== false;
+                  // Se já está pago: usa o estado CONGELADO do banco
+                  // Se ainda não pago: usa o estado local (applyBalanceMap)
+                  const frozenApply = isPaid ? (conf?.applyBalance !== false) : (applyBalanceMap[req.id] !== false);
                   
-                  // LOGICA NOVA: 
-                  // ON: Paga o valor trabalhado (Net) + Saldo Retroativo (Dívidas passadas)
-                  // OFF: Paga o valor TOTAL solicitado originalmente (Bruto), deixando descontos em aberto.
                   const finalTotal = isPaid 
-                    ? (conf?.applyBalance !== false ? (currentReqNet + (conf?.appliedBalance || 0)) : currentReqBruto) 
-                    : (shouldApply ? Math.max(0, currentReqNet + retroBalance) : currentReqBruto);
-                    
-                  // O valor que será mostrado como "Ajuste" (em cima do total)
+                    ? (frozenApply ? (currentReqNet + (conf?.appliedBalance || 0)) : currentReqBruto) 
+                    : (frozenApply ? Math.max(0, currentReqNet + retroBalance) : currentReqBruto);
+
                   const displayAdjustment = isPaid 
-                    ? (conf?.applyBalance !== false ? (conf?.appliedBalance || 0) : 0)
-                    : (shouldApply ? retroBalance : 0);
+                    ? (frozenApply ? (conf?.appliedBalance || 0) : 0)
+                    : (frozenApply ? retroBalance : 0);
 
                   return (
                     <div key={req.id} className="bg-background hover:bg-muted/5 transition-colors">
@@ -344,21 +342,21 @@ const PaymentTab = ({
                             
                             <div className="flex flex-col items-end pt-1">
                               {/* Se Saldo ON: Mostra o desconto da montagem atual riscado */}
-                              {((isPaid ? (conf?.applyBalance !== false) : shouldApply) && currentReqDiscounts > 0) && (
+                              {(frozenApply && currentReqDiscounts > 0) && (
                                 <span className="text-[10px] text-destructive font-medium opacity-60 line-through">
                                   - R$ {currentReqDiscounts.toFixed(2)} [DESC. FALTA]
                                 </span>
                               )}
                               
                               {/* Se Saldo ON: Mostra o ajuste retroativo (se houver) */}
-                              {((isPaid ? (conf?.applyBalance !== false) : shouldApply) && Math.abs(displayAdjustment) > 0.1) && (
+                              {(frozenApply && Math.abs(displayAdjustment) > 0.1) && (
                                 <span className={`text-[10px] font-bold ${displayAdjustment < 0 ? 'text-destructive' : 'text-blue-600'}`}>
                                   {displayAdjustment < 0 ? '' : '+'} R$ {displayAdjustment.toFixed(2)} [SALDO ANTERIOR]
                                 </span>
                               )}
 
                               {/* Se Saldo OFF: Mostra o valor bruto da montagem sem descontos */}
-                              {(isPaid ? (conf?.applyBalance === false) : !shouldApply) && (
+                              {!frozenApply && (
                                 <span className="text-[10px] text-destructive font-black italic">
                                   SALDO/DESC. NÃO APLICADO
                                 </span>
@@ -382,7 +380,21 @@ const PaymentTab = ({
                             </Button>
 
                             {/* Botão de Abater Saldo (Toggle) */}
-                            {!isPaid && (
+                            {/* Quando pago: exibe o estado congelado mas desabilitado */}
+                            {isPaid ? (
+                                <Button
+                                    size="sm"
+                                    disabled
+                                    className={`h-8 text-[9px] px-2 font-black uppercase tracking-tight cursor-not-allowed opacity-70 ${
+                                        frozenApply
+                                        ? "bg-blue-600 text-white"
+                                        : "border border-muted-foreground/30 text-muted-foreground bg-muted/20"
+                                    }`}
+                                    title="Pagamento confirmado. Estorne para alterar."
+                                >
+                                    🔒 {frozenApply ? "APLICADO" : "NÃO APLICADO"}
+                                </Button>
+                            ) : (
                                 <Button
                                     size="sm"
                                     variant={applyBalanceMap[req.id] === false ? "outline" : "default"}

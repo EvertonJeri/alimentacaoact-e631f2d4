@@ -52,6 +52,14 @@ export interface SystemSettings {
   hrEmails?: string;
   discountAlertDate?: number; // Dia do mês para alerta de desconto
   discountAutoSend?: boolean; // Enviar automaticamente no dia
+  // Datas CLT
+  cltPaymentDay?: number;    // Até o 5º dia útil
+  cltAdvanceDay?: number;    // Adiantamento no dia 20
+  cltSheetCloseDay?: number; // Fechamento da folha no dia 20
+  // Datas PJ
+  pjPeriod1EndDay?: number;      // Período 01~15 → paga até dia 19
+  pjPeriod1PaymentDay?: number;  // Pagamento do período 1
+  pjPeriod2PaymentDay?: number;  // Período 16~fim → paga até dia 04 do mês seguinte
 }
 
 export const DEFAULT_SETTINGS: SystemSettings = {
@@ -65,6 +73,12 @@ export const DEFAULT_SETTINGS: SystemSettings = {
   hrEmails: "",
   discountAlertDate: 25,
   discountAutoSend: false,
+  cltPaymentDay: 5,
+  cltAdvanceDay: 20,
+  cltSheetCloseDay: 20,
+  pjPeriod1EndDay: 15,
+  pjPeriod1PaymentDay: 19,
+  pjPeriod2PaymentDay: 4,
 }
 
 export interface FoodControlEntry {

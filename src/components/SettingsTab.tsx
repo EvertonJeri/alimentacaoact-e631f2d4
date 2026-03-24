@@ -306,6 +306,60 @@ export const SettingsTab = () => {
           </CardContent>
         </Card>
 
+        {/* REGRAS DE PAGAMENTO CLT/PJ */}
+        <Card className="border-border shadow-md md:col-span-2 border-l-4 border-l-blue-500">
+          <CardHeader className="bg-blue-50/40 border-b border-border">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
+                <CalendarDays className="h-5 w-5" />
+              </div>
+              <div>
+                <CardTitle className="text-sm font-bold uppercase tracking-tight">Regras de Pagamento — CLT e PJ</CardTitle>
+                <CardDescription className="text-xs mt-1">Configura os dias de referência para cada tipo de contrato. Esses valores serão usados como base para alertas e vencimentos.</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* CLT */}
+            <div className="space-y-4">
+              <h4 className="text-xs font-black uppercase tracking-widest text-blue-700 border-b border-blue-100 pb-2">Regras CLT</h4>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] uppercase font-black text-muted-foreground">Adiantamento</Label>
+                  <Input type="number" min={1} max={31} placeholder="20" value={settings.cltAdvanceDay ?? 20} onChange={(e) => setSettings({ ...settings, cltAdvanceDay: parseInt(e.target.value) || 20 })} className="bg-muted/20 h-9" />
+                  <p className="text-[9px] text-muted-foreground italic">Dia do adiantamento</p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] uppercase font-black text-muted-foreground">Fechamento Folha</Label>
+                  <Input type="number" min={1} max={31} placeholder="20" value={settings.cltSheetCloseDay ?? 20} onChange={(e) => setSettings({ ...settings, cltSheetCloseDay: parseInt(e.target.value) || 20 })} className="bg-muted/20 h-9" />
+                  <p className="text-[9px] text-muted-foreground italic">Fechamento mensal</p>
+                </div>
+              </div>
+            </div>
+            {/* PJ */}
+            <div className="space-y-4">
+              <h4 className="text-xs font-black uppercase tracking-widest text-emerald-700 border-b border-emerald-100 pb-2">Regras PJ</h4>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] uppercase font-black text-muted-foreground">Fim Período 1</Label>
+                  <Input type="number" min={1} max={31} placeholder="15" value={settings.pjPeriod1EndDay ?? 15} onChange={(e) => setSettings({ ...settings, pjPeriod1EndDay: parseInt(e.target.value) || 15 })} className="bg-muted/20 h-9" />
+                  <p className="text-[9px] text-muted-foreground italic">Dia 01 até este dia</p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] uppercase font-black text-muted-foreground">Pgto. Período 1</Label>
+                  <Input type="number" min={1} max={31} placeholder="19" value={settings.pjPeriod1PaymentDay ?? 19} onChange={(e) => setSettings({ ...settings, pjPeriod1PaymentDay: parseInt(e.target.value) || 19 })} className="bg-muted/20 h-9" />
+                  <p className="text-[9px] text-muted-foreground italic">Pagamento até dia 19</p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] uppercase font-black text-muted-foreground">Pgto. Período 2</Label>
+                  <Input type="number" min={1} max={31} placeholder="4" value={settings.pjPeriod2PaymentDay ?? 4} onChange={(e) => setSettings({ ...settings, pjPeriod2PaymentDay: parseInt(e.target.value) || 4 })} className="bg-muted/20 h-9" />
+                  <p className="text-[9px] text-muted-foreground italic">Dia 04 mês seguinte</p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* FERIADOS */}
         <Card className="border-border shadow-md md:col-span-2">
           <CardHeader className="bg-muted/30 border-b border-border">
