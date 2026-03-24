@@ -1,0 +1,3 @@
+
+ALTER TABLE public.people ADD COLUMN IF NOT EXISTS department TEXT;
+ALTER TABLE public.people ADD COLUMN IF NOT EXISTS pix TEXT;
