@@ -237,11 +237,29 @@ const DiscountsTab = ({
 
   return (
     <div className="space-y-4">
-      <p className="text-xs text-muted-foreground">
-        Descontos por refeição não utilizada. Baseado no horário de entrada e no controle de alimentação. Clique no nome para expandir os detalhes.
-      </p>
+      {showAlertBanner && discounts.length > 0 && (
+        <div className="flex items-center gap-3 p-3 rounded-lg bg-amber-50 border border-amber-200 animate-in fade-in">
+          <Bell className="h-5 w-5 text-amber-600 shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-bold text-amber-800">⚠️ Hoje é dia de envio dos descontos ao RH!</p>
+            <p className="text-xs text-amber-600">Verifique os descontos e envie o relatório.</p>
+          </div>
+          <Button size="sm" className="gap-1.5 bg-amber-600 hover:bg-amber-700 text-white" onClick={handleSendToHR}>
+            <Send className="h-3.5 w-3.5" /> Enviar para RH
+          </Button>
+        </div>
+      )}
 
-
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <p className="text-xs text-muted-foreground">
+          Descontos por refeição não utilizada. Baseado no horário de entrada e no controle de alimentação. Clique no nome para expandir os detalhes.
+        </p>
+        {discounts.length > 0 && (
+          <Button size="sm" variant="outline" className="gap-1.5 text-xs border-violet-300 text-violet-700 hover:bg-violet-50" onClick={handleSendToHR}>
+            <Users className="h-3.5 w-3.5" /> Enviar para RH
+          </Button>
+        )}
+      </div>
       <div className="rounded-xl border border-border overflow-hidden shadow-card">
         {groupedByPerson.size === 0 ? (
           <div className="text-center py-10 text-sm text-muted-foreground">
