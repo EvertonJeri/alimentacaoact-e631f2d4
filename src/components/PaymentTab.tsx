@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Check, ChevronDown, ChevronRight, Filter, Undo2, Trash2, MessageSquare, Mail } from "lucide-react";
-import { sendTeamsNotification, sendWhatsAppMessage, sendEmailNotification } from "@/lib/notifications";
+import { sendTeamsNotification, sendWhatsAppMessage, sendEmailNotification, notifyFinancePayment } from "@/lib/notifications";
 import { toast } from "sonner";
 import {
   type Person,
