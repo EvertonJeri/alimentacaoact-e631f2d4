@@ -187,27 +187,21 @@ export type Database = {
       people: {
         Row: {
           created_at: string | null
-          department: string | null
           id: string
           is_registered: boolean | null
           name: string
-          pix: string | null
         }
         Insert: {
           created_at?: string | null
-          department?: string | null
           id?: string
           is_registered?: boolean | null
           name: string
-          pix?: string | null
         }
         Update: {
           created_at?: string | null
-          department?: string | null
           id?: string
           is_registered?: boolean | null
           name?: string
-          pix?: string | null
         }
         Relationships: []
       }
@@ -224,9 +218,6 @@ export type Database = {
           id: string
           job_id: string
           person_id: string
-          is_travel_out: boolean | null
-          is_travel_return: boolean | null
-          is_auto_filled: boolean | null
         }
         Insert: {
           created_at?: string | null
@@ -240,9 +231,6 @@ export type Database = {
           id?: string
           job_id: string
           person_id: string
-          is_travel_out?: boolean | null
-          is_travel_return?: boolean | null
-          is_auto_filled?: boolean | null
         }
         Update: {
           created_at?: string | null
@@ -256,9 +244,6 @@ export type Database = {
           id?: string
           job_id?: string
           person_id?: string
-          is_travel_out?: boolean | null
-          is_travel_return?: boolean | null
-          is_auto_filled?: boolean | null
         }
         Relationships: [
           {
@@ -276,60 +261,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      system_settings: {
-        Row: {
-          id: string
-          enable_teams: boolean
-          teams_webhook_url: string | null
-          enable_whatsapp: boolean
-          manager_whatsapp: string
-          enable_email: boolean
-          admin_emails: string | null
-          created_at: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          id?: string
-          enable_teams?: boolean
-          teams_webhook_url?: string | null
-          enable_whatsapp?: boolean
-          manager_whatsapp?: string
-          enable_email?: boolean
-          admin_emails?: string | null
-          created_at?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          id?: string
-          enable_teams?: boolean
-          teams_webhook_url?: string | null
-          enable_whatsapp?: boolean
-          manager_whatsapp?: string
-          enable_email?: boolean
-          admin_emails?: string | null
-          created_at?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      custom_holidays: {
-        Row: {
-          date: string
-          name: string
-          created_at: string | null
-        }
-        Insert: {
-          date: string
-          name: string
-          created_at?: string | null
-        }
-        Update: {
-          date?: string
-          name?: string
-          created_at?: string | null
-        }
-        Relationships: []
       }
     }
     Views: {
