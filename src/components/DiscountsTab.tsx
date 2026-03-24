@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, ChevronRight, Check, Mail, Download, Bell } from "lucide-react";
+import { ChevronDown, ChevronRight, Check, Mail, Download, Bell, Users, Send } from "lucide-react";
 import { sendTeamsNotification, sendWhatsAppMessage, sendEmailNotification, notifyHRDiscounts, checkDiscountAlertDate } from "@/lib/notifications";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
