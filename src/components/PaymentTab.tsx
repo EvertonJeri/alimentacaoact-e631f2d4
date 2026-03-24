@@ -142,6 +142,10 @@ const PaymentTab = ({
         const emailBody = `Olá,\n\nInformamos que o pagamento abaixo foi confirmado no Sistema ACT:\n\nFuncionário: ${personName}\nProjeto: ${jobName}\nData de Pagamento: ${paymentDate}\nValor Total: R$ ${finalTotal.toFixed(2)}\n\nAtenciosamente,\nSistema ACT`;
         sendEmailNotification(emailSubject, emailBody);
 
+        // ==== NOTIFICAÇÃO ESPECÍFICA PARA O FINANCEIRO ====
+        const financeDetails = `👤 Funcionário: ${personName}\n🏗️ Projeto: ${jobName}\n📅 Data: ${paymentDate}\n💰 Valor: R$ ${finalTotal.toFixed(2)}`;
+        notifyFinancePayment(financeDetails);
+
         toast.success(`Pagamento de ${personName} confirmado! Notificações disparadas.`, { duration: 5000 });
       }
     }
