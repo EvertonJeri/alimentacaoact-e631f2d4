@@ -256,9 +256,7 @@ export function useDatabase() {
           id: conf.id,
           type: conf.type,
           payment_date: conf.paymentDate,
-          confirmed: conf.confirmed,
-          apply_balance: conf.applyBalance,
-          applied_balance: conf.appliedBalance
+          confirmed: conf.confirmed
         } as any, { onConflict: "id" });
       if (error) throw error;
     },
