@@ -296,11 +296,13 @@ const PaymentTab = ({
                   // ON: Paga o valor trabalhado (Net) + Saldo Retroativo (Dívidas passadas)
                   // OFF: Paga o valor TOTAL solicitado originalmente (Bruto), deixando descontos em aberto.
                   const finalTotal = isPaid 
-                    ? (currentReqNet + (conf?.appliedBalance || 0)) 
+                    ? (conf?.applyBalance !== false ? (currentReqNet + (conf?.appliedBalance || 0)) : currentReqBruto) 
                     : (shouldApply ? Math.max(0, currentReqNet + retroBalance) : currentReqBruto);
                     
                   // O valor que será mostrado como "Ajuste" (em cima do total)
-                  const displayAdjustment = shouldApply ? retroBalance : 0;
+                  const displayAdjustment = isPaid 
+                    ? (conf?.applyBalance !== false ? (conf?.appliedBalance || 0) : 0)
+                    : (shouldApply ? retroBalance : 0);
 
                   return (
                     <div key={req.id} className="bg-background hover:bg-muted/5 transition-colors">
@@ -342,22 +344,22 @@ const PaymentTab = ({
                             
                             <div className="flex flex-col items-end pt-1">
                               {/* Se Saldo ON: Mostra o desconto da montagem atual riscado */}
-                              {shouldApply && currentReqDiscounts > 0 && (
+                              {((isPaid ? (conf?.applyBalance !== false) : shouldApply) && currentReqDiscounts > 0) && (
                                 <span className="text-[10px] text-destructive font-medium opacity-60 line-through">
                                   - R$ {currentReqDiscounts.toFixed(2)} [DESC. FALTA]
                                 </span>
                               )}
                               
                               {/* Se Saldo ON: Mostra o ajuste retroativo (se houver) */}
-                              {shouldApply && Math.abs(retroBalance) > 0.1 && (
-                                <span className={`text-[10px] font-bold ${retroBalance < 0 ? 'text-destructive' : 'text-blue-600'}`}>
-                                  {retroBalance < 0 ? '' : '+'} R$ {retroBalance.toFixed(2)} [SALDO ANTERIOR]
+                              {((isPaid ? (conf?.applyBalance !== false) : shouldApply) && Math.abs(displayAdjustment) > 0.1) && (
+                                <span className={`text-[10px] font-bold ${displayAdjustment < 0 ? 'text-destructive' : 'text-blue-600'}`}>
+                                  {displayAdjustment < 0 ? '' : '+'} R$ {displayAdjustment.toFixed(2)} [SALDO ANTERIOR]
                                 </span>
                               )}
 
                               {/* Se Saldo OFF: Mostra o valor bruto da montagem sem descontos */}
-                              {!shouldApply && (
-                                <span className="text-[10px] text-destructive font-black italic animate-pulse">
+                              {(isPaid ? (conf?.applyBalance === false) : !shouldApply) && (
+                                <span className="text-[10px] text-destructive font-black italic">
                                   SALDO/DESC. NÃO APLICADO
                                 </span>
                               )}
