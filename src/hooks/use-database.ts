@@ -141,6 +141,12 @@ export function useDatabase() {
         managerWhatsApp: data.manager_whatsapp,
         enableEmail: data.enable_email,
         adminEmails: data.admin_emails,
+        financeWhatsApp: data.finance_whatsapp,
+        financeEmails: data.finance_emails,
+        hrWhatsApp: data.hr_whatsapp,
+        hrEmails: data.hr_emails,
+        discountAlertDate: data.discount_alert_date,
+        discountAutoSend: data.discount_auto_send,
       } as SystemSettings;
     },
   });
