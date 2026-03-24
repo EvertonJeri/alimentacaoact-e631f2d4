@@ -68,7 +68,7 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
     const processedDays = new Set<string>();
 
     (requests || []).forEach(req => {
-      const isPaid = getRequestConfirmation(req.id)?.confirmed || (confirmations || []).some(c => c.id === `job-${req.jobId}` && c.confirmed);
+      const isPaid = getRequestConfirmation(req.id)?.confirmed || (confirmations || []).some(c => ('id' in c) && c.id === `job-${req.jobId}` && c.confirmed);
       const person = people.find(p => p.id === req.personId);
       if (!person) return;
 
@@ -96,7 +96,7 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
         processedDays.add(dayKey);
 
         const entry = timeEntries.find(e => e.personId === req.personId && e.jobId === req.jobId && e.date === date);
-        const fc = foodControl.find(f => f.personId === req.personId && f.jobId === req.jobId && f.date === d);
+        const fc = foodControl.find(f => f.personId === req.personId && f.jobId === req.jobId && f.date === date);
         const reqMeals = (req.dailyOverrides?.[date] ?? req.meals) || [];
 
         // Valor Bruto sempre soma
