@@ -1,0 +1,11 @@
+import fs from 'fs';
+const data = JSON.parse(fs.readFileSync('db_dump.json', 'utf-8'));
+const search = "ROTIV";
+const found = data.jobs.filter(j => j.name.toLowerCase().includes(search.toLowerCase()));
+console.log("Found Jobs with ROTIV:", found);
+const search2 = "78";
+const found2 = data.jobs.filter(j => j.name.includes(search2));
+console.log("First 10 jobs with 78:", found2.slice(0, 10));
+const search3 = "VITOR";
+const found3 = data.jobs.filter(j => j.name.toLowerCase().includes(search3.toLowerCase()));
+console.log("Found Jobs with VITOR:", found3);
