@@ -247,7 +247,7 @@ const PaymentTab = ({
                     <>
                       <Input
                         type="date"
-                        className="h-8 text-xs w-32 tabular-nums"
+                        className="h-10 text-xs w-40 tabular-nums px-3 flex-row-reverse"
                         value={jobPaymentDate}
                         onChange={(e) => updatePaymentDate(`job-${jobId}`, "job", e.target.value)}
                       />
@@ -401,7 +401,7 @@ const PaymentTab = ({
                               <>
                                 <Input
                                   type="date"
-                                  className="h-8 text-xs w-32 tabular-nums"
+                                  className="h-10 text-xs w-40 tabular-nums px-3 flex-row-reverse"
                                   value={paymentDate}
                                   onChange={(e) => updatePaymentDate(req.id, "request", e.target.value)}
                                 />
@@ -419,7 +419,7 @@ const PaymentTab = ({
                                 <Input
                                   type="date"
                                   disabled
-                                  className="h-8 text-xs w-32 tabular-nums opacity-50 cursor-not-allowed"
+                                  className="h-10 text-xs w-40 tabular-nums opacity-50 cursor-not-allowed px-3 flex-row-reverse"
                                   value={paymentDate}
                                 />
                                 <Button

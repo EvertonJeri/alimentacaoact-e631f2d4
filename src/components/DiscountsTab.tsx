@@ -305,7 +305,7 @@ const DiscountsTab = ({
                         <label className="text-2xs text-muted-foreground whitespace-nowrap">Data Desconto:</label>
                         <Input
                           type="date"
-                          className="h-7 text-xs w-32 px-2"
+                          className="h-10 text-xs w-40 px-3 border-border shadow-sm flex-row-reverse"
                           value={paymentDate}
                           onChange={(e) => updatePaymentDate(personId, e.target.value)}
                         />
