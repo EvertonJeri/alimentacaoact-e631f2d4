@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      custom_holidays: {
+        Row: {
+          created_at: string | null
+          date: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          date: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          date?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       discount_confirmations: {
         Row: {
           confirmed: boolean | null
@@ -202,6 +223,57 @@ export type Database = {
           id?: string
           is_registered?: boolean | null
           name?: string
+        }
+        Relationships: []
+      }
+      system_settings: {
+        Row: {
+          admin_emails: string | null
+          discount_alert_date: number | null
+          discount_auto_send: boolean | null
+          enable_email: boolean | null
+          enable_teams: boolean | null
+          enable_whatsapp: boolean | null
+          finance_emails: string | null
+          finance_whatsapp: string | null
+          hr_emails: string | null
+          hr_whatsapp: string | null
+          id: string
+          manager_whatsapp: string | null
+          teams_webhook_url: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          admin_emails?: string | null
+          discount_alert_date?: number | null
+          discount_auto_send?: boolean | null
+          enable_email?: boolean | null
+          enable_teams?: boolean | null
+          enable_whatsapp?: boolean | null
+          finance_emails?: string | null
+          finance_whatsapp?: string | null
+          hr_emails?: string | null
+          hr_whatsapp?: string | null
+          id?: string
+          manager_whatsapp?: string | null
+          teams_webhook_url?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          admin_emails?: string | null
+          discount_alert_date?: number | null
+          discount_auto_send?: boolean | null
+          enable_email?: boolean | null
+          enable_teams?: boolean | null
+          enable_whatsapp?: boolean | null
+          finance_emails?: string | null
+          finance_whatsapp?: string | null
+          hr_emails?: string | null
+          hr_whatsapp?: string | null
+          id?: string
+          manager_whatsapp?: string | null
+          teams_webhook_url?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
