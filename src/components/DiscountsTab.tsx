@@ -58,6 +58,31 @@ const DiscountsTab = ({
   onUpdateConfirmation,
 }: DiscountsTabProps) => {
   const [expandedPersons, setExpandedPersons] = useState<Set<string>>(new Set());
+  const [showAlertBanner, setShowAlertBanner] = useState(false);
+
+  // Verificar se hoje é dia de alerta de desconto
+  useEffect(() => {
+    checkDiscountAlertDate().then(isAlertDay => {
+      setShowAlertBanner(isAlertDay);
+    });
+  }, []);
+
+  const handleSendToHR = async () => {
+    if (discounts.length === 0) {
+      toast.info("Nenhum desconto para enviar.");
+      return;
+    }
+
+    const lines = Array.from(groupedByPerson.entries()).map(([personId, rows]) => {
+      const name = getPersonName(personId);
+      const total = rows.reduce((s, d) => s + d.total, 0);
+      return `👤 ${name}: -R$ ${total.toFixed(2)}`;
+    }).join("\n");
+
+    const details = `📋 Relatório de Descontos\n\n${lines}\n\n💰 Total Geral: -R$ ${totalDiscount.toFixed(2)}`;
+    await notifyHRDiscounts(details);
+    toast.success("Relatório de descontos enviado ao RH!", { duration: 5000 });
+  };
 
   const getPersonName = (id: string) => people.find((p) => p.id === id)?.name || "—";
   const getJobName = (id: string) => jobs.find((j) => j.id === id)?.name || "—";
