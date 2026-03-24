@@ -482,7 +482,7 @@ export function useDatabase() {
           };
 
           if (match) {
-              toUpdate.push({ id: match.id, ...baseData }); // NAO alteramos o nome original do DB
+              toUpdate.push({ id: match.id, name: match.name, ...baseData }); // Mantemos o nome original do DB mas informamos pro Upsert não falhar
           } else {
               toInsert.push({ name: p.name.trim(), ...baseData });
           }
