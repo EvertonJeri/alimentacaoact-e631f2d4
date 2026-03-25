@@ -361,21 +361,29 @@ export const useDatabase = () => {
 
   const updateFoodControl = useMutation({
     mutationFn: async (entry: FoodControlEntry) => {
-      const { error } = await supabase
-        .from("food_control")
-        .upsert({
-          id: entry.id,
-          person_id: entry.personId,
-          job_id: entry.jobId,
-          date: entry.date,
-          requested_cafe: entry.requestedCafe,
-          requested_almoco: entry.requestedAlmoco,
-          requested_janta: entry.requestedJanta,
-          used_cafe: entry.usedCafe,
-          used_almoco: entry.usedAlmoco,
-          used_janta: entry.usedJanta,
-        } as any, { onConflict: "id" });
-      if (error) throw error;
+      const mealTypes: ('cafe' | 'almoco' | 'janta')[] = ['cafe', 'almoco', 'janta'];
+      
+      for (const mealType of mealTypes) {
+        let isUsed = false;
+        let isRequested = false;
+
+        if (mealType === 'cafe') { isUsed = entry.usedCafe; isRequested = entry.requestedCafe; }
+        if (mealType === 'almoco') { isUsed = entry.usedAlmoco; isRequested = entry.requestedAlmoco; }
+        if (mealType === 'janta') { isUsed = entry.usedJanta; isRequested = entry.requestedJanta; }
+
+        const { error } = await supabase
+          .from("food_control")
+          .upsert({
+            person_id: entry.personId,
+            job_id: entry.jobId,
+            date: entry.date,
+            meal_type: mealType,
+            status: isUsed ? 'consumed' : 'not_consumed',
+            requested: isRequested
+          } as any, { onConflict: "person_id,job_id,date,meal_type" });
+          
+        if (error) throw error;
+      }
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["food_control"] }),
   });
