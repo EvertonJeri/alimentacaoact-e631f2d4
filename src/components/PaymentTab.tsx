@@ -159,15 +159,18 @@ const PaymentTab = ({
             appliedBalance: isNaN(retroBalance) ? 0 : retroBalance
         });
 
-        // 2. Notificação opcional via WhatsApp de forma segura
+        // 2. Notificação automática via E-mail e WhatsApp para o Financeiro
         const waMsg = `✅ *Pagamento Confirmado - Sistema ACT*\n\n👤 Funcionário: ${personName}\n🏗️ Projeto: ${jobName}\n📅 Data: ${paymentDate}\n💰 Valor: R$ ${finalValue.toFixed(2)}`;
         
-        // Timeout pequeno para não travar a UI enquanto o navegador lida com o popup
+        // Alerta para o financeiro (usa as configurações do banco)
+        notifyFinancePayment(waMsg);
+
+        // Alerta opcional diretamente para o funcionário (via WhatsApp)
         setTimeout(() => {
-          if (confirm(`Pagamento confirmado! Deseja enviar o comprovante para ${personName} via WhatsApp?`)) {
+          if (confirm(`Aviso financeiro enviado! Deseja abrir o WhatsApp para o funcionário ${personName}?`)) {
             sendWhatsAppMessage(waMsg);
           }
-        }, 100);
+        }, 150);
       }
 
       if (type === "job") {
@@ -192,7 +195,14 @@ const PaymentTab = ({
               appliedBalance: shouldApply ? retro : 0
           });
         }
-        toast.success(`Pagamento integral do projeto confirmado!`);
+
+        // 3. Notificação automática via E-mail e WhatsApp para o Financeiro (Total do Job)
+        const jobName = getJobName(jobId);
+        const totalJobPayment = jobReqs.reduce((acc, r) => acc + (calcRequestBruto(r) || 0), 0);
+        const jobWaMsg = `🏦 *FECHAMENTO INTEGRAL DE PROJETO*\n\n🏗️ Projeto: ${jobName}\n📅 Data: ${paymentDate}\n💰 Total Liquidado: R$ ${totalJobPayment.toFixed(2)}\n👥 Funcionários: ${jobReqs.length}`;
+        
+        notifyFinancePayment(jobWaMsg);
+        toast.success(`Pagamento integral do projeto confirmado! Relatórios enviados.`);
       }
     } catch (error) {
       console.error("Erro ao confirmar pagamento:", error);
