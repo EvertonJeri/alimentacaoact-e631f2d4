@@ -84,18 +84,26 @@ export const useDatabase = () => {
     queryFn: async () => {
       const { data, error } = await supabase.from("food_control").select("*");
       if (error) throw error;
-      return (data || []).map((f: any) => ({
-          id: f.id,
-          personId: f.person_id,
-          jobId: f.job_id,
-          date: f.date,
-          requestedCafe: f.requested_cafe ?? true,
-          requestedAlmoco: f.requested_almoco ?? true,
-          requestedJanta: f.requested_janta ?? true,
-          usedCafe: f.used_cafe ?? false,
-          usedAlmoco: f.used_almoco ?? false,
-          usedJanta: f.used_janta ?? false,
-      })) as FoodControlEntry[];
+      
+      const grouped = (data || []).reduce((acc: any, f: any) => {
+        const key = `${f.person_id}-${f.job_id}-${f.date}`;
+        if (!acc[key]) {
+          acc[key] = {
+            id: f.id, personId: f.person_id, jobId: f.job_id, date: f.date,
+            usedCafe: false, usedAlmoco: false, usedJanta: false,
+            requestedCafe: false, requestedAlmoco: false, requestedJanta: false
+          };
+        }
+        
+        const isUsed = f.status === 'consumed';
+        if (f.meal_type === 'cafe') acc[key].usedCafe = isUsed;
+        if (f.meal_type === 'almoco') acc[key].usedAlmoco = isUsed;
+        if (f.meal_type === 'janta') acc[key].usedJanta = isUsed;
+        
+        return acc;
+      }, {});
+      
+      return Object.values(grouped) as FoodControlEntry[];
     },
   });
 
