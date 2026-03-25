@@ -103,10 +103,11 @@ const MealRequestSystem = ({
 
   const handleConfirmFinance = async () => {
     const jobName = jobs.find(j => j.id === selectedJob)?.name || "—";
-    const details = `🏗️ PROJETO: ${jobName}\n👥 PROFISSIONAIS: ${financeSummary.count}\n💰 VALOR TOTAL: R$ ${financeSummary.total.toFixed(2)}`;
+    const details = `⚠️ *NOVOS LANÇAMENTOS PARA PAGAMENTO*\n\n🏗️ Projeto: ${jobName}\n👥 Profissionais Envolvidos: ${financeSummary.count}\n💰 Valor Estimado das Novas Refeições: R$ ${financeSummary.total.toFixed(2)}\n\n*Os valores acima acabaram de ser lançados no sistema e já estão disponíveis para conferência e pagamento na aba 'Pagamentos'.*`;
     
     await notifyFinancePayment(details);
     setShowFinanceDialog(false);
+    toast.success("Financeiro notificado sobre os novos lançamentos!");
     if (onNavigateToPayment) onNavigateToPayment();
   };
 
