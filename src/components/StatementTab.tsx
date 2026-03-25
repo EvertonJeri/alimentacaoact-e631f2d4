@@ -295,7 +295,18 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
                                  e.stopPropagation(); 
                                  const pName = getPersonName(ps.personId);
                                  const jNameStr = getJobName(ps.jobId);
-                                 const detailsStr = ps.details.map(d => `• ${d.date.split("-").reverse().join("/").slice(0,5)}: ${d.reason} (${d.value > 0 ? '+' : ''}R$ ${d.value.toFixed(2)})`).join('\n');
+                                 const detailsStr = ps.details.map(d => {
+                                    const date = d.date.split("-").reverse().join("/").slice(0,5);
+                                    let breakdown = '';
+                                    if (d.mealsBreakdown) {
+                                      const parts = [];
+                                      if (d.mealsBreakdown.cafe) parts.push(`Café: ${d.mealsBreakdown.cafe.toFixed(2)}`);
+                                      if (d.mealsBreakdown.almoco) parts.push(`Almoço: ${d.mealsBreakdown.almoco.toFixed(2)}`);
+                                      if (d.mealsBreakdown.janta) parts.push(`Janta: ${d.mealsBreakdown.janta.toFixed(2)}`);
+                                      if (parts.length > 0) breakdown = ` (${parts.join(', ')})`;
+                                    }
+                                    return `• ${date}: ${d.reason}${breakdown} [${d.value > 0 ? '+' : ''}R$ ${d.value.toFixed(2)}]`;
+                                 }).join('\n');
                                  
                                  const msg = `📊 *EXTRATO DE ALIMENTAÇÃO*\n\n👤 *Profissional:* ${pName}\n🏗️ *Job:* ${jNameStr}\n\n💰 *Solicitado:* R$ ${ps.totalRequested.toFixed(2)}\n⚙️ *Ajustes:* R$ ${ps.balance.toFixed(2)}\n💵 *VALOR FINAL:* R$ ${ps.totalUsed.toFixed(2)}\n\n*DETALHAMENTO:* \n${detailsStr || 'Nenhum ajuste registrado.'}\n\n_Enviado via Sistema ACT_`;
                                  
