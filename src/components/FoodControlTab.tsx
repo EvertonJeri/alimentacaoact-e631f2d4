@@ -25,8 +25,7 @@ interface FoodControlTabProps {
   requests: MealRequest[];
   timeEntries: TimeEntry[];
   foodControl: FoodControlEntry[];
-  setFoodControl?: React.Dispatch<React.SetStateAction<FoodControlEntry[]>>;
-  onUpdateEntry?: (entry: FoodControlEntry) => void;
+  onUpdateEntry: (entry: FoodControlEntry) => void;
   initialJobFilter?: string;
 }
 
@@ -36,7 +35,6 @@ const FoodControlTab = ({
   requests,
   timeEntries,
   foodControl,
-  setFoodControl,
   onUpdateEntry,
   initialJobFilter = "all"
 }: FoodControlTabProps) => {
@@ -140,16 +138,7 @@ const FoodControlTab = ({
       usedJanta: field === "usedJanta" ? value : row.usedJanta,
     };
 
-    onUpdateEntry?.(updated);
-    setFoodControl?.((prev) => {
-      const idx = prev.findIndex((fc) => fc.personId === personId && fc.jobId === jobId && fc.date === date);
-      if (idx >= 0) {
-        const copy = [...prev];
-        copy[idx] = updated;
-        return copy;
-      }
-      return [...prev, updated];
-    });
+    onUpdateEntry(updated);
   };
 
   const filteredRows = rows.filter((r) => {
