@@ -188,8 +188,6 @@ export type Database = {
           id: string
           payment_date: string | null
           type: string
-          apply_balance?: boolean | null
-          applied_balance?: number | null
         }
         Insert: {
           confirmed?: boolean
@@ -197,8 +195,6 @@ export type Database = {
           id: string
           payment_date?: string | null
           type?: string
-          apply_balance?: boolean | null
-          applied_balance?: number | null
         }
         Update: {
           confirmed?: boolean
@@ -206,8 +202,6 @@ export type Database = {
           id?: string
           payment_date?: string | null
           type?: string
-          apply_balance?: boolean | null
-          applied_balance?: number | null
         }
         Relationships: []
       }
