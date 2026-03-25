@@ -74,6 +74,8 @@ const MealRequestSystem = ({
   const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0]);
   const [endDate, setEndDate] = useState(new Date().toISOString().split("T")[0]);
   const [meals, setMeals] = useState<MealType[]>(["cafe", "almoco", "janta"]);
+  const [isLocal, setIsLocal] = useState(false);
+  const [activeSubTab, setActiveSubTab] = useState<"normal" | "complement">("normal");
   const [expandedRequests, setExpandedRequests] = useState<Set<string>>(new Set());
   const [showFinanceDialog, setShowFinanceDialog] = useState(false);
 
@@ -113,10 +115,26 @@ const MealRequestSystem = ({
 
   const handleAdd = () => {
     if (!selectedJob || !personId || !startDate || !endDate || !location) return;
-
     const dates = getDatesInRange(startDate, endDate);
-    
-    // VERIFICAÇÃO DE DUPLICIDADE (CONFLITO COM OUTRO JOB OU JÁ EXISTENTE NO MESMO JOB)
+
+    if (activeSubTab === "complement") {
+      // MODO COMPLEMENTO: Busca a solicitação existente para este profissional neste job
+      const existing = requests.find(r => r.personId === personId && r.jobId === selectedJob);
+      if (existing) {
+        const updatedMeals = Array.from(new Set([...existing.meals, ...meals])) as MealType[];
+        const updated: MealRequest = {
+          ...existing,
+          meals: updatedMeals,
+          isLocal: isLocal || existing.isLocal
+        };
+        onUpdateRequest(updated);
+        setPersonId("");
+        toast.success(`Complemento de refeição adicionado para ${people.find(p => p.id === personId)?.name}!`);
+        return;
+      }
+    }
+
+    // VERIFICAÇÃO DE DUPLICIDADE (Modo Normal)
     const conflict = requests.find(r => 
       r.personId === personId && 
       dates.some(d => getDatesInRange(r.startDate, r.endDate).includes(d))
@@ -124,7 +142,7 @@ const MealRequestSystem = ({
     
     if (conflict) {
       if (conflict.jobId === selectedJob) {
-        toast.error("Ateção: Esta pessoa já possui uma solicitação de refeição para este período neste mesmo projeto!", { duration: 6000 });
+        toast.error("Esta pessoa já possui uma solicitação neste projeto! Use a aba 'Complemento' se quiser adicionar mais refeições.", { duration: 6000 });
       } else {
         const conflictJob = jobs.find(j => j.id === conflict.jobId)?.name || 'Outro Projeto';
         toast.error(`Ação bloqueada: esta pessoa já possui refeição no projeto [${conflictJob}] neste período!`, { duration: 6000 });
@@ -132,11 +150,9 @@ const MealRequestSystem = ({
       return;
     }
 
-    const person = people.find(p => p.id === personId);
     const overrides: Record<string, MealType[]> = {};
     let hasOverride = false;
 
-    // Regra de Viagem: Aplica no dia de início se houver horário de viagem
     if (travelTime) {
       const offset = transportType === "aviao" ? 4 : 2;
       const [h, m] = travelTime.split(":").map(Number);
@@ -162,6 +178,7 @@ const MealRequestSystem = ({
       location: location as LocationType,
       transportType,
       travelTime: travelTime || undefined,
+      isLocal
     };
     onUpdateRequest(newRequest);
     setPersonId("");
@@ -315,11 +332,30 @@ const MealRequestSystem = ({
         </div>
 
         <div className={`rounded-2xl border border-border p-6 shadow-lg space-y-6 ring-1 ring-primary/5 transition-opacity bg-muted/10`}>
-          <div className="flex items-center justify-between border-b border-border pb-4">
-              <h2 className="text-sm font-black text-foreground uppercase tracking-widest">Registrar Novas Refeições</h2>
-              <div className="flex items-center gap-2 text-2xs text-muted-foreground italic">
-                <Calendar className="h-3 w-3" /> Configurando Job: {jName(selectedJob)}
+           <div className="flex flex-col gap-4 border-b border-border pb-4">
+              <div className="flex items-center justify-between">
+                <div className="flex gap-4">
+                  <button 
+                    onClick={() => setActiveSubTab("normal")}
+                    className={`text-[10px] font-black uppercase tracking-widest pb-1 transition-all border-b-2 ${activeSubTab === "normal" ? "text-primary border-primary" : "text-muted-foreground border-transparent opacity-60 hover:opacity-100"}`}
+                  >
+                    Solicitação Normal
+                  </button>
+                  <button 
+                    onClick={() => setActiveSubTab("complement")}
+                    className={`text-[10px] font-black uppercase tracking-widest pb-1 transition-all border-b-2 ${activeSubTab === "complement" ? "text-primary border-primary" : "text-muted-foreground border-transparent opacity-60 hover:opacity-100"}`}
+                  >
+                    Complemento
+                  </button>
+                </div>
+                <div className="flex items-center gap-2 text-2xs text-muted-foreground italic">
+                  <Calendar className="h-3 w-3" /> Configurando Job: {jName(selectedJob)}
+                </div>
               </div>
+              <h2 className="text-sm font-black text-foreground uppercase tracking-widest flex items-center gap-2">
+                <Utensils className="h-4 w-4 text-primary" />
+                {activeSubTab === "normal" ? "Registrar Novas Refeições" : "Adicionar Complemento de Refeição"}
+              </h2>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -335,6 +371,18 @@ const MealRequestSystem = ({
                   onValueChange={setPersonId}
                   placeholder="Selecione o profissional..."
                 />
+                <div className="flex items-center space-x-2 bg-primary/5 p-2 rounded-lg border border-primary/10">
+                  <Checkbox 
+                    id="isLocal" 
+                    checked={isLocal} 
+                    onCheckedChange={(v) => {
+                      setIsLocal(!!v);
+                      if (!!v) setMeals(["almoco"]); 
+                      else setMeals(["cafe", "almoco", "janta"]);
+                    }} 
+                  />
+                  <Label htmlFor="isLocal" className="text-xs font-bold leading-none cursor-pointer text-primary">Pessoa do local (Recebe só almoço)</Label>
+                </div>
                 {personId && balance !== 0 && (
                   <div className={`p-3 rounded-lg border text-xs flex items-center justify-between gap-2 shadow-inner transition-all ${balance < 0 ? 'bg-destructive/5 border-destructive/20 text-destructive' : 'bg-primary/5 border-primary/20 text-primary'}`}>
                     <div className="flex items-center gap-2">
@@ -410,13 +458,27 @@ const MealRequestSystem = ({
               <h3 className="font-black uppercase text-[10px] tracking-widest text-muted-foreground">Refeições Programadas</h3>
               <div className="flex gap-4 items-center">
                 <span className="text-[9px] bg-primary/10 text-primary px-3 py-1 rounded-full font-black uppercase">{filtered.length} Ativos</span>
-                <Button
+                 <Button
                   onClick={handleSendAll}
                   disabled={filtered.length === 0}
                   size="sm"
                   className="bg-primary text-primary-foreground font-black uppercase text-[10px] tracking-widest h-8 px-4"
                 >
                   <Send className="h-3 w-3 mr-1.5" /> Enviar para Registro
+                </Button>
+                <Button
+                  onClick={() => {
+                    const job = jobs.find(j => j.id === selectedJob);
+                    const jobName = job?.name || "";
+                    const msg = `🏗️ *RESUMO DO JOB*\n\n📌 *"Job" - "${jobName}"*\n\n👥 Profissionais Ativos: ${financeSummary.count}\n💰 Valor Estimado: R$ ${financeSummary.total.toFixed(2)}\n\n_Enviado via Sistema ACT_`;
+                    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+                  }}
+                  disabled={filtered.length === 0}
+                  size="sm"
+                  variant="outline"
+                  className="border-green-600 text-green-700 font-black uppercase text-[10px] tracking-widest h-8 px-4 hover:bg-green-50"
+                >
+                  <Send className="h-3 w-3 mr-1.5 text-green-600" /> WhatsApp Grupo
                 </Button>
               </div>
             </div>

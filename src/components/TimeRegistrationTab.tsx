@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -275,6 +276,11 @@ const TimeRegistrationTab = ({
             if (!exit1) exit1 = loc === "Fora SP" ? "12:00" : "10:00";
             if (!entry2) entry2 = loc === "Fora SP" ? "13:00" : "";
             if (!exit2) exit2 = loc === "Fora SP" ? "18:00" : "";
+            
+            toast.info("Atenção à Alimentação!", {
+                description: "Viagens de volta podem dar direito a almoço dependendo do horário de saída. Verifique o Controle Alimentar.",
+                duration: 6000
+            });
         }
     } else {
         // Zap (automático padrão)

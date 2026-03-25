@@ -37,6 +37,7 @@ export interface MealRequest {
   transportType?: "onibus" | "aviao";
   travelTime?: string; // HH:mm
   dailyOverrides?: Record<string, MealType[]>;
+  isLocal?: boolean; // Se verdadeiro, regra simplificada (almoço 08-18h)
 }
 
 export interface SystemSettings {
