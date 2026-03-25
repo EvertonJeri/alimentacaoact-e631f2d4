@@ -136,24 +136,27 @@ const PaymentTab = ({
         if (!req) return;
 
         const shouldApply = (applyBalanceMap[id] !== false);
-        const currentReqBruto = calcRequestBruto(req);
-        const currentReqDiscounts = getRequestDiscounts(req);
+        const currentReqBruto = calcRequestBruto(req) || 0;
+        const currentReqDiscounts = getRequestDiscounts(req) || 0;
         const currentReqNet = currentReqBruto - currentReqDiscounts;
-        const totalWallet = calculatePersonBalance(req.personId, requests, foodControl, confirmations, people, timeEntries);
-        const retroBalance = totalWallet - currentReqNet;
+        const totalWallet = calculatePersonBalance(req.personId, requests, foodControl, confirmations, people, timeEntries) || 0;
+        const retroBalance = isNaN(totalWallet - currentReqNet) ? 0 : (totalWallet - currentReqNet);
         const finalValue = shouldApply ? Math.max(0, currentReqNet + retroBalance) : currentReqBruto;
 
         const personName = getPersonName(req.personId);
         const jobName = getJobName(req.jobId);
 
+        // Segurança: data não pode ser vazia
+        const finalPaymentDate = paymentDate || new Date().toISOString().split('T')[0];
+
         // 1. Atualiza o banco de dados primeiro
         await onUpdateConfirmation({ 
             id, 
             type, 
-            paymentDate, 
+            paymentDate: finalPaymentDate, 
             confirmed: true,
             applyBalance: shouldApply,
-            appliedBalance: shouldApply ? retroBalance : 0
+            appliedBalance: isNaN(retroBalance) ? 0 : retroBalance
         });
 
         // 2. Notificação opcional via WhatsApp de forma segura
