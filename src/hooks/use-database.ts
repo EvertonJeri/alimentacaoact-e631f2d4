@@ -392,7 +392,38 @@ export const useDatabase = () => {
         if (error) throw error;
       }
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: ["food_control"] }),
+    onMutate: async (newEntry) => {
+      // Cancela as buscas para não sobrescrever o estado otimista
+      await queryClient.cancelQueries({ queryKey: ["food_control"] });
+
+      // Salva o estado anterior para recuperar em caso de erro
+      const previousFoodControl = queryClient.getQueryData(["food_control"]);
+
+      // Atualiza o cache de forma otimista (instantânea na tela)
+      queryClient.setQueryData(["food_control"], (old: FoodControlEntry[] | undefined) => {
+        if (!old) return [newEntry];
+        const exists = old.findIndex(fc => fc.personId === newEntry.personId && fc.jobId === newEntry.jobId && fc.date === newEntry.date);
+        if (exists >= 0) {
+          const copy = [...old];
+          copy[exists] = { ...copy[exists], ...newEntry };
+          return copy;
+        }
+        return [...old, newEntry];
+      });
+
+      return { previousFoodControl };
+    },
+    onError: (err, newEntry, context: any) => {
+      // Se der erro no banco, volta para o estado anterior
+      if (context?.previousFoodControl) {
+        queryClient.setQueryData(["food_control"], context.previousFoodControl);
+      }
+      toast.error("Erro ao sincronizar com o banco. Tente novamente.");
+    },
+    onSettled: () => {
+      // No final, sincroniza com o banco para garantir consistência
+      queryClient.invalidateQueries({ queryKey: ["food_control"] });
+    },
   });
 
   const updateCustomHolidays = useMutation({
