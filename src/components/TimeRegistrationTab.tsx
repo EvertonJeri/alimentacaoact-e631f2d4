@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -52,24 +52,24 @@ const TimeInputCell = ({
   className?: string;
 }) => {
   const [val, setVal] = useState(initialValue || "");
-  const [isFocused, setIsFocused] = useState(false);
+  const lastExternalRef = useRef(initialValue || "");
 
-  // Sync only when not focused (e.g., from autofill button)
+  // Sync only when initialValue genuinely changes from outside (e.g., autofill)
   useEffect(() => {
-    if (!isFocused && initialValue !== val) {
-        setVal(initialValue || "");
+    if (initialValue !== lastExternalRef.current) {
+      lastExternalRef.current = initialValue || "";
+      setVal(initialValue || "");
     }
-  }, [initialValue, isFocused]);
+  }, [initialValue]);
 
   return (
     <Input
       type="time"
       value={val}
       onChange={(e) => setVal(e.target.value)}
-      onFocus={() => setIsFocused(true)}
       onBlur={() => {
-        setIsFocused(false);
         if (val !== (initialValue || "")) {
+          lastExternalRef.current = val;
           onCommit(val);
         }
       }}
