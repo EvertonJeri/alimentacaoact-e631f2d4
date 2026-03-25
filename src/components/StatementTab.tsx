@@ -217,6 +217,31 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
         <div className="flex gap-2">
             <Button onClick={() => setExpandedPeople(new Set(personStatements.map(ps => `${ps.personId}-${ps.jobId}`)))} variant="outline">Abrir Todos</Button>
             <Button onClick={() => setExpandedPeople(new Set())} variant="outline">Recolher</Button>
+            {selectedJob !== "all" && personStatements.length > 0 && (
+              <Button 
+                onClick={() => {
+                   const jName = jobs.find(j => j.id === selectedJob)?.name || "";
+                   const totalJob = personStatements.reduce((acc, ps) => acc + ps.totalUsed, 0);
+                   const list = personStatements.map(ps => `👤 *${getPersonName(ps.personId)}*: R$ ${ps.totalUsed.toFixed(2)}`).join('\n');
+                   const msg = `🏗️ *EXTRATO GERAL - JOB: ${jName}*\n\n${list}\n\n💰 *TOTAL DA MONTAGEM:* R$ ${totalJob.toFixed(2)}\n\n_Enviado via Sistema ACT_`;
+                   
+                   if (navigator.share) {
+                      navigator.share({ title: `Extrato ${jName}`, text: msg }).catch(() => {
+                        navigator.clipboard.writeText(msg);
+                        toast.success("Resumo copiado! Cole no grupo.");
+                        window.open('https://web.whatsapp.com/', '_blank');
+                      });
+                   } else {
+                      navigator.clipboard.writeText(msg);
+                      toast.success("Resumo copiado! Cole no grupo.");
+                      window.open('https://web.whatsapp.com/', '_blank');
+                   }
+                }}
+                className="bg-green-600 hover:bg-green-700 text-white font-black uppercase text-[10px] tracking-widest px-4"
+              >
+                <Send className="h-3 w-3 mr-2" /> Mandar Todos p/ Zap
+              </Button>
+            )}
             <Button onClick={() => window.print()}>PDF</Button>
         </div>
       </div>
