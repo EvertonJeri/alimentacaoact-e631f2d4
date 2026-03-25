@@ -52,7 +52,7 @@ const TimeInputCell = ({
   className?: string;
 }) => {
   const [val, setVal] = useState(initialValue || "");
-  const lastExternalRef = React.useRef(initialValue || "");
+  const lastExternalRef = useRef(initialValue || "");
 
   // Sync only when initialValue genuinely changes from outside (e.g., autofill)
   useEffect(() => {
