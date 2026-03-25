@@ -378,8 +378,7 @@ export const useDatabase = () => {
             job_id: entry.jobId,
             date: entry.date,
             meal_type: mealType,
-            status: isUsed ? 'consumed' : 'not_consumed',
-            requested: isRequested
+            status: isUsed ? 'consumed' : 'not_consumed'
           } as any, { onConflict: "person_id,job_id,date,meal_type" });
           
         if (error) throw error;
