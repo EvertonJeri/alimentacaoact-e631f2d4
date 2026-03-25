@@ -51,6 +51,7 @@ const PaymentTab = ({
 
   const [filterJob, setFilterJob] = useState(initialJobFilter);
   const [expandedRequests, setExpandedRequests] = useState<Set<string>>(new Set());
+  const [expandedJobs, setExpandedJobs] = useState<Set<string>>(new Set<string>(jobs.map(j => j.id))); // Padrão: tudo aberto
 
   useEffect(() => {
     if (initialJobFilter) setFilterJob(initialJobFilter);
@@ -90,6 +91,15 @@ const PaymentTab = ({
 
   const toggleRequest = (id: string) => {
     setExpandedRequests((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleJob = (id: string) => {
+    setExpandedJobs((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
@@ -254,9 +264,14 @@ const PaymentTab = ({
           return (
             <div key={jobId} className="rounded-xl border border-border overflow-hidden shadow-card">
               <div className="bg-muted/50 px-4 py-3 flex items-center justify-between border-b border-border">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-bold text-sm text-foreground">{getJobName(jobId)}</h3>
-                  {isJobPaid && <Badge variant="secondary" className="bg-green-500/10 text-green-600 border-green-200 py-0.5">✓ Pago ({jobConf.paymentDate})</Badge>}
+                <div className="flex items-center gap-3">
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => toggleJob(jobId)}>
+                    {expandedJobs.has(jobId) ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                  </Button>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-sm text-foreground">{getJobName(jobId)}</h3>
+                    {isJobPaid && <Badge variant="secondary" className="bg-green-500/10 text-green-600 border-green-200 py-0.5">✓ Pago ({jobConf.paymentDate})</Badge>}
+                  </div>
                 </div>
                 {!isJobPaid ? (
                   <div className="flex items-center gap-2">
@@ -268,8 +283,9 @@ const PaymentTab = ({
                 )}
               </div>
 
-              <div className="divide-y divide-border">
-                {jobReqs.map((req) => {
+              {expandedJobs.has(jobId) && (
+                <div className="divide-y divide-border">
+                  {jobReqs.map((req) => {
                   const person = people.find(p => p.id === req.personId);
                   const conf = getConfirmation(req.id);
                   const isPaid = isJobPaid || conf?.confirmed;
@@ -435,7 +451,8 @@ const PaymentTab = ({
                     </div>
                   );
                 })}
-              </div>
+                </div>
+              )}
             </div>
           );
         })}
