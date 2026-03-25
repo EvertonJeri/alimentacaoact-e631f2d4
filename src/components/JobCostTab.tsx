@@ -13,7 +13,9 @@ import {
   getMealValue,
   calculateDayDiscount
 } from "@/lib/types";
-import { Check, Wallet, Scissors, Calculator, CheckCircle2 } from "lucide-react";
+import { Check, Wallet, Scissors, Calculator, CheckCircle2, FileDown } from "lucide-react";
+import * as XLSX from 'xlsx';
+import { toast } from "sonner";
 
 interface JobCostTabProps {
   people: Person[];
@@ -123,6 +125,34 @@ const JobCostTab = ({
     });
   };
 
+  const handleExportExcel = () => {
+    const data = jobs.map(job => {
+      const costs = calculateJobCost(job.id);
+      if (costs.totalPlanned === 0 && costs.totalPlannedDiscount === 0) return null;
+      
+      const status = getJobStatus(job.id)?.confirmed ? "Finalizado" : "Pendente";
+
+      return {
+        "Projeto": job.name,
+        "Pagamento Confirmado (R$)": costs.totalPaid,
+        "Pagamento Previsto (R$)": costs.totalPlanned,
+        "Desconto Confirmado (R$)": costs.totalDiscount,
+        "Desconto Previsto (R$)": costs.totalPlannedDiscount,
+        "Custo Líquido Real (R$)": costs.netCost,
+        "Custo Líquido Estimado (R$)": costs.plannedNetCost,
+        "Status": status
+      };
+    }).filter(Boolean);
+
+    const worksheet = XLSX.utils.json_to_sheet(data as any);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Fechamento de Jobs");
+    
+    // Gerar arquivo e disparar download
+    XLSX.writeFile(workbook, `Fechamento_Jobs_ACT_${new Date().toISOString().split('T')[0]}.xlsx`);
+    toast.success("Excel gerado com sucesso!");
+  };
+
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-border overflow-hidden shadow-card">
@@ -134,7 +164,11 @@ const JobCostTab = ({
               <th className="text-right px-4 py-3 text-2xs uppercase tracking-wider font-medium text-muted-foreground">Descontos (Débito)</th>
               <th className="text-right px-4 py-3 text-2xs uppercase tracking-wider font-medium text-primary">Custo do Job</th>
               <th className="text-center px-4 py-3 text-2xs uppercase tracking-wider font-medium text-muted-foreground">Status</th>
-              <th className="px-4 py-3"></th>
+              <th className="px-4 py-3 text-center">
+                <Button variant="ghost" size="icon" onClick={handleExportExcel} title="Exportar para Excel" className="h-8 w-8">
+                  <FileDown className="h-4 w-4" />
+                </Button>
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">

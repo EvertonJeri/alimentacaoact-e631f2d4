@@ -141,6 +141,9 @@ const PaymentTab = ({
         const retroBalance = totalWallet - currentReqNet;
         const finalValue = shouldApply ? Math.max(0, currentReqNet + retroBalance) : currentReqBruto;
 
+        const personName = getPersonName(req.personId);
+        const jobName = getJobName(req.jobId);
+        
         onUpdateConfirmation({ 
             id, 
             type, 
@@ -150,11 +153,17 @@ const PaymentTab = ({
             appliedBalance: shouldApply ? retroBalance : 0
         });
 
-        const personName = getPersonName(req.personId);
-        const jobName = getJobName(req.jobId);
-        const waMsg = `✅ *Pagamento Confirmado - Sistema ACT*\n\n👤 Funcionário: ${personName}\n🏗️ Projeto: ${jobName}\n📅 Data: ${paymentDate}\n💰 Valor: R$ ${finalValue.toFixed(2)}`;
-        sendWhatsAppMessage(waMsg);
         toast.success(`Pagamento de ${personName} confirmado!`);
+
+        // Notificação opcional via WhatsApp/Teams
+        const waMsg = `✅ *Pagamento Confirmado - Sistema ACT*\n\n👤 Funcionário: ${personName}\n🏗️ Projeto: ${jobName}\n📅 Data: ${paymentDate}\n💰 Valor: R$ ${finalValue.toFixed(2)}`;
+        
+        // Pequeno delay para permitir que o toast apareça antes de abrir o popup do WA
+        setTimeout(() => {
+          if (confirm(`Deseja notificar o pagamento para ${personName} via WhatsApp?`)) {
+            sendWhatsAppMessage(waMsg);
+          }
+        }, 500);
       }
     }
 
