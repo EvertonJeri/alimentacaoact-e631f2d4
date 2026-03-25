@@ -169,13 +169,26 @@ const MealRequestSystem = ({
   };
 
   const handleSendAll = () => {
-    if (filtered.length === 0) return;
+    if (filtered.length === 0) {
+      toast.info("Não há solicitações para o job selecionado.");
+      return;
+    }
     
     let createdCount = 0;
+    let requestsProcessed = 0;
+
     filtered.forEach(req => {
       const dates = getDatesInRange(req.startDate, req.endDate);
+      let personDaysCreated = 0;
+
       dates.forEach((date, idx) => {
-        const existing = timeEntries.find(e => e.personId === req.personId && e.jobId === req.jobId && e.date === date);
+        // Verifica se já existe registro de horas para esta pessoa nesta data e job
+        const existing = timeEntries.find(e => 
+          e.personId === req.personId && 
+          e.jobId === req.jobId &&
+          e.date === date
+        );
+
         if (!existing && onUpdateTimeEntry) {
           let entry1 = "";
           let exit1 = "";
@@ -212,17 +225,27 @@ const MealRequestSystem = ({
             isAutoFilled
           });
 
-          const saved = localStorage.getItem('time-reg-overrides');
-          const overrides = saved ? JSON.parse(saved) : {};
-          overrides[id] = { isTravelOut, isTravelReturn, isAutoFilled };
-          localStorage.setItem('time-reg-overrides', JSON.stringify(overrides));
+          // Salva override local para consistência visual imediata
+          try {
+            const saved = localStorage.getItem('time-reg-overrides');
+            const overrides = saved ? JSON.parse(saved) : {};
+            overrides[id] = { isTravelOut, isTravelReturn, isAutoFilled };
+            localStorage.setItem('time-reg-overrides', JSON.stringify(overrides));
+          } catch (e) { console.error(e); }
 
+          personDaysCreated++;
           createdCount++;
         }
       });
+      requestsProcessed++;
     });
 
-    toast.success(`${filtered.length} solicitação(ões) processadas. ${createdCount > 0 ? `${createdCount} dia(s) criados no Registro de Horas!` : 'Todas as datas já constavam no Registro de Horas!'}`, { duration: 5000 });
+    if (createdCount > 0) {
+      toast.success(`${requestsProcessed} solicitações processadas. ${createdCount} novos dias criados no Registro de Horas!`, { duration: 5000 });
+    } else {
+      toast.info(`Processado: ${requestsProcessed} solicitações. Todos os dias já estavam registrados.`, { duration: 5000 });
+    }
+    
     setShowFinanceDialog(true);
   };
 
