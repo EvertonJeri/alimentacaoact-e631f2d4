@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -27,6 +27,7 @@ interface FoodControlTabProps {
   foodControl: FoodControlEntry[];
   setFoodControl?: React.Dispatch<React.SetStateAction<FoodControlEntry[]>>;
   onUpdateEntry?: (entry: FoodControlEntry) => void;
+  initialJobFilter?: string;
 }
 
 const FoodControlTab = ({
@@ -37,10 +38,15 @@ const FoodControlTab = ({
   foodControl,
   setFoodControl,
   onUpdateEntry,
+  initialJobFilter = "all"
 }: FoodControlTabProps) => {
 
-  const [filterJob, setFilterJob] = useState("all");
+  const [filterJob, setFilterJob] = useState(initialJobFilter);
   const [filterDate, setFilterDate] = useState("");
+
+  useEffect(() => {
+    if (initialJobFilter) setFilterJob(initialJobFilter);
+  }, [initialJobFilter]);
 
   const getPersonName = (id: string) => people.find((p) => p.id === id)?.name || "—";
   const getJobName = (id: string) => jobs.find((j) => j.id === id)?.name || "—";

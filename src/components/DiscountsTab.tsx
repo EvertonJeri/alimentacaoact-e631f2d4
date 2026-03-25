@@ -34,6 +34,7 @@ interface DiscountsTabProps {
   confirmations: (DiscountConfirmation | PaymentConfirmation)[];
   setConfirmations: (confs: (DiscountConfirmation | PaymentConfirmation)[]) => void;
   onUpdateConfirmation?: (conf: DiscountConfirmation) => void;
+  initialJobFilter?: string;
 }
 
 interface DiscountRow {
@@ -56,9 +57,15 @@ const DiscountsTab = ({
   confirmations,
   setConfirmations,
   onUpdateConfirmation,
+  initialJobFilter = "all"
 }: DiscountsTabProps) => {
   const [expandedPersons, setExpandedPersons] = useState<Set<string>>(new Set());
   const [showAlertBanner, setShowAlertBanner] = useState(false);
+  const [filterJob, setFilterJob] = useState(initialJobFilter);
+
+  useEffect(() => {
+    if (initialJobFilter) setFilterJob(initialJobFilter);
+  }, [initialJobFilter]);
 
   // Verificar se hoje é dia de alerta de desconto
   useEffect(() => {
@@ -115,13 +122,15 @@ const DiscountsTab = ({
         const dayCalc = calculateDayDiscount(req, date, entry || undefined, fc, people);
         
         if (dayCalc.total > 0) {
-          rows.push({ personId: req.personId, jobId: req.jobId, date, ...dayCalc });
+          if (filterJob === "all" || req.jobId === filterJob) {
+            rows.push({ personId: req.personId, jobId: req.jobId, date, ...dayCalc });
+          }
         }
       });
     });
 
     return rows;
-  }, [registeredRequests, timeEntries, foodControl, people]);
+  }, [registeredRequests, timeEntries, foodControl, people, filterJob]);
 
   // Group by person
   const groupedByPerson = useMemo(() => {

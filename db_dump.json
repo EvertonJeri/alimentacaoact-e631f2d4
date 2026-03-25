@@ -9353,1088 +9353,9 @@
       "id": "c8585fcd-5f78-4c11-b912-5178d84346ba",
       "name": "2471 - Base Cabeça Fenix",
       "created_at": "2026-03-23T20:50:19.893034+00:00"
-    },
-    {
-      "id": "96614153-ced4-4bbb-9597-cc4e2c96e76d",
-      "name": "2525G - CAIXA LUMINOSOS - MICHELANGELO",
-      "created_at": "2026-03-23T20:50:19.893034+00:00"
-    },
-    {
-      "id": "447e8f15-e771-4de2-b57e-aac38839040c",
-      "name": "2493 - CAPACETE POLIURÉIA TESTE",
-      "created_at": "2026-03-23T20:50:19.893034+00:00"
-    },
-    {
-      "id": "f5e1ae78-3de1-4bba-bcdb-432e8e262f72",
-      "name": "2526F - CARROS PEQUENOS SÃO PAULO",
-      "created_at": "2026-03-23T20:50:19.893034+00:00"
-    },
-    {
-      "id": "d1c84b92-652c-464a-aa00-bf6e8735be2a",
-      "name": "2511C - CENÁRIOS CARRINHO BICICLETA - 2 PEÇAS ITU",
-      "created_at": "2026-03-23T20:50:19.893034+00:00"
-    },
-    {
-      "id": "835ff1be-bd58-476f-bf30-b3b130171727",
-      "name": "2477F - CENÁRIOS CHAVES GRANDE RJ - EXTRA 1 RIO DE JANEIRO",
-      "created_at": "2026-03-23T20:50:19.893034+00:00"
-    },
-    {
-      "id": "7a8b41d1-72e1-4907-b5fb-95729df14c94",
-      "name": "2477G - CENÁRIOS CHAVES GRANDE RJ - EXTRA 2 - FORRAÇÃO NAPA E BARRA ANTI IMPACTO RIO DE JANEIRO",
-      "created_at": "2026-03-23T20:50:19.893034+00:00"
-    },
-    {
-      "id": "67c46f56-9780-4199-a09c-47bd34834e5b",
-      "name": "2174A - Chaves",
-      "created_at": "2026-03-23T20:50:19.893034+00:00"
-    },
-    {
-      "id": "01554f7f-2cf4-4974-996f-2dc363fdd4da",
-      "name": "2477H - Chaves grande RJ - Extra 3",
-      "created_at": "2026-03-23T20:50:19.893034+00:00"
-    },
-    {
-      "id": "154f6300-8d4d-44f3-bfcc-a090aa69b435",
-      "name": "2477XD - CHAVES GRANDE RJ - MONTAGEM",
-      "created_at": "2026-03-23T20:50:19.893034+00:00"
-    },
-    {
-      "id": "87d65a7a-3c9e-4272-bf19-9ad6cc3df484",
-      "name": "2391C - COMPLEMENTO - MONTAGEM SMURF",
-      "created_at": "2026-03-23T20:50:19.893034+00:00"
-    },
-    {
-      "id": "89ef8166-c38f-4771-a120-38dc7918de21",
-      "name": "2476B - COMPLEMENTO CHAVES PQ COMPLEMENTO URBELANDIA",
-      "created_at": "2026-03-23T20:50:19.893034+00:00"
-    },
-    {
-      "id": "37d38a31-4da4-4e04-9d1d-e5fd22b26270",
-      "name": "2410L - Complemento fabrica - Sao Jose do Rio Preto",
-      "created_at": "2026-03-23T20:50:19.893034+00:00"
-    },
-    {
-      "id": "40d52c3c-01ea-4521-aea2-4161206e4a5a",
-      "name": "2274F - Complemento montagem - chaves São José do Rio Preto",
-      "created_at": "2026-03-23T20:50:19.893034+00:00"
-    },
-    {
-      "id": "26c1d510-4a5a-4a1f-98c5-37ea343f3faf",
-      "name": "2525C - CORTINAS PVC - MICHELANGELO",
-      "created_at": "2026-03-23T20:50:19.893034+00:00"
-    },
-    {
-      "id": "ddb5a62b-f2be-463c-ac91-17b468f2abfa",
-      "name": "2441 - Criação Placa Job Personalizada",
-      "created_at": "2026-03-23T20:50:19.893034+00:00"
-    },
-    {
-      "id": "458b4892-c27e-47d4-9fed-67038a988333",
-      "name": "2508H - CUSTO PISO LOJA SÃO PAULO",
-      "created_at": "2026-03-23T20:50:19.893034+00:00"
-    },
-    {
-      "id": "efcbf37f-4468-4f18-8d33-1173573735d9",
-      "name": "2525B - CV, REVESTIMENTO E PISO - MICHELANGELO",
-      "created_at": "2026-03-23T20:50:19.893034+00:00"
-    },
-    {
-      "id": "0ae242a7-e6a7-4aec-b807-215b2e7ed104",
-      "name": "2326F - Desmontagem -  Castelo Ra tim bum",
-      "created_at": "2026-03-23T20:50:19.893034+00:00"
-    },
-    {
-      "id": "d1077847-bed6-420a-aefe-8c91b2eb6cdc",
-      "name": "2528X - DESMONTAGEM CHAVES PEQ. FORTALEZA",
-      "created_at": "2026-03-23T20:50:19.893034+00:00"
-    },
-    {
-      "id": "e0adcfdb-c612-454a-a41e-257f812190bc",
-      "name": "2299B - DESMONTAGEM E TRANSPORTE CORAL & SNORKEL",
-      "created_at": "2026-03-23T20:50:19.893034+00:00"
-    },
-    {
-      "id": "44c1f7e2-30f5-4cff-a93f-c3e80248c0ff",
-      "name": "2526H - ESCULTURA DEMOGOGOM SÃO PAULO",
-      "created_at": "2026-03-23T20:50:19.893034+00:00"
-    },
-    {
-      "id": "2c6d22c9-1adc-484f-a366-2492025808fc",
-      "name": "2504 - ESCULTURA HOMEM COM LIMÃO 1,00 X 0,82 X 1,75(H)M SÃO PAULO",
-      "created_at": "2026-03-23T20:50:19.893034+00:00"
-    },
-    {
-      "id": "c3c1d499-2d23-4f35-a4d0-ba12e0cda98d",
-      "name": "2437C - Exposição Hip Hop Complemento Paredes",
-      "created_at": "2026-03-23T20:50:19.893034+00:00"
-    },
-    {
-      "id": "baadf9c1-6c99-4067-8474-550eece63844",
-      "name": "2437D - Exposição Hip Hop Complemento Pintura Bombox",
-      "created_at": "2026-03-23T20:50:19.893034+00:00"
-    },
-    {
-      "id": "a00d9608-179b-4ef5-85f9-5c51c9e9df8e",
-      "name": "2508F - EXTRA BACKSTAGE - CHAVES CCXP",
-      "created_at": "2026-03-23T20:50:19.893034+00:00"
-    },
-    {
-      "id": "40a5ceae-a038-4395-987a-04335e071bdc",
-      "name": "2525I - EXTRA GRID E CHASSI MICHELANGELO",
-      "created_at": "2026-03-23T20:50:19.893034+00:00"
-    },
-    {
-      "id": "a55d6e64-3baa-46ea-bd87-fa822065bafb",
-      "name": "2525H - EXTRA MICHELANGELO",
-      "created_at": "2026-03-23T20:50:19.893034+00:00"
-    },
-    {
-      "id": "a531d0d0-7259-42f4-a2d8-648efe009c7d",
-      "name": "2525J - EXTRA MONTAGEM - MICHELANGELO RIO DE JANEIRO",
-      "created_at": "2026-03-23T20:50:19.893034+00:00"
-    },
-    {
-      "id": "c17f0d09-05b4-48a5-bfad-bf18455e4824",
-      "name": "2526E - EXTRAS - PARADA",
-      "created_at": "2026-03-23T20:50:19.893034+00:00"
-    },
-    {
-      "id": "f7afb47e-395f-43dc-831a-aab0a3870d0b",
-      "name": "2472 - festa junina - decoracao",
-      "created_at": "2026-03-23T20:50:19.893034+00:00"
-    },
-    {
-      "id": "14a1cad3-b220-42c7-9c82-d0a67597cd05",
-      "name": "2511D - GATHERING CÚPULA LADO DIREITO 2025",
-      "created_at": "2026-03-23T20:50:19.893034+00:00"
-    },
-    {
-      "id": "4cf816a6-b510-4025-b2f2-9201903a404f",
-      "name": "2525E - HOUTERS - MICHELANGELO",
-      "created_at": "2026-03-23T20:50:19.893034+00:00"
-    },
-    {
-      "id": "ed9f3f9d-ba54-4740-a97c-0ba58ad64f5d",
-      "name": "2247HB - MESA DE CENTRO FLORINDA",
-      "created_at": "2026-03-23T20:50:18.785666+00:00"
-    },
-    {
-      "id": "94c57921-1e31-421a-8095-1bbb594139b1",
-      "name": "2247HD - MESA DE JANTAR COM CADEIRAS FLORINDA",
-      "created_at": "2026-03-23T20:50:18.785666+00:00"
-    },
-    {
-      "id": "ba4eee40-3654-4bb1-afc1-f59e40509eb4",
-      "name": "2247GB - MESA DE JANTAR MADRUGA",
-      "created_at": "2026-03-23T20:50:18.785666+00:00"
-    },
-    {
-      "id": "8cd4f263-aea9-42d8-b0a7-b9700508da07",
-      "name": "2247BB - PArede + ESCRIVANINHA SALA 1 - fazer no atelier",
-      "created_at": "2026-03-23T20:50:18.785666+00:00"
-    },
-    {
-      "id": "331d7b27-dd35-41ca-ace7-6edd64a27c3a",
-      "name": "2247IE - PAREDE COM ROTEIROS ANTIGOS SALA 8 PATIO 2",
-      "created_at": "2026-03-23T20:50:18.785666+00:00"
-    },
-    {
-      "id": "d6571575-5866-4fb8-b9dd-77b15fba08ff",
-      "name": "2247DD - PAREDE INIMIGOS LAMBE LAMBE SALA 3 - 19/07",
-      "created_at": "2026-03-23T20:50:18.785666+00:00"
-    },
-    {
-      "id": "8e09935d-ee00-48bc-a1ad-4f831e9c9725",
-      "name": "2247A - PAREDES + LONA aprox. 950m²",
-      "created_at": "2026-03-23T20:50:18.785666+00:00"
-    },
-    {
-      "id": "f5050ef8-b4e9-410d-b2b0-904822175244",
-      "name": "2247DF - PISO CORACAO - COMUNICACAO VISUAL SALA 3",
-      "created_at": "2026-03-23T20:50:18.785666+00:00"
-    },
-    {
-      "id": "38f0fc15-6a13-4adf-86b1-95647cfb1f47",
-      "name": "2247IF - PISO DO PATIO SALA 8 PATIO 2",
-      "created_at": "2026-03-23T20:50:18.785666+00:00"
-    },
-    {
-      "id": "df030ca9-4e1c-4108-8058-11fefa814c01",
-      "name": "2247FA - PISO VILA  50M² SALA 5 PATIO 1",
-      "created_at": "2026-03-23T20:50:18.785666+00:00"
-    },
-    {
-      "id": "1129a639-a250-4ea9-907e-4e47629e512f",
-      "name": "2247CA - PORTICO CORAÇÃO SALA 2",
-      "created_at": "2026-03-23T20:50:18.785666+00:00"
-    },
-    {
-      "id": "87d15c9d-60e5-4820-9c58-708e5fd902dc",
-      "name": "2247CB - SOLDADOS SALA 2",
-      "created_at": "2026-03-23T20:50:18.785666+00:00"
-    },
-    {
-      "id": "01d29b3b-adc5-4789-8dfd-8b1d27794ce3",
-      "name": "2247IC - TANQUE DUPLO SALA 8 PATIO 2",
-      "created_at": "2026-03-23T20:50:18.785666+00:00"
-    },
-    {
-      "id": "70d6da7c-bbff-46ab-ae4a-afe0e5f30cd9",
-      "name": "2247IB - TANQUE UNITARIO SALA 8 PATIO 2",
-      "created_at": "2026-03-23T20:50:18.785666+00:00"
-    },
-    {
-      "id": "c376d2d3-074b-4333-8394-e46f81826b0b",
-      "name": "2247HC - TAPETE FLORINDA",
-      "created_at": "2026-03-23T20:50:18.785666+00:00"
-    },
-    {
-      "id": "9848ccec-ac78-48b6-a322-67b3b1ccf40a",
-      "name": "2247CC - TETO SALA 2 - JOAO",
-      "created_at": "2026-03-23T20:50:18.785666+00:00"
-    },
-    {
-      "id": "d991f9a3-71b0-4307-a60b-817d8405f12c",
-      "name": "2247GD - TV + RADIO MADRUGA",
-      "created_at": "2026-03-23T20:50:18.785666+00:00"
-    },
-    {
-      "id": "7c83549d-9ad8-4ff3-a205-2ba67a272291",
-      "name": "2348A - Árvore VIVO",
-      "created_at": "2026-03-23T20:50:18.785666+00:00"
-    },
-    {
-      "id": "ada40ba4-d25e-4fab-bb8f-291d81293bab",
-      "name": "2539K - ITENS EXTRAS - PEQUENO PRINCIPE SÃO PAULO",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "9d60b79b-fd26-42bb-9c98-536fd36e0927",
-      "name": "2525F - JANELA - MICHELANGELO",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "678bb953-44fa-4473-b012-d3b9f30b152c",
-      "name": "2513N - Janela Cogumelo Talkshow",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "c4853b70-bf1d-4aea-a614-21517708e7b1",
-      "name": "2127E - Lastro para portal",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "78b56913-3f7c-4931-8359-32210660ec0c",
-      "name": "2508Z - LOGISITCA - CHAVES CCXP",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "b1ef08e0-9fde-4e7c-b880-0d3db916cc38",
-      "name": "2525Z - LOGISTICA - MICHELANGELO RJ",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "a6f4f365-4045-4eb9-8e03-b42c87baa79d",
-      "name": "2528Z - LOGISTICA CHAVES PEQ. FORTALEZA",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "caa3db77-6678-4496-b4b8-aafed0c5da1c",
-      "name": "2519 - LOGO TOMORROWLAND",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "ebb9b9e8-725e-47be-b0fe-94eb72b93519",
-      "name": "2174B - Manutenção Odair",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "cab999fd-27bc-4de2-8813-9121f6d21efb",
-      "name": "2413F - Manutenção volpi",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "b360bf47-8f97-4719-b46c-0a2b0c05979a",
-      "name": "2526G - MERCADO SÃO PAULO",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "b444df38-080f-42b6-8428-31da074f564d",
-      "name": "2513K - Mesa extra Salão da Smurfette",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "78b7b7a4-aab7-4a01-a92b-ec9649c2506c",
-      "name": "2525W - MONTAGEM - MICHELANGELO RJ",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "52ec2fca-83eb-4dff-a1e6-bbd67f03409e",
-      "name": "2528W - MONTAGEM CHAVES PEQ. FORTALEZA",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "644636b8-420f-42d1-a9c9-236fe0936cac",
-      "name": "2476A - MONTAGEM CHAVES SHOPPING URBELANDIA",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "c224ccd6-8901-4092-8cfa-88bd114ec4f1",
-      "name": "2508W - MONTAGEM E DESMONTAGEM - CHAVES CCXP",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "d8817870-8768-4ae1-9ec5-eed3178a5338",
-      "name": "2475 - MONTAGEM E DESMONTAGEM TOMORROWLAND",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "de2dd96e-23b9-4bfc-8c21-ccd70402f9d8",
-      "name": "2503W - MONTAGEM MOLECULAS E CANETA",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "ebf1cd91-7025-4f02-984f-02b29f45fa2a",
-      "name": "2508C - MOVEIS - CHAVES CCXP",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "8453c6d6-b9d7-4c56-a435-3a1f75212350",
-      "name": "2525D - MOVEIS - MICHELANGELO",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "4d5cef37-4802-495a-9b08-a0d9ae71fe7c",
-      "name": "2508G - MUDANÇAS PAREDES - CHAVES CCXP",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "c1c2b856-a659-472e-b996-bd20acb73185",
-      "name": "EX.TS.08 - ORNAMENTO DE ACABAMENTO",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "66760d86-e8d4-415d-a510-39a492c272c1",
-      "name": "EX.TS.07 - ORNAMENTO DE ACABAMENTO",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "0925c28e-db74-4353-ae5f-6349fb304f35",
-      "name": "2529W - OUTROS MONTAGEM - GERADOR EÓLICO SÃO PAULO",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "c9e9eb66-6828-4c25-abaf-c48a48cccca9",
-      "name": "2508A - PAREDES - CHAVES CCXP",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "3f5b3de4-9517-4381-a052-7b092c62666a",
-      "name": "2508E - PAREDES - EXTRA",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "eec42a78-d814-4074-a083-2d3a5b677612",
-      "name": "2525A - PAREDES Q30 - MICHELANGELO",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "edb76427-150e-44dd-8a62-6628e3c913a1",
-      "name": "2494 - PASSARO POLIURÉIA TESTE",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "b78d86df-a01e-4fc6-91fc-9c08b46727c2",
-      "name": "2508D - PINTURA - CHAVES CCXP",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "bbb78f9c-5901-480e-bd9a-fb20db3c88d4",
-      "name": "2528B - PORTA EXTRA CHAVES PEQ - FORTALEZA",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "2a9f145c-551a-451f-b843-39ba419bba51",
-      "name": "2513P - Portas salões de festas e dml",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "eb71b64a-46c5-46b8-b266-5b72b3507a51",
-      "name": "2442 - Produção Caixa Placas Jobs Usados",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "278d5fd6-9067-4cd5-8abd-25a690c51b9f",
-      "name": "2465 - Reforma Coreto",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "af191492-8071-4016-b3bf-e2dc2c6754bc",
-      "name": "2511E - REFORMA E INSTALAÇOES TOMORROWLAND - EXTRA",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "6d4e9cf7-02be-40d0-9629-e3942af2de36",
-      "name": "2440 - REFORMA INTERNA  GALPÃO",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "ee64c79d-0192-4ab2-95ec-7ead8d4eb2c7",
-      "name": "2474 - REFORMA MASCOTE TAUA",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "ee6ccbf2-fccf-45e2-b05a-9b159e1c90ba",
-      "name": "2481 - REFORMA SALA DE REUNIAO PRODUÇÃO",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "d1ba70d8-54f5-44b2-a4a6-b103393db7b0",
-      "name": "2451 - Reformas Minecraft",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "7730a6e6-8080-4915-9f51-c06247f10d66",
-      "name": "2508B - REVESTIMENTOS - CHAVES CCXP",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "b3e0e045-0bea-4313-981b-b42fe6abb2d1",
-      "name": "2528A - SALA EXTRA CHAVES PEQ. - FORTALEZA",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "d664e152-a511-4814-a821-fde1f3ca2ca2",
-      "name": "2274C - SAO JOSE DO RIO PRETO - Montagem chaves shopping",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "2c4e41f9-7cbe-4b65-829d-688cdbddfef0",
-      "name": "2526I - SISTEMA ELETRICA SÃO PAULO",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "5fa0d9ee-eea4-4eae-9e98-f7a31f2b2f88",
-      "name": "2274B - SOROCABA - Montagem chaves shopping",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "c98a4308-365d-4aae-bd1c-5a6179d9b15d",
-      "name": "2470 - TESTE 3D - Peça de Xadrez",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "5d53abcc-eaa1-4e6f-9a84-0b6bb855a1d5",
-      "name": "2495 - TRABALHO INTERNO REFORMA SALA DE COMPRAS",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "40945007-d4ce-4d21-b93c-dedbe1611693",
-      "name": "2560 - ESCULTURA COGUMELO B",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "8a174a84-923b-4881-81f9-f6b2f21cec8a",
-      "name": "2559 - ESCULTURA COGUMELO HIRATAKE",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "09fac829-675f-49d9-88c2-b4e9098b991a",
-      "name": "2561 - ESCULTURA COGUMELO HIRATAKE 3D",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "c9111653-c317-48e5-96d1-3c7aaea0683c",
-      "name": "2558 - QG ANIMAL",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "9870a9d7-e8e3-4220-9ed6-0b6b4f3541ef",
-      "name": "F3.TS.15 - Escrivaninha com astrolabio - FASE 3",
-      "created_at": "2026-03-23T20:50:20.086868+00:00"
-    },
-    {
-      "id": "73dce632-7d80-4b91-8527-18b828345d08",
-      "name": "2293 - Snorkel e mascara com acrilico",
-      "created_at": "2026-03-23T20:50:18.970426+00:00"
-    },
-    {
-      "id": "11d69129-ab57-44c0-9d24-4a92e8cc0b51",
-      "name": "2325 - Fone + base",
-      "created_at": "2026-03-23T20:50:18.970426+00:00"
-    },
-    {
-      "id": "e2a04429-dd2b-497d-adc8-e4c5b5b4221d",
-      "name": "2301 - Menina e Tsuru",
-      "created_at": "2026-03-23T20:50:18.970426+00:00"
-    },
-    {
-      "id": "be5ca19b-9780-4c7b-8c04-ff1e908c5945",
-      "name": "2319A - Esquilo pepito 2",
-      "created_at": "2026-03-23T20:50:18.970426+00:00"
-    },
-    {
-      "id": "695b558a-54b6-4fee-a67d-04ab1ea08bc5",
-      "name": "2319B - Jota (iluminação no capacete)",
-      "created_at": "2026-03-23T20:50:18.970426+00:00"
-    },
-    {
-      "id": "85f9d2bd-e3ce-4cb3-8398-9a5793955995",
-      "name": "2342 - Manutenção chaves",
-      "created_at": "2026-03-23T20:50:18.970426+00:00"
-    },
-    {
-      "id": "c92f8eef-cff9-46cf-a4ef-5af50a48f868",
-      "name": "2257 - Enaldinho",
-      "created_at": "2026-03-23T20:50:18.970426+00:00"
-    },
-    {
-      "id": "734821fe-8e43-4142-90b8-300d6a6f43b2",
-      "name": "2250 - Escultura cascão  - nova posição",
-      "created_at": "2026-03-23T20:50:18.970426+00:00"
-    },
-    {
-      "id": "723795eb-11bd-4b43-9fe6-1f169fd3fc9a",
-      "name": "2541A - NAVE AKM BRADESCO",
-      "created_at": "2026-03-23T20:50:20.269001+00:00"
-    },
-    {
-      "id": "5d01e590-55ca-4cfd-bfb7-36ba35612f75",
-      "name": "2543W - Montagem MDO - Baleia - One Piece",
-      "created_at": "2026-03-23T20:50:20.269001+00:00"
-    },
-    {
-      "id": "85e5b7be-8cbd-4db9-988a-b3b4d2b2cbad",
-      "name": "2513L - Pintura 3 Portas:",
-      "created_at": "2026-03-23T20:50:20.269001+00:00"
-    },
-    {
-      "id": "00297c4c-3719-47db-8e00-0344c8f94f24",
-      "name": "2490ZC - LOGISTICA MAD HOUSE ITU",
-      "created_at": "2026-03-23T20:50:20.269001+00:00"
-    },
-    {
-      "id": "8a679190-1dee-4b41-bba9-c0eb9afbf5a1",
-      "name": "2434C - Banheiros The Town Complementos / Saldo Banheiros Cancelados",
-      "created_at": "2026-03-23T20:50:20.269001+00:00"
-    },
-    {
-      "id": "6aba5dc6-86c6-41b5-8c3e-3c298b4bf668",
-      "name": "F1.ET.01 - relógios funcionais com Smurfs",
-      "created_at": "2026-03-23T20:50:20.269001+00:00"
-    },
-    {
-      "id": "b6ceab10-5c14-4f65-90a8-02ab9595372e",
-      "name": "F1.EB.19 - RELÓGIO FUNCIONAL DO VITRAL PRINCIPAL COM SMURFS",
-      "created_at": "2026-03-23T20:50:20.269001+00:00"
-    },
-    {
-      "id": "2197ca42-009b-4a1d-b66c-c0a53c8c7c3f",
-      "name": "2391B - MONTAGEM SMURF 2/2",
-      "created_at": "2026-03-23T20:50:20.269001+00:00"
-    },
-    {
-      "id": "a5b64ed0-c11d-4057-96cb-89d56e259212",
-      "name": "2566B - ESCULTURA SOFÁ BOCA",
-      "created_at": "2026-03-23T20:50:20.269001+00:00"
-    },
-    {
-      "id": "22508c73-160e-4838-8b9b-3d71f7c1dca0",
-      "name": "EX.CK.17 - VASO COM FLORES",
-      "created_at": "2026-03-23T20:50:20.269001+00:00"
-    },
-    {
-      "id": "295eaf14-4515-4650-b063-7af202f6c157",
-      "name": "2543Z - Logistica - Baleia - One Piece",
-      "created_at": "2026-03-23T20:50:20.269001+00:00"
-    },
-    {
-      "id": "85875275-4d87-4f24-ac1e-7b34a730fb55",
-      "name": "F1.MO.01 - PERSONAGEM SMURF MOINHO",
-      "created_at": "2026-03-23T20:50:20.269001+00:00"
-    },
-    {
-      "id": "f221ed46-abac-4574-9797-7c9a6d50ed15",
-      "name": "2497 - REFORMA GALPÃO - MELHORIAS",
-      "created_at": "2026-03-23T20:50:20.269001+00:00"
-    },
-    {
-      "id": "a5ba4933-78ff-416c-8188-d286eefefc29",
-      "name": "2566A - ESCULTURA CAVALO - 2 UNIDADES",
-      "created_at": "2026-03-23T20:50:20.269001+00:00"
-    },
-    {
-      "id": "c3a6798b-30e7-4c65-80a6-4826bcac501b",
-      "name": "2543B - ACOMPANHAMENTO - BALEIA - ONE PIECE RIO DE JANEIRO",
-      "created_at": "2026-03-23T20:50:20.269001+00:00"
-    },
-    {
-      "id": "2b4957c2-3481-410b-b542-946674c4dcc2",
-      "name": "2565 - CAPACETES PDV+ARMARIO E EMB. ENGRADADOS",
-      "created_at": "2026-03-23T20:50:20.269001+00:00"
-    },
-    {
-      "id": "0b3ddb07-bc06-4c85-8322-6d9c3c464e7e",
-      "name": "2520A - ESCULTURA PERSONAGEM SENKU 2025 SÃO PAULO",
-      "created_at": "2026-03-23T20:50:20.269001+00:00"
-    },
-    {
-      "id": "20e879fa-8874-427e-9528-5db860eb0ada",
-      "name": "2520B - OUTROS EMBALAGEM EM ENGRADADO PERSONAGEM SENKU 2025 SÃO PAULO",
-      "created_at": "2026-03-23T20:50:20.269001+00:00"
-    },
-    {
-      "id": "1a9b76c5-9fdd-477a-8332-078663550652",
-      "name": "2520W - OUTROS MONTAGEM PERSONAGEM SENKU 2025 SÃO PAULO",
-      "created_at": "2026-03-23T20:50:20.269001+00:00"
-    },
-    {
-      "id": "b6344194-9cf2-4327-8059-0e675e4978c4",
-      "name": "F1.EB.03 - PINTURA EM TEXTURA DE MADEIRA NA ESTRUTURA DE FERRO INTERNA (Cancelado R$ 60.000,00)",
-      "created_at": "2026-03-23T20:50:20.269001+00:00"
-    },
-    {
-      "id": "90b37de9-20c1-438d-beca-32d0faed912b",
-      "name": "F1.EB.04 - CORDAS DECORATIVAS NA ESTRUTURA DO TELHADO (Cancelado 14.598,00)",
-      "created_at": "2026-03-23T20:50:20.269001+00:00"
-    },
-    {
-      "id": "4aa2779f-01af-4be3-830f-a5f1203c820c",
-      "name": "2477WE - CHAVES GRANDE RJ - DESMONTAGEM",
-      "created_at": "2026-03-23T20:50:20.269001+00:00"
-    },
-    {
-      "id": "43650bc8-de45-4d11-9276-5553a29926d2",
-      "name": "2482B - MANUTENÇÃO VOLPI - POA - Projeto caiu",
-      "created_at": "2026-03-23T20:50:20.269001+00:00"
-    },
-    {
-      "id": "ed358321-95d4-42d3-8218-68eb46d1842b",
-      "name": "2539X - DESMONTAGEM - PEQUENO PRINCIPE",
-      "created_at": "2026-03-23T20:50:20.269001+00:00"
-    },
-    {
-      "id": "5589cc2a-7a78-493b-b0f4-c451613ecdb8",
-      "name": "2543X - Desmontagem MDO - Baleia - One Piece",
-      "created_at": "2026-03-23T20:50:20.269001+00:00"
-    },
-    {
-      "id": "834e930c-01c3-4907-8f03-5912e3faa9f1",
-      "name": "2554X - DESMONTAGEM CHAVES PEQ. SÃO JOSE",
-      "created_at": "2026-03-23T20:50:20.269001+00:00"
-    },
-    {
-      "id": "cbda03fa-ca00-4b25-98bd-63a3b514b3cb",
-      "name": "2390B - Extra smurf",
-      "created_at": "2026-03-23T20:50:20.269001+00:00"
-    },
-    {
-      "id": "69933263-8ec5-4bff-bcd0-682cbdd95872",
-      "name": "2546X - DESMONTAGEM ONDA COM PRANCHA MC1000 SÃO PAULO",
-      "created_at": "2026-03-23T20:50:20.269001+00:00"
-    },
-    {
-      "id": "b89199e9-6564-4a9b-ac75-e4802285a553",
-      "name": "2541W - ACOMPANHAMENTO - NAVE AKM BRADESCO",
-      "created_at": "2026-03-23T20:50:20.269001+00:00"
-    },
-    {
-      "id": "cfa0a39b-eea6-4283-858c-d152dc4cc14c",
-      "name": "2569A - PROVADOR CENTRAL - TEAR",
-      "created_at": "2026-03-23T20:50:20.269001+00:00"
-    },
-    {
-      "id": "e723f38b-65e5-4126-a889-da72842c572f",
-      "name": "2569D - MOVÉIS - LACOSTE",
-      "created_at": "2026-03-23T20:50:20.269001+00:00"
-    },
-    {
-      "id": "0036d023-a986-4f9b-b912-ab6754cbc9ba",
-      "name": "2569B - ESCULTURAS - LACOSTE",
-      "created_at": "2026-03-23T20:50:20.269001+00:00"
-    },
-    {
-      "id": "556c04c6-a109-4759-b67a-e0fb2bf3cf7e",
-      "name": "2569C - PIRULITO - 3 UN",
-      "created_at": "2026-03-23T20:50:20.269001+00:00"
-    },
-    {
-      "id": "1b314354-23a9-449f-8124-628193a687c9",
-      "name": "2569E - ROLO TECIDO",
-      "created_at": "2026-03-23T20:50:20.269001+00:00"
-    },
-    {
-      "id": "cd4f5bf0-2b9e-45bf-a56b-1c72fef3ee53",
-      "name": "2569W - MONTAGEM - LACOSTE",
-      "created_at": "2026-03-23T20:50:20.269001+00:00"
-    },
-    {
-      "id": "e4c1d90b-8cba-46f1-9ce7-403b2d0cfcda",
-      "name": "2570 - ENTREGA TV RIO",
-      "created_at": "2026-03-23T20:50:20.269001+00:00"
-    },
-    {
-      "id": "2a712ef7-f825-479a-8863-ea900faf5a9e",
-      "name": "2572 - PINTURA E RESTAURAÇÃO BOB ESPONJA",
-      "created_at": "2026-03-23T20:50:20.269001+00:00"
-    },
-    {
-      "id": "f17035a5-bfa7-464c-9fbd-fa09994a2a32",
-      "name": "2574W - MONTAGEM CHAVES MÉDIO - RECIFE",
-      "created_at": "2026-03-23T20:50:20.269001+00:00"
-    },
-    {
-      "id": "842e86c6-4ab3-46d5-94c0-0da36a0e28c0",
-      "name": "2574X - DESMONTAGEM CHAVES MÉDIO - RECIFE",
-      "created_at": "2026-03-23T20:50:20.269001+00:00"
-    },
-    {
-      "id": "ea244a75-65f8-4f6d-8f4b-c5c1e671d4bc",
-      "name": "2573 - REPOSIÇÃO PAREDES CHAVES",
-      "created_at": "2026-03-23T20:50:20.269001+00:00"
-    },
-    {
-      "id": "a2eb9470-1924-4f22-a8d5-83e3db1f907c",
-      "name": "2575 - NAVE COM ILUMINAÇÃO",
-      "created_at": "2026-03-23T20:50:20.269001+00:00"
-    },
-    {
-      "id": "eef586cd-b499-4a42-a5b2-229f916f475e",
-      "name": "2576A - GLOBOTOY",
-      "created_at": "2026-03-23T20:50:20.269001+00:00"
-    },
-    {
-      "id": "70082479-f24a-4815-93f6-6298a65bbecf",
-      "name": "2576B - BASE GLOBOTOY",
-      "created_at": "2026-03-23T20:50:20.269001+00:00"
-    },
-    {
-      "id": "ae3bac42-4727-4908-9d96-1f44a7d9f449",
-      "name": "2576C - CAIXA ARMAZENAMENTO E TRANSP. GLOBOTOY",
-      "created_at": "2026-03-23T20:50:20.269001+00:00"
-    },
-    {
-      "id": "3c365bce-1ed6-425b-b0d8-f0825ce2a5ab",
-      "name": "2576D - COMUNICAÇÃO VISUAL CAMISETA GLOBOTOY",
-      "created_at": "2026-03-23T20:50:20.269001+00:00"
-    },
-    {
-      "id": "40d4934b-f996-4e64-ab8f-89f5ff20b092",
-      "name": "2213# - Pato donald",
-      "created_at": "2026-03-23T20:50:19.145545+00:00"
-    },
-    {
-      "id": "e5aca30c-b229-48b8-a8cd-c5f22b0fbdf1",
-      "name": "2214# - Pluto",
-      "created_at": "2026-03-23T20:50:19.145545+00:00"
-    },
-    {
-      "id": "71c10458-6266-49e8-8e82-02482426129e",
-      "name": "2165 - Reforma maça",
-      "created_at": "2026-03-23T20:50:19.33467+00:00"
-    },
-    {
-      "id": "5c594554-7fb6-435c-9c09-41f9bd5060a0",
-      "name": "2147 - coelho segurando ovo",
-      "created_at": "2026-03-23T20:50:19.33467+00:00"
-    },
-    {
-      "id": "0024b45e-d36c-45d6-a53e-a02b808bdab1",
-      "name": "2113 - Balde 2,40",
-      "created_at": "2026-03-23T20:50:19.33467+00:00"
-    },
-    {
-      "id": "b638e007-21da-4f22-9e84-37c0856446b3",
-      "name": "2180 - Banco cenoura",
-      "created_at": "2026-03-23T20:50:19.33467+00:00"
-    },
-    {
-      "id": "62a5844a-f64d-47a0-a655-6321b673844d",
-      "name": "2181 - Banco coelhos",
-      "created_at": "2026-03-23T20:50:19.33467+00:00"
-    },
-    {
-      "id": "381b1941-3faf-4ede-8eb4-ae48de86bad9",
-      "name": "2179 - Banco ovos",
-      "created_at": "2026-03-23T20:50:19.33467+00:00"
-    },
-    {
-      "id": "8e707fb6-3cf3-4df4-b193-75f053dc940b",
-      "name": "2116 - Bancos e mesas",
-      "created_at": "2026-03-23T20:50:19.33467+00:00"
-    },
-    {
-      "id": "0a8959d7-2bca-4f90-8873-cab2d7b713f7",
-      "name": "2100 - Filtrinho",
-      "created_at": "2026-03-23T20:50:19.522307+00:00"
-    },
-    {
-      "id": "e71676a5-15bb-4d8c-8596-102adf26fd5a",
-      "name": "F3.VP.13 - Flores das arvores  - FASE 3",
-      "created_at": "2026-03-23T20:50:19.522307+00:00"
-    },
-    {
-      "id": "dc5a5d00-7f75-4bf5-9689-5bf7c30d33ed",
-      "name": "F3.CG.22 - gaiola com smurfs  e cordas  - FASE 3",
-      "created_at": "2026-03-23T20:50:19.522307+00:00"
-    },
-    {
-      "id": "af7cd55d-21c4-4ffc-a8af-d0d5319751ec",
-      "name": "F3.SP.21 - Gaiolas - FASE 3",
-      "created_at": "2026-03-23T20:50:19.522307+00:00"
-    },
-    {
-      "id": "8e1a7060-2f07-4529-9b75-ec206fef40d9",
-      "name": "F3.CG.23 - gaiolas 1 - FASE 3",
-      "created_at": "2026-03-23T20:50:19.522307+00:00"
-    },
-    {
-      "id": "34c69849-c212-4d9e-b2dc-97b05b87ee55",
-      "name": "F3.CG.24 - gaiolas 2  - FASE 3",
-      "created_at": "2026-03-23T20:50:19.522307+00:00"
-    },
-    {
-      "id": "bd5f0a7a-8263-4b82-b1c3-b6acc7e0bc7f",
-      "name": "F3.CG.25 - gaiolas 3 - FASE 3",
-      "created_at": "2026-03-23T20:50:19.522307+00:00"
-    },
-    {
-      "id": "9902e560-36a8-41b3-ad76-fcbef5d3c591",
-      "name": "2078 - Hello kitty dourada",
-      "created_at": "2026-03-23T20:50:19.522307+00:00"
-    },
-    {
-      "id": "28d83575-df2b-401d-b186-df59f3fa4c51",
-      "name": "F3.SP.07 - Mobiliário e Armários - FASE 3  F3.SP.07",
-      "created_at": "2026-03-23T20:50:19.522307+00:00"
-    },
-    {
-      "id": "5c972ada-fe30-494a-bc6f-673f60fdbc6a",
-      "name": "F3.CG.12 - Modelagem de pata do gato Cruel - FASE 3",
-      "created_at": "2026-03-23T20:50:19.522307+00:00"
-    },
-    {
-      "id": "1a1dea95-c994-49e0-ae7e-555851b40f7a",
-      "name": "2101 - Mudança e ajuste kombi",
-      "created_at": "2026-03-23T20:50:19.707377+00:00"
-    },
-    {
-      "id": "b74ac6d9-8613-459a-ba6d-f49720c77902",
-      "name": "2105 - Reforma princesa e mesa fundo do mar",
-      "created_at": "2026-03-23T20:50:19.707377+00:00"
-    },
-    {
-      "id": "9291ee05-4d91-467b-90aa-1ed61c23aa29",
-      "name": "2106 - Reforma turma mickey",
-      "created_at": "2026-03-23T20:50:19.707377+00:00"
-    },
-    {
-      "id": "4cc814e2-a94c-46c1-9b7f-fe1b880f12eb",
-      "name": "2002H - Escultura Batalha dos centauros",
-      "created_at": "2026-03-23T20:50:19.707377+00:00"
-    },
-    {
-      "id": "6e1b99ae-d1d6-48f5-a929-3931941e1f38",
-      "name": "2002F - Escultura Madona da escada",
-      "created_at": "2026-03-23T20:50:19.707377+00:00"
-    },
-    {
-      "id": "29bd0d75-c9ff-4ab4-8e68-ca0b9dc296ac",
-      "name": "2002D - Escultura Madona de bruges",
-      "created_at": "2026-03-23T20:50:19.707377+00:00"
-    },
-    {
-      "id": "ad91ebe9-c61d-42a4-bc97-7dd42ad2d7c3",
-      "name": "2002I - Escultura Tondo Pitti",
-      "created_at": "2026-03-23T20:50:19.707377+00:00"
-    },
-    {
-      "id": "655418c5-f5cf-4a55-aa7a-90c1452b92d8",
-      "name": "2089D - Margarida",
-      "created_at": "2026-03-23T20:50:19.707377+00:00"
-    },
-    {
-      "id": "9b2c0f4a-739c-4a25-b9c8-ffc090083711",
-      "name": "2089A - Minnie rosa",
-      "created_at": "2026-03-23T20:50:19.707377+00:00"
-    },
-    {
-      "id": "57c88e1c-1411-490a-b68a-a41292e4578f",
-      "name": "2089C - Pateta",
-      "created_at": "2026-03-23T20:50:19.707377+00:00"
-    },
-    {
-      "id": "9093a731-d32e-4ba7-83c8-4d710dbf42b6",
-      "name": "2089B - Pluto",
-      "created_at": "2026-03-23T20:50:19.707377+00:00"
-    },
-    {
-      "id": "298a3103-277c-43ed-a863-fe408e4fd256",
-      "name": "F2.WF.02 - bueiro - grade - FASE 2",
-      "created_at": "2026-03-23T20:50:19.707377+00:00"
-    },
-    {
-      "id": "5d1b7142-96e6-4213-9a93-b52b17c9c938",
-      "name": "F2.FT.07 - Objetos e elementos do 3D - FASE 2 VASSOURA",
-      "created_at": "2026-03-23T20:50:19.707377+00:00"
-    },
-    {
-      "id": "77ea1756-a7af-47e1-8293-ae9a3790205f",
-      "name": "F2.FC.06 - prateleira 3 - FASE 2",
-      "created_at": "2026-03-23T20:50:19.707377+00:00"
-    },
-    {
-      "id": "f53031dc-e023-423a-be08-7796990c921a",
-      "name": "F2.FC.07 - prateleira 4 - FASE 2",
-      "created_at": "2026-03-23T20:50:19.707377+00:00"
-    },
-    {
-      "id": "334c0eaf-7498-44ed-9642-d216470040bc",
-      "name": "2087E - Projeto 3d",
-      "created_at": "2026-03-23T20:50:19.707377+00:00"
-    },
-    {
-      "id": "dad1d347-72e7-4528-befa-c779a0968d09",
-      "name": "2046A - Avião",
-      "created_at": "2026-03-23T20:50:19.707377+00:00"
-    },
-    {
-      "id": "cad194e9-e742-41c6-be47-53175f35e7e0",
-      "name": "2046C - Bomba",
-      "created_at": "2026-03-23T20:50:19.707377+00:00"
-    },
-    {
-      "id": "f633eaeb-b562-4fd8-8955-1c19f15b4271",
-      "name": "2046B - Pista",
-      "created_at": "2026-03-23T20:50:19.707377+00:00"
-    },
-    {
-      "id": "d41c7b79-55d5-4f06-b06c-6afe3ada1d84",
-      "name": "2067B - Chocomonstro - 4 unidades",
-      "created_at": "2026-03-23T20:50:19.707377+00:00"
-    },
-    {
-      "id": "d0c640d0-016d-46be-addd-dd856ea02f8a",
-      "name": "2090 - Dinossauro escorrega",
-      "created_at": "2026-03-23T20:50:19.707377+00:00"
-    },
-    {
-      "id": "3b3cfd95-5cb0-470a-a2df-854faffca07c",
-      "name": "2097 - Engradado akira - rodizios",
-      "created_at": "2026-03-23T20:50:19.707377+00:00"
-    },
-    {
-      "id": "a2c5917a-8386-47d4-8e03-c039eb117e8c",
-      "name": "2063 - Unicornio 1,20",
-      "created_at": "2026-03-23T20:50:19.707377+00:00"
     }
   ],
   "entries": [
-    {
-      "id": "778660f5-b321-40d0-8648-0cfaf87ddfd0",
-      "person_id": "e9d2823c-63ea-4e4b-992f-1ea579f4140c",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-19",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:41.760022+00:00"
-    },
-    {
-      "id": "7d4a696c-6c29-4255-84ac-201de2829fe8",
-      "person_id": "fa0eafa5-d5f7-455a-ae5e-604cdecfc3a7",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-17",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:41.850677+00:00"
-    },
-    {
-      "id": "a0c2b64e-c37c-41a2-bbb0-57a1acc0e3c2",
-      "person_id": "ff61771e-2f81-43ac-a729-e2a8a3e1e49b",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-15",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:41.993308+00:00"
-    },
-    {
-      "id": "f3a4a7b7-cdfb-4a3d-80c0-2309ce686e7e",
-      "person_id": "3d68740a-c58d-4af9-b422-12bffb493a0a",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-16",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.033707+00:00"
-    },
-    {
-      "id": "5b520beb-81b6-4696-b158-a46dada18ac5",
-      "person_id": "9f1de05f-6869-40b6-b071-550292ec2d5f",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-16",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.073242+00:00"
-    },
-    {
-      "id": "c9bc208c-a3ca-4c5f-9171-2a529529d1e1",
-      "person_id": "9f1de05f-6869-40b6-b071-550292ec2d5f",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-18",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.102363+00:00"
-    },
-    {
-      "id": "ca7e160c-5b3f-4152-bade-e37dce81e9fa",
-      "person_id": "f3828f4d-95c7-4130-93d4-89cf10f3ab50",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-18",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.130962+00:00"
-    },
-    {
-      "id": "fbb66e5c-7869-4341-ae6f-86b5ba37a5a3",
-      "person_id": "f3828f4d-95c7-4130-93d4-89cf10f3ab50",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-15",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.140222+00:00"
-    },
     {
       "id": "7b50a7b8-4382-465d-b6ae-8322ccbd7274",
       "person_id": "3c896e73-b1fa-4aed-9291-2613230f3afc",
@@ -10447,19 +9368,6 @@
       "entry3": null,
       "exit3": null,
       "created_at": "2026-03-23T22:27:14.961241+00:00"
-    },
-    {
-      "id": "7b77c490-c2b4-4dba-b274-987462d11233",
-      "person_id": "46059c6b-8b16-456d-a021-27cd8a3a2542",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-19",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.166658+00:00"
     },
     {
       "id": "da1c9ade-9571-46a6-8236-f4cbc7677315",
@@ -10514,19 +9422,6 @@
       "created_at": "2026-03-24T15:02:21.568527+00:00"
     },
     {
-      "id": "a5be2ce2-4baf-41b1-874a-79d9a7eac334",
-      "person_id": "bb6b40ca-a06a-4a95-8d30-dfa16a8f3e54",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-18",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.458439+00:00"
-    },
-    {
       "id": "a61d9187-e87b-4c1b-8c71-2d29e2b493b3",
       "person_id": "22d45fa5-1f4a-43fe-98dd-b4829c56aae0",
       "job_id": "4aa2779f-01af-4be3-830f-a5f1203c820c",
@@ -10538,71 +9433,6 @@
       "entry3": null,
       "exit3": null,
       "created_at": "2026-03-23T22:27:15.089678+00:00"
-    },
-    {
-      "id": "496922ee-5352-48e1-84aa-6bac51bf1517",
-      "person_id": "8abc01ff-ae12-4956-88ec-0e6da2b8539b",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-18",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.484454+00:00"
-    },
-    {
-      "id": "31bdd2ab-846c-43e3-96ef-796e1ae61bda",
-      "person_id": "8abc01ff-ae12-4956-88ec-0e6da2b8539b",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-17",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.4884+00:00"
-    },
-    {
-      "id": "44635142-bd66-4793-8bc7-957940378f08",
-      "person_id": "e5a99cc4-4188-4389-81d8-078145605dff",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-16",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.499204+00:00"
-    },
-    {
-      "id": "b323abf9-6f2d-4a5c-b06e-fd5d433bd4a4",
-      "person_id": "bb6b40ca-a06a-4a95-8d30-dfa16a8f3e54",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-19",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.498225+00:00"
-    },
-    {
-      "id": "22f415c3-f354-4f34-96dd-ddea7ee1a5cc",
-      "person_id": "64f498b8-5ac3-467f-abf0-c5adf9a67e90",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-16",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.505847+00:00"
     },
     {
       "id": "3f89373b-bec4-44de-b529-216c586eda89",
@@ -10761,19 +9591,6 @@
       "created_at": "2026-03-24T19:00:42.16495+00:00"
     },
     {
-      "id": "04d42084-0d6f-4923-9cc1-2a41d21aa3aa",
-      "person_id": "3e26b376-8459-46f1-99b0-43d24963081e",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-17",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:51:17.720277+00:00"
-    },
-    {
       "id": "7c1899dc-ff2c-40a6-9cb8-0c3304eb9e96",
       "person_id": "9f1de05f-6869-40b6-b071-550292ec2d5f",
       "job_id": "4aa2779f-01af-4be3-830f-a5f1203c820c",
@@ -10813,19 +9630,6 @@
       "created_at": "2026-03-23T22:27:15.326242+00:00"
     },
     {
-      "id": "3ccae1b3-9a11-463d-a7cb-2ae9665f41e1",
-      "person_id": "bb6b40ca-a06a-4a95-8d30-dfa16a8f3e54",
-      "job_id": "4aa2779f-01af-4be3-830f-a5f1203c820c",
-      "date": "2026-03-24",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-23T22:27:15.326587+00:00"
-    },
-    {
       "id": "8c37ebe2-5931-4fbe-8311-ce0be2859243",
       "person_id": "bb6b40ca-a06a-4a95-8d30-dfa16a8f3e54",
       "job_id": "4aa2779f-01af-4be3-830f-a5f1203c820c",
@@ -10850,19 +9654,6 @@
       "entry3": null,
       "exit3": null,
       "created_at": "2026-03-23T22:27:15.311075+00:00"
-    },
-    {
-      "id": "354f811d-7c7b-428d-ad58-0f60b5bd46f7",
-      "person_id": "9f1de05f-6869-40b6-b071-550292ec2d5f",
-      "job_id": "4aa2779f-01af-4be3-830f-a5f1203c820c",
-      "date": "2026-03-24",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-23T22:27:15.306341+00:00"
     },
     {
       "id": "1beb41e5-a9eb-46ef-9fa7-e7de5200cb68",
@@ -10891,19 +9682,6 @@
       "created_at": "2026-03-24T19:00:42.437928+00:00"
     },
     {
-      "id": "744f0a07-0f3b-43ab-b63b-735ef4b99a3b",
-      "person_id": "3e26b376-8459-46f1-99b0-43d24963081e",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-18",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:51:17.753183+00:00"
-    },
-    {
       "id": "bfe1c5f8-04fe-43f8-9fe0-9093728ad3d9",
       "person_id": "ff61771e-2f81-43ac-a729-e2a8a3e1e49b",
       "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
@@ -10928,19 +9706,6 @@
       "entry3": null,
       "exit3": null,
       "created_at": "2026-03-23T22:27:15.335864+00:00"
-    },
-    {
-      "id": "0324185f-c430-4142-a58a-081d788d6535",
-      "person_id": "3c896e73-b1fa-4aed-9291-2613230f3afc",
-      "job_id": "4aa2779f-01af-4be3-830f-a5f1203c820c",
-      "date": "2026-04-01",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-23T22:27:15.344005+00:00"
     },
     {
       "id": "6b172fdb-2e27-49ee-a55d-1c97a034dbca",
@@ -11073,32 +9838,6 @@
       "created_at": "2026-03-23T22:27:15.372584+00:00"
     },
     {
-      "id": "250f5fb9-6e5d-46a8-a88c-5497ca91a5f2",
-      "person_id": "22d45fa5-1f4a-43fe-98dd-b4829c56aae0",
-      "job_id": "4aa2779f-01af-4be3-830f-a5f1203c820c",
-      "date": "2026-03-24",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-23T22:27:15.37151+00:00"
-    },
-    {
-      "id": "87eaadbc-0797-41c2-b27f-b606ca16bbde",
-      "person_id": "3c896e73-b1fa-4aed-9291-2613230f3afc",
-      "job_id": "4aa2779f-01af-4be3-830f-a5f1203c820c",
-      "date": "2026-03-24",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-23T22:27:15.373968+00:00"
-    },
-    {
       "id": "e3a338a2-11c9-4284-b6d3-5b3f68641026",
       "person_id": "3c896e73-b1fa-4aed-9291-2613230f3afc",
       "job_id": "4aa2779f-01af-4be3-830f-a5f1203c820c",
@@ -11229,6 +9968,240 @@
       "created_at": "2026-03-24T20:25:39.718326+00:00"
     },
     {
+      "id": "44635142-bd66-4793-8bc7-957940378f08",
+      "person_id": "e5a99cc4-4188-4389-81d8-078145605dff",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-16",
+      "entry1": "08:02:00",
+      "exit1": "12:07:00",
+      "entry2": "13:06:00",
+      "exit2": "19:00:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.499204+00:00"
+    },
+    {
+      "id": "fbb66e5c-7869-4341-ae6f-86b5ba37a5a3",
+      "person_id": "f3828f4d-95c7-4130-93d4-89cf10f3ab50",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-15",
+      "entry1": "07:57:00",
+      "exit1": "12:12:00",
+      "entry2": "13:05:00",
+      "exit2": "18:03:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.140222+00:00"
+    },
+    {
+      "id": "a0c2b64e-c37c-41a2-bbb0-57a1acc0e3c2",
+      "person_id": "ff61771e-2f81-43ac-a729-e2a8a3e1e49b",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-15",
+      "entry1": "07:57:00",
+      "exit1": "12:12:00",
+      "entry2": "13:05:00",
+      "exit2": "18:09:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:41.993308+00:00"
+    },
+    {
+      "id": "0324185f-c430-4142-a58a-081d788d6535",
+      "person_id": "3c896e73-b1fa-4aed-9291-2613230f3afc",
+      "job_id": "4aa2779f-01af-4be3-830f-a5f1203c820c",
+      "date": "2026-04-01",
+      "entry1": "08:01:00",
+      "exit1": "12:19:00",
+      "entry2": "13:08:00",
+      "exit2": "16:37:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-23T22:27:15.344005+00:00"
+    },
+    {
+      "id": "5b520beb-81b6-4696-b158-a46dada18ac5",
+      "person_id": "9f1de05f-6869-40b6-b071-550292ec2d5f",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-16",
+      "entry1": "08:23:00",
+      "exit1": "12:07:00",
+      "entry2": "13:11:00",
+      "exit2": "19:00:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.073242+00:00"
+    },
+    {
+      "id": "f3a4a7b7-cdfb-4a3d-80c0-2309ce686e7e",
+      "person_id": "3d68740a-c58d-4af9-b422-12bffb493a0a",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-16",
+      "entry1": "07:45:00",
+      "exit1": "12:11:00",
+      "entry2": "13:09:00",
+      "exit2": "18:31:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.033707+00:00"
+    },
+    {
+      "id": "22f415c3-f354-4f34-96dd-ddea7ee1a5cc",
+      "person_id": "64f498b8-5ac3-467f-abf0-c5adf9a67e90",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-16",
+      "entry1": "08:05:00",
+      "exit1": "12:10:00",
+      "entry2": "13:09:00",
+      "exit2": "18:25:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.505847+00:00"
+    },
+    {
+      "id": "04d42084-0d6f-4923-9cc1-2a41d21aa3aa",
+      "person_id": "3e26b376-8459-46f1-99b0-43d24963081e",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-17",
+      "entry1": "07:59:00",
+      "exit1": "12:18:00",
+      "entry2": "13:17:00",
+      "exit2": "18:20:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:51:17.720277+00:00"
+    },
+    {
+      "id": "778660f5-b321-40d0-8648-0cfaf87ddfd0",
+      "person_id": "e9d2823c-63ea-4e4b-992f-1ea579f4140c",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-19",
+      "entry1": "08:00:00",
+      "exit1": "10:00:00",
+      "entry2": null,
+      "exit2": null,
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:41.760022+00:00"
+    },
+    {
+      "id": "31bdd2ab-846c-43e3-96ef-796e1ae61bda",
+      "person_id": "8abc01ff-ae12-4956-88ec-0e6da2b8539b",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-17",
+      "entry1": "07:55:00",
+      "exit1": "12:17:00",
+      "entry2": "13:19:00",
+      "exit2": "18:20:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.4884+00:00"
+    },
+    {
+      "id": "7d4a696c-6c29-4255-84ac-201de2829fe8",
+      "person_id": "fa0eafa5-d5f7-455a-ae5e-604cdecfc3a7",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-17",
+      "entry1": "07:40:00",
+      "exit1": "12:11:00",
+      "entry2": "13:05:00",
+      "exit2": "18:24:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:41.850677+00:00"
+    },
+    {
+      "id": "ca7e160c-5b3f-4152-bade-e37dce81e9fa",
+      "person_id": "f3828f4d-95c7-4130-93d4-89cf10f3ab50",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-18",
+      "entry1": "07:48:00",
+      "exit1": "12:11:00",
+      "entry2": "13:12:00",
+      "exit2": "17:12:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.130962+00:00"
+    },
+    {
+      "id": "a5be2ce2-4baf-41b1-874a-79d9a7eac334",
+      "person_id": "bb6b40ca-a06a-4a95-8d30-dfa16a8f3e54",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-18",
+      "entry1": "07:47:00",
+      "exit1": "12:33:00",
+      "entry2": "13:21:00",
+      "exit2": "18:11:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.458439+00:00"
+    },
+    {
+      "id": "c9bc208c-a3ca-4c5f-9171-2a529529d1e1",
+      "person_id": "9f1de05f-6869-40b6-b071-550292ec2d5f",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-18",
+      "entry1": "07:46:00",
+      "exit1": "12:29:00",
+      "entry2": "13:15:00",
+      "exit2": "19:50:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.102363+00:00"
+    },
+    {
+      "id": "7b77c490-c2b4-4dba-b274-987462d11233",
+      "person_id": "46059c6b-8b16-456d-a021-27cd8a3a2542",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-19",
+      "entry1": "08:01:00",
+      "exit1": "12:28:00",
+      "entry2": "13:23:00",
+      "exit2": "18:35:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.166658+00:00"
+    },
+    {
+      "id": "250f5fb9-6e5d-46a8-a88c-5497ca91a5f2",
+      "person_id": "22d45fa5-1f4a-43fe-98dd-b4829c56aae0",
+      "job_id": "4aa2779f-01af-4be3-830f-a5f1203c820c",
+      "date": "2026-03-24",
+      "entry1": "08:09:00",
+      "exit1": "12:28:00",
+      "entry2": "13:28:00",
+      "exit2": "18:21:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-23T22:27:15.37151+00:00"
+    },
+    {
+      "id": "354f811d-7c7b-428d-ad58-0f60b5bd46f7",
+      "person_id": "9f1de05f-6869-40b6-b071-550292ec2d5f",
+      "job_id": "4aa2779f-01af-4be3-830f-a5f1203c820c",
+      "date": "2026-03-24",
+      "entry1": "08:07:00",
+      "exit1": "12:27:00",
+      "entry2": "13:28:00",
+      "exit2": "18:21:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-23T22:27:15.306341+00:00"
+    },
+    {
+      "id": "87eaadbc-0797-41c2-b27f-b606ca16bbde",
+      "person_id": "3c896e73-b1fa-4aed-9291-2613230f3afc",
+      "job_id": "4aa2779f-01af-4be3-830f-a5f1203c820c",
+      "date": "2026-03-24",
+      "entry1": "08:09:00",
+      "exit1": "12:29:00",
+      "entry2": "13:29:00",
+      "exit2": "18:17:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-23T22:27:15.373968+00:00"
+    },
+    {
       "id": "1b0efb5e-d444-4a1c-85b0-59d3dfa3bcef",
       "person_id": "bb6b40ca-a06a-4a95-8d30-dfa16a8f3e54",
       "job_id": "4aa2779f-01af-4be3-830f-a5f1203c820c",
@@ -11240,19 +10213,6 @@
       "entry3": null,
       "exit3": null,
       "created_at": "2026-03-23T22:27:15.382694+00:00"
-    },
-    {
-      "id": "3f182123-3c11-46fb-840e-4af7c5bb7db2",
-      "person_id": "e9d2823c-63ea-4e4b-992f-1ea579f4140c",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-16",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:41.832327+00:00"
     },
     {
       "id": "26163bd4-7fbf-4f06-8bad-277897f43a46",
@@ -11268,45 +10228,6 @@
       "created_at": "2026-03-24T15:02:21.55306+00:00"
     },
     {
-      "id": "8b456adc-41d3-41ec-84ca-ca1f2f9d143d",
-      "person_id": "8abc01ff-ae12-4956-88ec-0e6da2b8539b",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-20",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:41.974045+00:00"
-    },
-    {
-      "id": "88fbb2bd-dfbc-482c-be2a-ec88a746759a",
-      "person_id": "3d68740a-c58d-4af9-b422-12bffb493a0a",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-17",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.023814+00:00"
-    },
-    {
-      "id": "ad02696e-8f67-4ae4-b2c5-c788c7efffab",
-      "person_id": "9f1de05f-6869-40b6-b071-550292ec2d5f",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-15",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.053219+00:00"
-    },
-    {
       "id": "912818a8-c550-4074-af67-5d959474e6ce",
       "person_id": "9f1de05f-6869-40b6-b071-550292ec2d5f",
       "job_id": "5d01e590-55ca-4cfd-bfb7-36ba35612f75",
@@ -11320,71 +10241,6 @@
       "created_at": "2026-03-24T15:02:21.577054+00:00"
     },
     {
-      "id": "0841a578-1770-4fe9-b1e7-d380ae7d98c2",
-      "person_id": "3d68740a-c58d-4af9-b422-12bffb493a0a",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-18",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.078142+00:00"
-    },
-    {
-      "id": "16c26d45-90fc-49a4-a6c5-fd2025fb6873",
-      "person_id": "3d68740a-c58d-4af9-b422-12bffb493a0a",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-19",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.085738+00:00"
-    },
-    {
-      "id": "c707c3b1-1bb8-4284-b812-1f136b8f7132",
-      "person_id": "0fa2e09c-b799-4b50-8975-3207f9bee824",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-19",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.126213+00:00"
-    },
-    {
-      "id": "6e98a54a-d8dd-46ed-93ab-c9a81467fcc3",
-      "person_id": "f3828f4d-95c7-4130-93d4-89cf10f3ab50",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-17",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.138072+00:00"
-    },
-    {
-      "id": "8576d1a9-427f-4a6c-9735-ca28077c375c",
-      "person_id": "0fa2e09c-b799-4b50-8975-3207f9bee824",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-16",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.139542+00:00"
-    },
-    {
       "id": "bc3ecc85-2e84-4255-ba4f-4368c85f79d0",
       "person_id": "69e18ffa-8f76-4b44-9c73-0ec8ab449776",
       "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
@@ -11396,97 +10252,6 @@
       "entry3": null,
       "exit3": null,
       "created_at": "2026-03-24T19:00:42.435206+00:00"
-    },
-    {
-      "id": "5d66eb3c-0951-42ca-8516-56a012e57f74",
-      "person_id": "e5a99cc4-4188-4389-81d8-078145605dff",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-18",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.445647+00:00"
-    },
-    {
-      "id": "a7d568c4-8931-4936-b0be-674059a8e4f4",
-      "person_id": "69e18ffa-8f76-4b44-9c73-0ec8ab449776",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-19",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.443552+00:00"
-    },
-    {
-      "id": "d28e66df-01d1-4c7f-be6b-81b97a0767a8",
-      "person_id": "46059c6b-8b16-456d-a021-27cd8a3a2542",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-20",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.465672+00:00"
-    },
-    {
-      "id": "6f419c6d-0d70-4d81-a4f2-ec7bf2030729",
-      "person_id": "bb6b40ca-a06a-4a95-8d30-dfa16a8f3e54",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-16",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.468742+00:00"
-    },
-    {
-      "id": "b3fef37e-4f34-4608-ab20-4fa208bfb1a4",
-      "person_id": "64f498b8-5ac3-467f-abf0-c5adf9a67e90",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-19",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.477556+00:00"
-    },
-    {
-      "id": "c538e75d-2f25-4fe7-bfcd-1a41bbe3fa75",
-      "person_id": "ff61771e-2f81-43ac-a729-e2a8a3e1e49b",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-20",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.482414+00:00"
-    },
-    {
-      "id": "ed68f33f-2b22-4606-9a6c-e426be6582ec",
-      "person_id": "8abc01ff-ae12-4956-88ec-0e6da2b8539b",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-22",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.491746+00:00"
     },
     {
       "id": "dd1de184-cdfb-44da-8a65-35efadd7bbe9",
@@ -11658,6 +10423,19 @@
       "created_at": "2026-03-24T20:54:25.169896+00:00"
     },
     {
+      "id": "2493718f-f78f-466c-b768-1e0f9d51bd66",
+      "person_id": "3e26b376-8459-46f1-99b0-43d24963081e",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-15",
+      "entry1": "08:01:00",
+      "exit1": "12:09:00",
+      "entry2": "13:09:00",
+      "exit2": "16:40:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:51:17.719467+00:00"
+    },
+    {
       "id": "e0362324-35c7-4642-8347-71851a7a94d2",
       "person_id": "e9d2823c-63ea-4e4b-992f-1ea579f4140c",
       "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
@@ -11684,6 +10462,45 @@
       "created_at": "2026-03-24T19:00:42.505683+00:00"
     },
     {
+      "id": "88fbb2bd-dfbc-482c-be2a-ec88a746759a",
+      "person_id": "3d68740a-c58d-4af9-b422-12bffb493a0a",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-17",
+      "entry1": "07:47:00",
+      "exit1": "12:09:00",
+      "entry2": "13:06:00",
+      "exit2": "18:24:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.023814+00:00"
+    },
+    {
+      "id": "ad02696e-8f67-4ae4-b2c5-c788c7efffab",
+      "person_id": "9f1de05f-6869-40b6-b071-550292ec2d5f",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-15",
+      "entry1": "08:04:00",
+      "exit1": "12:19:00",
+      "entry2": "13:18:00",
+      "exit2": "18:09:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.053219+00:00"
+    },
+    {
+      "id": "3f182123-3c11-46fb-840e-4af7c5bb7db2",
+      "person_id": "e9d2823c-63ea-4e4b-992f-1ea579f4140c",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-16",
+      "entry1": "07:50:00",
+      "exit1": "12:07:00",
+      "entry2": "13:08:00",
+      "exit2": "19:01:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:41.832327+00:00"
+    },
+    {
       "id": "ec341cbe-8eb4-4a92-95a9-8606b9a09399",
       "person_id": "64f498b8-5ac3-467f-abf0-c5adf9a67e90",
       "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
@@ -11695,19 +10512,6 @@
       "entry3": null,
       "exit3": null,
       "created_at": "2026-03-24T19:00:42.50436+00:00"
-    },
-    {
-      "id": "2493718f-f78f-466c-b768-1e0f9d51bd66",
-      "person_id": "3e26b376-8459-46f1-99b0-43d24963081e",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-15",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:51:17.719467+00:00"
     },
     {
       "id": "d253888d-6e33-4bc2-b536-10226caf267f",
@@ -12022,6 +10826,188 @@
       "created_at": "2026-03-24T20:54:25.071073+00:00"
     },
     {
+      "id": "6e98a54a-d8dd-46ed-93ab-c9a81467fcc3",
+      "person_id": "f3828f4d-95c7-4130-93d4-89cf10f3ab50",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-17",
+      "entry1": "07:40:00",
+      "exit1": "12:08:00",
+      "entry2": "13:08:00",
+      "exit2": "18:25:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.138072+00:00"
+    },
+    {
+      "id": "c707c3b1-1bb8-4284-b812-1f136b8f7132",
+      "person_id": "0fa2e09c-b799-4b50-8975-3207f9bee824",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-19",
+      "entry1": "08:00:00",
+      "exit1": "10:00:00",
+      "entry2": null,
+      "exit2": null,
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.126213+00:00"
+    },
+    {
+      "id": "8576d1a9-427f-4a6c-9735-ca28077c375c",
+      "person_id": "0fa2e09c-b799-4b50-8975-3207f9bee824",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-16",
+      "entry1": "07:44:00",
+      "exit1": "12:09:00",
+      "entry2": "13:00:00",
+      "exit2": "19:02:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.139542+00:00"
+    },
+    {
+      "id": "6f419c6d-0d70-4d81-a4f2-ec7bf2030729",
+      "person_id": "bb6b40ca-a06a-4a95-8d30-dfa16a8f3e54",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-16",
+      "entry1": "08:03:00",
+      "exit1": "12:08:00",
+      "entry2": "13:06:00",
+      "exit2": "18:16:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.468742+00:00"
+    },
+    {
+      "id": "5d66eb3c-0951-42ca-8516-56a012e57f74",
+      "person_id": "e5a99cc4-4188-4389-81d8-078145605dff",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-18",
+      "entry1": "08:02:00",
+      "exit1": "12:29:00",
+      "entry2": "13:18:00",
+      "exit2": "19:50:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.445647+00:00"
+    },
+    {
+      "id": "0841a578-1770-4fe9-b1e7-d380ae7d98c2",
+      "person_id": "3d68740a-c58d-4af9-b422-12bffb493a0a",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-18",
+      "entry1": "07:47:00",
+      "exit1": "12:11:00",
+      "entry2": "13:10:00",
+      "exit2": "18:12:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.078142+00:00"
+    },
+    {
+      "id": "a7d568c4-8931-4936-b0be-674059a8e4f4",
+      "person_id": "69e18ffa-8f76-4b44-9c73-0ec8ab449776",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-19",
+      "entry1": "08:13:00",
+      "exit1": "12:25:00",
+      "entry2": "13:19:00",
+      "exit2": "19:30:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.443552+00:00"
+    },
+    {
+      "id": "b323abf9-6f2d-4a5c-b06e-fd5d433bd4a4",
+      "person_id": "bb6b40ca-a06a-4a95-8d30-dfa16a8f3e54",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-19",
+      "entry1": "08:12:00",
+      "exit1": "12:26:00",
+      "entry2": "13:20:00",
+      "exit2": "18:03:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.498225+00:00"
+    },
+    {
+      "id": "b3fef37e-4f34-4608-ab20-4fa208bfb1a4",
+      "person_id": "64f498b8-5ac3-467f-abf0-c5adf9a67e90",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-19",
+      "entry1": "08:05:00",
+      "exit1": "12:26:00",
+      "entry2": "13:19:00",
+      "exit2": "18:30:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.477556+00:00"
+    },
+    {
+      "id": "16c26d45-90fc-49a4-a6c5-fd2025fb6873",
+      "person_id": "3d68740a-c58d-4af9-b422-12bffb493a0a",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-19",
+      "entry1": "08:05:00",
+      "exit1": "12:28:00",
+      "entry2": "13:16:00",
+      "exit2": "17:25:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.085738+00:00"
+    },
+    {
+      "id": "c538e75d-2f25-4fe7-bfcd-1a41bbe3fa75",
+      "person_id": "ff61771e-2f81-43ac-a729-e2a8a3e1e49b",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-20",
+      "entry1": "08:07:00",
+      "exit1": "12:16:00",
+      "entry2": "13:07:00",
+      "exit2": "20:01:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.482414+00:00"
+    },
+    {
+      "id": "d28e66df-01d1-4c7f-be6b-81b97a0767a8",
+      "person_id": "46059c6b-8b16-456d-a021-27cd8a3a2542",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-20",
+      "entry1": "08:01:00",
+      "exit1": "12:32:00",
+      "entry2": "13:23:00",
+      "exit2": "18:02:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.465672+00:00"
+    },
+    {
+      "id": "8b456adc-41d3-41ec-84ca-ca1f2f9d143d",
+      "person_id": "8abc01ff-ae12-4956-88ec-0e6da2b8539b",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-20",
+      "entry1": "08:01:00",
+      "exit1": "12:18:00",
+      "entry2": "13:29:00",
+      "exit2": "18:06:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:41.974045+00:00"
+    },
+    {
+      "id": "ed68f33f-2b22-4606-9a6c-e426be6582ec",
+      "person_id": "8abc01ff-ae12-4956-88ec-0e6da2b8539b",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-22",
+      "entry1": "08:00:00",
+      "exit1": "12:00:00",
+      "entry2": "13:00:00",
+      "exit2": "18:00:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.491746+00:00"
+    },
+    {
       "id": "88049862-dd50-451a-8b62-5e0f44e74e11",
       "person_id": "22d45fa5-1f4a-43fe-98dd-b4829c56aae0",
       "job_id": "4aa2779f-01af-4be3-830f-a5f1203c820c",
@@ -12048,32 +11034,6 @@
       "created_at": "2026-03-24T15:02:21.520351+00:00"
     },
     {
-      "id": "97bf53eb-76d2-497e-98fc-3e110f7ff2d2",
-      "person_id": "e9d2823c-63ea-4e4b-992f-1ea579f4140c",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-18",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:41.805328+00:00"
-    },
-    {
-      "id": "f28ef44e-4d78-490a-a4f4-1c02193f8087",
-      "person_id": "e9d2823c-63ea-4e4b-992f-1ea579f4140c",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-17",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:41.832666+00:00"
-    },
-    {
       "id": "63003d4e-36d5-41ed-aa26-8a79c3a19269",
       "person_id": "9f1de05f-6869-40b6-b071-550292ec2d5f",
       "job_id": "5d01e590-55ca-4cfd-bfb7-36ba35612f75",
@@ -12087,277 +11047,43 @@
       "created_at": "2026-03-24T15:02:21.583755+00:00"
     },
     {
-      "id": "c8b7f37c-32ac-413d-a943-0699e4d321ab",
-      "person_id": "fa0eafa5-d5f7-455a-ae5e-604cdecfc3a7",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-19",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:41.850801+00:00"
-    },
-    {
       "id": "08278cad-fcc8-4e5c-b415-579d7603504f",
       "person_id": "ff61771e-2f81-43ac-a729-e2a8a3e1e49b",
       "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
       "date": "2026-02-17",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
+      "entry1": "07:40:00",
+      "exit1": "12:09:00",
+      "entry2": "13:05:00",
+      "exit2": "18:24:00",
       "entry3": null,
       "exit3": null,
       "created_at": "2026-03-24T19:00:41.99369+00:00"
-    },
-    {
-      "id": "a6335df4-006e-4834-8cde-896b1ed48161",
-      "person_id": "ff61771e-2f81-43ac-a729-e2a8a3e1e49b",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-18",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:41.993353+00:00"
-    },
-    {
-      "id": "c89a65e6-ef4e-468e-8efb-d83dc4f7dda9",
-      "person_id": "ff61771e-2f81-43ac-a729-e2a8a3e1e49b",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-21",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.060313+00:00"
-    },
-    {
-      "id": "4c8aa87b-88bd-4f78-aa7e-97bbd15bd4cb",
-      "person_id": "0fa2e09c-b799-4b50-8975-3207f9bee824",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-15",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.08756+00:00"
-    },
-    {
-      "id": "2ae4791d-4bd2-41cc-aa7d-9422b1cb7b0f",
-      "person_id": "69e18ffa-8f76-4b44-9c73-0ec8ab449776",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-18",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.12888+00:00"
     },
     {
       "id": "998b9078-016b-48e3-9690-85904a59390e",
       "person_id": "f3828f4d-95c7-4130-93d4-89cf10f3ab50",
       "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
       "date": "2026-02-16",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
+      "entry1": "07:44:00",
+      "exit1": "12:09:00",
+      "entry2": "13:08:00",
+      "exit2": "19:01:00",
       "entry3": null,
       "exit3": null,
       "created_at": "2026-03-24T19:00:42.129281+00:00"
-    },
-    {
-      "id": "6ecbf29f-e906-4670-a76a-ed65e252be3e",
-      "person_id": "46059c6b-8b16-456d-a021-27cd8a3a2542",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-18",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.166422+00:00"
-    },
-    {
-      "id": "d60291d7-3c5b-415f-b8d9-a3d351be7eb6",
-      "person_id": "f3828f4d-95c7-4130-93d4-89cf10f3ab50",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-19",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.166127+00:00"
-    },
-    {
-      "id": "d4b0c50e-739c-4f43-a88f-c6b2cb1b6b48",
-      "person_id": "e5a99cc4-4188-4389-81d8-078145605dff",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-21",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.439455+00:00"
-    },
-    {
-      "id": "6e731274-bff2-428a-9ec3-c51a20092ae3",
-      "person_id": "e5a99cc4-4188-4389-81d8-078145605dff",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-23",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.437608+00:00"
-    },
-    {
-      "id": "63e353a4-dcb5-44b7-bcb1-d739287ab7da",
-      "person_id": "46059c6b-8b16-456d-a021-27cd8a3a2542",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-17",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.447429+00:00"
     },
     {
       "id": "d06f2677-2a96-48df-b214-3c25c44f0589",
       "person_id": "bb6b40ca-a06a-4a95-8d30-dfa16a8f3e54",
       "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
       "date": "2026-02-15",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
+      "entry1": "08:04:00",
+      "exit1": "12:18:00",
+      "entry2": "13:12:00",
+      "exit2": "18:06:00",
       "entry3": null,
       "exit3": null,
       "created_at": "2026-03-24T19:00:42.448794+00:00"
-    },
-    {
-      "id": "cb8262b2-fed4-449b-a243-12045422c481",
-      "person_id": "bb6b40ca-a06a-4a95-8d30-dfa16a8f3e54",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-17",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.465322+00:00"
-    },
-    {
-      "id": "5b226bfa-6f2d-4c51-b3f1-4cdac8ba32ab",
-      "person_id": "ff61771e-2f81-43ac-a729-e2a8a3e1e49b",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-16",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.475513+00:00"
-    },
-    {
-      "id": "bd7ff725-100c-4376-aed0-43970da70ab2",
-      "person_id": "64f498b8-5ac3-467f-abf0-c5adf9a67e90",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-17",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.476493+00:00"
-    },
-    {
-      "id": "27d803f8-4864-44df-abc6-917956e3aa17",
-      "person_id": "64f498b8-5ac3-467f-abf0-c5adf9a67e90",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-20",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.485868+00:00"
-    },
-    {
-      "id": "7e98772a-daa7-4bf7-9580-048f5f1ad3b8",
-      "person_id": "64f498b8-5ac3-467f-abf0-c5adf9a67e90",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-18",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.488799+00:00"
-    },
-    {
-      "id": "a9240e74-e171-41f0-9dee-47aa516af03f",
-      "person_id": "e5a99cc4-4188-4389-81d8-078145605dff",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-15",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.49865+00:00"
-    },
-    {
-      "id": "a164a9e3-fc46-4336-8e36-2abee8c65c54",
-      "person_id": "e5a99cc4-4188-4389-81d8-078145605dff",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-22",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.502469+00:00"
-    },
-    {
-      "id": "f5147091-8d61-48df-8e67-398b780dbec2",
-      "person_id": "64f498b8-5ac3-467f-abf0-c5adf9a67e90",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-15",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.509118+00:00"
     },
     {
       "id": "5d0317b6-15a8-4baa-a309-b352a3e3cf1a",
@@ -12386,6 +11112,32 @@
       "created_at": "2026-03-24T19:00:42.088455+00:00"
     },
     {
+      "id": "f5147091-8d61-48df-8e67-398b780dbec2",
+      "person_id": "64f498b8-5ac3-467f-abf0-c5adf9a67e90",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-15",
+      "entry1": "08:02:00",
+      "exit1": "12:08:00",
+      "entry2": "13:04:00",
+      "exit2": "16:36:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.509118+00:00"
+    },
+    {
+      "id": "a9240e74-e171-41f0-9dee-47aa516af03f",
+      "person_id": "e5a99cc4-4188-4389-81d8-078145605dff",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-15",
+      "entry1": "07:59:00",
+      "exit1": "12:19:00",
+      "entry2": "13:19:00",
+      "exit2": "18:12:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.49865+00:00"
+    },
+    {
       "id": "a116a59a-ba88-4c1e-b1d0-5fedf858e514",
       "person_id": "e5a99cc4-4188-4389-81d8-078145605dff",
       "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
@@ -12397,6 +11149,19 @@
       "entry3": null,
       "exit3": null,
       "created_at": "2026-03-24T19:00:42.153859+00:00"
+    },
+    {
+      "id": "d60291d7-3c5b-415f-b8d9-a3d351be7eb6",
+      "person_id": "f3828f4d-95c7-4130-93d4-89cf10f3ab50",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-19",
+      "entry1": "08:00:00",
+      "exit1": "10:00:00",
+      "entry2": null,
+      "exit2": null,
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.166127+00:00"
     },
     {
       "id": "05fa41bf-552e-47ed-ac39-3b568b310eb0",
@@ -12802,82 +11567,238 @@
       "created_at": "2026-03-24T20:54:25.167031+00:00"
     },
     {
-      "id": "f2d554d2-e75b-49ce-bffd-f07a91c76d5d",
-      "person_id": "fa0eafa5-d5f7-455a-ae5e-604cdecfc3a7",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-16",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:41.795651+00:00"
-    },
-    {
-      "id": "c693cd08-33ff-493f-86b6-e502b9668a12",
-      "person_id": "fa0eafa5-d5f7-455a-ae5e-604cdecfc3a7",
+      "id": "4c8aa87b-88bd-4f78-aa7e-97bbd15bd4cb",
+      "person_id": "0fa2e09c-b799-4b50-8975-3207f9bee824",
       "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
       "date": "2026-02-15",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
+      "entry1": "07:57:00",
+      "exit1": "12:13:00",
+      "entry2": "13:13:00",
+      "exit2": "18:04:00",
       "entry3": null,
       "exit3": null,
-      "created_at": "2026-03-24T19:00:41.846797+00:00"
+      "created_at": "2026-03-24T19:00:42.08756+00:00"
     },
     {
-      "id": "3b9c87e6-3d6f-46d0-baab-b44cf94b06c9",
-      "person_id": "3d68740a-c58d-4af9-b422-12bffb493a0a",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-15",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:41.851206+00:00"
-    },
-    {
-      "id": "ad892031-25ef-40ad-9cc2-65a2f907be58",
+      "id": "5b226bfa-6f2d-4c51-b3f1-4cdac8ba32ab",
       "person_id": "ff61771e-2f81-43ac-a729-e2a8a3e1e49b",
       "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-19",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
+      "date": "2026-02-16",
+      "entry1": "07:44:00",
+      "exit1": "12:07:00",
+      "entry2": "13:08:00",
+      "exit2": "19:01:00",
       "entry3": null,
       "exit3": null,
-      "created_at": "2026-03-24T19:00:42.019321+00:00"
+      "created_at": "2026-03-24T19:00:42.475513+00:00"
     },
     {
-      "id": "253e2473-0766-4692-9ea6-8845f6709302",
-      "person_id": "9f1de05f-6869-40b6-b071-550292ec2d5f",
+      "id": "bd7ff725-100c-4376-aed0-43970da70ab2",
+      "person_id": "64f498b8-5ac3-467f-abf0-c5adf9a67e90",
       "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
       "date": "2026-02-17",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
+      "entry1": "08:00:00",
+      "exit1": "12:17:00",
+      "entry2": "13:54:00",
+      "exit2": "18:17:00",
       "entry3": null,
       "exit3": null,
-      "created_at": "2026-03-24T19:00:42.0675+00:00"
+      "created_at": "2026-03-24T19:00:42.476493+00:00"
     },
     {
-      "id": "7a5619f5-f5a8-4d20-9302-9fefb070baa5",
-      "person_id": "9f1de05f-6869-40b6-b071-550292ec2d5f",
+      "id": "f28ef44e-4d78-490a-a4f4-1c02193f8087",
+      "person_id": "e9d2823c-63ea-4e4b-992f-1ea579f4140c",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-17",
+      "entry1": "07:52:00",
+      "exit1": "12:09:00",
+      "entry2": "13:05:00",
+      "exit2": "18:24:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:41.832666+00:00"
+    },
+    {
+      "id": "27d803f8-4864-44df-abc6-917956e3aa17",
+      "person_id": "64f498b8-5ac3-467f-abf0-c5adf9a67e90",
       "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
       "date": "2026-02-20",
-      "entry1": null,
-      "exit1": null,
+      "entry1": "08:10:00",
+      "exit1": "12:19:00",
+      "entry2": "13:22:00",
+      "exit2": "20:01:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.485868+00:00"
+    },
+    {
+      "id": "cb8262b2-fed4-449b-a243-12045422c481",
+      "person_id": "bb6b40ca-a06a-4a95-8d30-dfa16a8f3e54",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-17",
+      "entry1": "07:51:00",
+      "exit1": "12:18:00",
+      "entry2": "13:16:00",
+      "exit2": "18:20:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.465322+00:00"
+    },
+    {
+      "id": "a164a9e3-fc46-4336-8e36-2abee8c65c54",
+      "person_id": "e5a99cc4-4188-4389-81d8-078145605dff",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-22",
+      "entry1": "08:08:00",
+      "exit1": "13:01:00",
+      "entry2": "13:50:00",
+      "exit2": "23:06:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.502469+00:00"
+    },
+    {
+      "id": "63e353a4-dcb5-44b7-bcb1-d739287ab7da",
+      "person_id": "46059c6b-8b16-456d-a021-27cd8a3a2542",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-17",
+      "entry1": "07:51:00",
+      "exit1": "12:18:00",
+      "entry2": "13:16:00",
+      "exit2": "18:20:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.447429+00:00"
+    },
+    {
+      "id": "c8b7f37c-32ac-413d-a943-0699e4d321ab",
+      "person_id": "fa0eafa5-d5f7-455a-ae5e-604cdecfc3a7",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-19",
+      "entry1": "08:00:00",
+      "exit1": "10:00:00",
       "entry2": null,
       "exit2": null,
       "entry3": null,
       "exit3": null,
-      "created_at": "2026-03-24T19:00:42.093462+00:00"
+      "created_at": "2026-03-24T19:00:41.850801+00:00"
+    },
+    {
+      "id": "a6335df4-006e-4834-8cde-896b1ed48161",
+      "person_id": "ff61771e-2f81-43ac-a729-e2a8a3e1e49b",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-18",
+      "entry1": "07:51:00",
+      "exit1": "12:11:00",
+      "entry2": "13:07:00",
+      "exit2": "18:13:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:41.993353+00:00"
+    },
+    {
+      "id": "7e98772a-daa7-4bf7-9580-048f5f1ad3b8",
+      "person_id": "64f498b8-5ac3-467f-abf0-c5adf9a67e90",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-18",
+      "entry1": "08:02:00",
+      "exit1": "12:17:00",
+      "entry2": "13:16:00",
+      "exit2": "18:06:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.488799+00:00"
+    },
+    {
+      "id": "97bf53eb-76d2-497e-98fc-3e110f7ff2d2",
+      "person_id": "e9d2823c-63ea-4e4b-992f-1ea579f4140c",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-18",
+      "entry1": "07:51:00",
+      "exit1": "12:12:00",
+      "entry2": "13:15:00",
+      "exit2": "17:15:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:41.805328+00:00"
+    },
+    {
+      "id": "6ecbf29f-e906-4670-a76a-ed65e252be3e",
+      "person_id": "46059c6b-8b16-456d-a021-27cd8a3a2542",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-18",
+      "entry1": "07:54:00",
+      "exit1": "12:16:00",
+      "entry2": "13:19:00",
+      "exit2": "18:11:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.166422+00:00"
+    },
+    {
+      "id": "2ae4791d-4bd2-41cc-aa7d-9422b1cb7b0f",
+      "person_id": "69e18ffa-8f76-4b44-9c73-0ec8ab449776",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-18",
+      "entry1": "08:01:00",
+      "exit1": "12:29:00",
+      "entry2": "13:26:00",
+      "exit2": "18:15:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.12888+00:00"
+    },
+    {
+      "id": "3ccae1b3-9a11-463d-a7cb-2ae9665f41e1",
+      "person_id": "bb6b40ca-a06a-4a95-8d30-dfa16a8f3e54",
+      "job_id": "4aa2779f-01af-4be3-830f-a5f1203c820c",
+      "date": "2026-03-24",
+      "entry1": "08:07:00",
+      "exit1": "12:28:00",
+      "entry2": "13:28:00",
+      "exit2": "18:21:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-23T22:27:15.326587+00:00"
+    },
+    {
+      "id": "d4b0c50e-739c-4f43-a88f-c6b2cb1b6b48",
+      "person_id": "e5a99cc4-4188-4389-81d8-078145605dff",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-21",
+      "entry1": "08:01:00",
+      "exit1": "12:11:00",
+      "entry2": "13:04:00",
+      "exit2": "20:10:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.439455+00:00"
+    },
+    {
+      "id": "c89a65e6-ef4e-468e-8efb-d83dc4f7dda9",
+      "person_id": "ff61771e-2f81-43ac-a729-e2a8a3e1e49b",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-21",
+      "entry1": "08:15:00",
+      "exit1": "12:06:00",
+      "entry2": "13:03:00",
+      "exit2": "20:01:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.060313+00:00"
+    },
+    {
+      "id": "6e731274-bff2-428a-9ec3-c51a20092ae3",
+      "person_id": "e5a99cc4-4188-4389-81d8-078145605dff",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-23",
+      "entry1": "10:18:00",
+      "exit1": "13:08:00",
+      "entry2": "14:13:00",
+      "exit2": "18:00:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.437608+00:00"
     },
     {
       "id": "34af4127-7669-4f48-be70-1c79a3c1329d",
@@ -12893,32 +11814,6 @@
       "created_at": "2026-03-24T15:02:21.55239+00:00"
     },
     {
-      "id": "aa0c06e1-90b1-4694-b3fe-ba4bdb9c346f",
-      "person_id": "e5a99cc4-4188-4389-81d8-078145605dff",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-20",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.140128+00:00"
-    },
-    {
-      "id": "43c28c44-9302-4262-b227-873956440584",
-      "person_id": "0fa2e09c-b799-4b50-8975-3207f9bee824",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-18",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.159615+00:00"
-    },
-    {
       "id": "0675f886-15e0-4f5b-96b1-b11ad82b3d4d",
       "person_id": "9f1de05f-6869-40b6-b071-550292ec2d5f",
       "job_id": "5d01e590-55ca-4cfd-bfb7-36ba35612f75",
@@ -12932,108 +11827,43 @@
       "created_at": "2026-03-24T15:02:21.584727+00:00"
     },
     {
-      "id": "015eb222-dfb6-4e55-8f2a-031b06583a11",
+      "id": "aa0c06e1-90b1-4694-b3fe-ba4bdb9c346f",
       "person_id": "e5a99cc4-4188-4389-81d8-078145605dff",
       "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-17",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.430683+00:00"
-    },
-    {
-      "id": "d4391ee5-0197-46dc-b1ce-c400b18e945d",
-      "person_id": "69e18ffa-8f76-4b44-9c73-0ec8ab449776",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-16",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.43053+00:00"
-    },
-    {
-      "id": "5cf7e1cd-5e38-4566-9656-53eea22009e5",
-      "person_id": "69e18ffa-8f76-4b44-9c73-0ec8ab449776",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
       "date": "2026-02-20",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
+      "entry1": "08:12:00",
+      "exit1": "12:16:00",
+      "entry2": "13:10:00",
+      "exit2": "20:00:00",
       "entry3": null,
       "exit3": null,
-      "created_at": "2026-03-24T19:00:42.444003+00:00"
+      "created_at": "2026-03-24T19:00:42.140128+00:00"
+    },
+    {
+      "id": "43c28c44-9302-4262-b227-873956440584",
+      "person_id": "0fa2e09c-b799-4b50-8975-3207f9bee824",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-18",
+      "entry1": "07:42:00",
+      "exit1": "12:12:00",
+      "entry2": "13:13:00",
+      "exit2": "17:11:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.159615+00:00"
     },
     {
       "id": "ce73d64e-7df1-4b01-97a1-b05a6786663a",
       "person_id": "bb6b40ca-a06a-4a95-8d30-dfa16a8f3e54",
       "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
       "date": "2026-02-20",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
+      "entry1": "08:06:00",
+      "exit1": "12:30:00",
+      "entry2": "13:27:00",
+      "exit2": "18:26:00",
       "entry3": null,
       "exit3": null,
       "created_at": "2026-03-24T19:00:42.45415+00:00"
-    },
-    {
-      "id": "463edba2-7d7a-4934-ac65-748a3610d2c5",
-      "person_id": "8abc01ff-ae12-4956-88ec-0e6da2b8539b",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-15",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.468601+00:00"
-    },
-    {
-      "id": "ad14c0ef-b709-4d92-8bcc-101add9ad90c",
-      "person_id": "64f498b8-5ac3-467f-abf0-c5adf9a67e90",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-22",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.487321+00:00"
-    },
-    {
-      "id": "effcfffa-f8a3-4c95-b8a9-a62603077c3c",
-      "person_id": "64f498b8-5ac3-467f-abf0-c5adf9a67e90",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-21",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.492739+00:00"
-    },
-    {
-      "id": "f963c840-ef58-4ff6-a29b-e9c612a9f4f0",
-      "person_id": "e5a99cc4-4188-4389-81d8-078145605dff",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-19",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.5024+00:00"
     },
     {
       "id": "9b79fe12-12ad-43ba-8280-dd0c604a4e4f",
@@ -13062,6 +11892,32 @@
       "created_at": "2026-03-24T19:00:42.126104+00:00"
     },
     {
+      "id": "463edba2-7d7a-4934-ac65-748a3610d2c5",
+      "person_id": "8abc01ff-ae12-4956-88ec-0e6da2b8539b",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-15",
+      "entry1": "08:01:00",
+      "exit1": "12:19:00",
+      "entry2": "13:08:00",
+      "exit2": "16:37:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.468601+00:00"
+    },
+    {
+      "id": "253e2473-0766-4692-9ea6-8845f6709302",
+      "person_id": "9f1de05f-6869-40b6-b071-550292ec2d5f",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-17",
+      "entry1": "07:51:00",
+      "exit1": "12:25:00",
+      "entry2": "13:00:00",
+      "exit2": "18:04:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.0675+00:00"
+    },
+    {
       "id": "6bb1a44e-a845-4e6f-a4a9-a04e150175a4",
       "person_id": "8abc01ff-ae12-4956-88ec-0e6da2b8539b",
       "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
@@ -13088,6 +11944,19 @@
       "created_at": "2026-03-24T19:00:42.446228+00:00"
     },
     {
+      "id": "3b9c87e6-3d6f-46d0-baab-b44cf94b06c9",
+      "person_id": "3d68740a-c58d-4af9-b422-12bffb493a0a",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-15",
+      "entry1": "07:57:00",
+      "exit1": "12:08:00",
+      "entry2": "13:17:00",
+      "exit2": "18:04:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:41.851206+00:00"
+    },
+    {
       "id": "e7c77480-fde6-4542-9a2d-4fd6eedb9f60",
       "person_id": "bb6b40ca-a06a-4a95-8d30-dfa16a8f3e54",
       "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
@@ -13099,6 +11968,32 @@
       "entry3": null,
       "exit3": null,
       "created_at": "2026-03-24T19:00:42.061956+00:00"
+    },
+    {
+      "id": "f2d554d2-e75b-49ce-bffd-f07a91c76d5d",
+      "person_id": "fa0eafa5-d5f7-455a-ae5e-604cdecfc3a7",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-16",
+      "entry1": "07:44:00",
+      "exit1": "12:11:00",
+      "entry2": "13:09:00",
+      "exit2": "19:01:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:41.795651+00:00"
+    },
+    {
+      "id": "ad14c0ef-b709-4d92-8bcc-101add9ad90c",
+      "person_id": "64f498b8-5ac3-467f-abf0-c5adf9a67e90",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-22",
+      "entry1": "08:03:00",
+      "exit1": "12:58:00",
+      "entry2": "14:06:00",
+      "exit2": "23:06:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.487321+00:00"
     },
     {
       "id": "977ae3ba-76ba-45e3-93f5-485b89d25d03",
@@ -13153,19 +12048,6 @@
       "created_at": "2026-03-24T20:25:39.68071+00:00"
     },
     {
-      "id": "96b92586-286f-4dfd-8f33-dc26301590d4",
-      "person_id": "22d45fa5-1f4a-43fe-98dd-b4829c56aae0",
-      "job_id": "50368021-f93e-4d0d-a0f1-d8c5f2ccf832",
-      "date": "2026-02-23",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T20:25:39.722292+00:00"
-    },
-    {
       "id": "86822d3b-f2fb-4db9-bd3c-29817ad14d7f",
       "person_id": "22d45fa5-1f4a-43fe-98dd-b4829c56aae0",
       "job_id": "50368021-f93e-4d0d-a0f1-d8c5f2ccf832",
@@ -13216,6 +12098,19 @@
       "entry3": null,
       "exit3": null,
       "created_at": "2026-03-24T20:25:40.028103+00:00"
+    },
+    {
+      "id": "015eb222-dfb6-4e55-8f2a-031b06583a11",
+      "person_id": "e5a99cc4-4188-4389-81d8-078145605dff",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-17",
+      "entry1": "08:08:00",
+      "exit1": "12:26:00",
+      "entry2": "13:07:00",
+      "exit2": "18:40:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.430683+00:00"
     },
     {
       "id": "4bf74951-5205-41b6-8424-231b7e780e5a",
@@ -13465,6 +12360,110 @@
       "created_at": "2026-03-24T20:54:25.172322+00:00"
     },
     {
+      "id": "ad892031-25ef-40ad-9cc2-65a2f907be58",
+      "person_id": "ff61771e-2f81-43ac-a729-e2a8a3e1e49b",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-19",
+      "entry1": "08:05:00",
+      "exit1": "13:04:00",
+      "entry2": "14:02:00",
+      "exit2": "18:34:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.019321+00:00"
+    },
+    {
+      "id": "c693cd08-33ff-493f-86b6-e502b9668a12",
+      "person_id": "fa0eafa5-d5f7-455a-ae5e-604cdecfc3a7",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-15",
+      "entry1": "07:59:00",
+      "exit1": "12:11:00",
+      "entry2": "13:10:00",
+      "exit2": "18:12:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:41.846797+00:00"
+    },
+    {
+      "id": "5cf7e1cd-5e38-4566-9656-53eea22009e5",
+      "person_id": "69e18ffa-8f76-4b44-9c73-0ec8ab449776",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-20",
+      "entry1": "08:22:00",
+      "exit1": "12:30:00",
+      "entry2": "13:16:00",
+      "exit2": "18:02:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.444003+00:00"
+    },
+    {
+      "id": "f963c840-ef58-4ff6-a29b-e9c612a9f4f0",
+      "person_id": "e5a99cc4-4188-4389-81d8-078145605dff",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-19",
+      "entry1": "08:07:00",
+      "exit1": "12:24:00",
+      "entry2": "13:20:00",
+      "exit2": "19:30:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.5024+00:00"
+    },
+    {
+      "id": "d4391ee5-0197-46dc-b1ce-c400b18e945d",
+      "person_id": "69e18ffa-8f76-4b44-9c73-0ec8ab449776",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-16",
+      "entry1": "07:55:00",
+      "exit1": "12:11:00",
+      "entry2": "13:06:00",
+      "exit2": "19:00:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.43053+00:00"
+    },
+    {
+      "id": "7a5619f5-f5a8-4d20-9302-9fefb070baa5",
+      "person_id": "9f1de05f-6869-40b6-b071-550292ec2d5f",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-20",
+      "entry1": "08:00:00",
+      "exit1": "12:01:00",
+      "entry2": "13:10:00",
+      "exit2": "20:01:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.093462+00:00"
+    },
+    {
+      "id": "effcfffa-f8a3-4c95-b8a9-a62603077c3c",
+      "person_id": "64f498b8-5ac3-467f-abf0-c5adf9a67e90",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-21",
+      "entry1": "08:16:00",
+      "exit1": "12:06:00",
+      "entry2": "12:04:00",
+      "exit2": "20:01:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.492739+00:00"
+    },
+    {
+      "id": "96b92586-286f-4dfd-8f33-dc26301590d4",
+      "person_id": "22d45fa5-1f4a-43fe-98dd-b4829c56aae0",
+      "job_id": "50368021-f93e-4d0d-a0f1-d8c5f2ccf832",
+      "date": "2026-02-23",
+      "entry1": "08:05:00",
+      "exit1": "12:42:00",
+      "entry2": "13:45:00",
+      "exit2": "17:44:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T20:25:39.722292+00:00"
+    },
+    {
       "id": "ba024551-e5bf-40d0-aac7-29ba12ea7378",
       "person_id": "3c896e73-b1fa-4aed-9291-2613230f3afc",
       "job_id": "4aa2779f-01af-4be3-830f-a5f1203c820c",
@@ -13491,32 +12490,6 @@
       "created_at": "2026-03-24T15:06:01.356822+00:00"
     },
     {
-      "id": "5db64aa3-a899-494b-9e2d-8d5983766561",
-      "person_id": "e9d2823c-63ea-4e4b-992f-1ea579f4140c",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-15",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:41.77684+00:00"
-    },
-    {
-      "id": "6b350943-56d7-4d28-a2c0-c2bd36581132",
-      "person_id": "8abc01ff-ae12-4956-88ec-0e6da2b8539b",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-19",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:41.97851+00:00"
-    },
-    {
       "id": "74f73c33-cb94-45d3-9fb4-d11eac2e6333",
       "person_id": "9f1de05f-6869-40b6-b071-550292ec2d5f",
       "job_id": "5d01e590-55ca-4cfd-bfb7-36ba35612f75",
@@ -13530,82 +12503,17 @@
       "created_at": "2026-03-24T15:02:21.5529+00:00"
     },
     {
-      "id": "a7da2ec7-fc1d-4f96-b000-7524b21dd530",
-      "person_id": "fa0eafa5-d5f7-455a-ae5e-604cdecfc3a7",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-18",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.059535+00:00"
-    },
-    {
-      "id": "b07d1b60-1555-4db1-90e2-a07b7807b489",
-      "person_id": "0fa2e09c-b799-4b50-8975-3207f9bee824",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-17",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.094847+00:00"
-    },
-    {
-      "id": "79c69a0c-68da-484d-9f56-623d0f34f856",
-      "person_id": "9f1de05f-6869-40b6-b071-550292ec2d5f",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-21",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.139646+00:00"
-    },
-    {
-      "id": "a359a611-1583-49e6-ba13-52872a605de1",
-      "person_id": "46059c6b-8b16-456d-a021-27cd8a3a2542",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-16",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.166224+00:00"
-    },
-    {
-      "id": "88130071-2645-4099-ae04-2365a4c71703",
-      "person_id": "69e18ffa-8f76-4b44-9c73-0ec8ab449776",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-17",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.458203+00:00"
-    },
-    {
-      "id": "cfa59bc2-fd4e-4ed6-bc6d-cad9c307062a",
+      "id": "496922ee-5352-48e1-84aa-6bac51bf1517",
       "person_id": "8abc01ff-ae12-4956-88ec-0e6da2b8539b",
       "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-16",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
+      "date": "2026-02-18",
+      "entry1": "07:05:00",
+      "exit1": "12:30:00",
+      "entry2": "13:15:00",
+      "exit2": "18:16:00",
       "entry3": null,
       "exit3": null,
-      "created_at": "2026-03-24T19:00:42.48123+00:00"
+      "created_at": "2026-03-24T19:00:42.484454+00:00"
     },
     {
       "id": "a817a59b-61fd-4f11-8072-b2b76b96ee8f",
@@ -13736,19 +12644,6 @@
       "entry3": null,
       "exit3": null,
       "created_at": "2026-03-24T19:51:17.361832+00:00"
-    },
-    {
-      "id": "5ad4f6c9-4af6-4e89-baaa-9324c1ad1651",
-      "person_id": "3e26b376-8459-46f1-99b0-43d24963081e",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-19",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:51:17.799387+00:00"
     },
     {
       "id": "7a084b84-c6f8-4b0c-971a-eb688f6a664e",
@@ -14063,6 +12958,123 @@
       "created_at": "2026-03-24T20:54:25.172945+00:00"
     },
     {
+      "id": "a359a611-1583-49e6-ba13-52872a605de1",
+      "person_id": "46059c6b-8b16-456d-a021-27cd8a3a2542",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-16",
+      "entry1": "08:21:00",
+      "exit1": "12:27:00",
+      "entry2": "13:07:00",
+      "exit2": "18:23:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.166224+00:00"
+    },
+    {
+      "id": "79c69a0c-68da-484d-9f56-623d0f34f856",
+      "person_id": "9f1de05f-6869-40b6-b071-550292ec2d5f",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-21",
+      "entry1": "08:14:00",
+      "exit1": "12:11:00",
+      "entry2": "13:10:00",
+      "exit2": "17:46:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.139646+00:00"
+    },
+    {
+      "id": "88130071-2645-4099-ae04-2365a4c71703",
+      "person_id": "69e18ffa-8f76-4b44-9c73-0ec8ab449776",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-17",
+      "entry1": "07:52:00",
+      "exit1": "12:17:00",
+      "entry2": "13:18:00",
+      "exit2": "18:40:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.458203+00:00"
+    },
+    {
+      "id": "5db64aa3-a899-494b-9e2d-8d5983766561",
+      "person_id": "e9d2823c-63ea-4e4b-992f-1ea579f4140c",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-15",
+      "entry1": "07:59:00",
+      "exit1": "12:11:00",
+      "entry2": "13:11:00",
+      "exit2": "18:09:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:41.77684+00:00"
+    },
+    {
+      "id": "cfa59bc2-fd4e-4ed6-bc6d-cad9c307062a",
+      "person_id": "8abc01ff-ae12-4956-88ec-0e6da2b8539b",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-16",
+      "entry1": "08:08:00",
+      "exit1": "12:08:00",
+      "entry2": "13:06:00",
+      "exit2": "18:16:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.48123+00:00"
+    },
+    {
+      "id": "6b350943-56d7-4d28-a2c0-c2bd36581132",
+      "person_id": "8abc01ff-ae12-4956-88ec-0e6da2b8539b",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-19",
+      "entry1": "08:28:00",
+      "exit1": "12:25:00",
+      "entry2": "13:11:00",
+      "exit2": "18:30:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:41.97851+00:00"
+    },
+    {
+      "id": "b07d1b60-1555-4db1-90e2-a07b7807b489",
+      "person_id": "0fa2e09c-b799-4b50-8975-3207f9bee824",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-17",
+      "entry1": "07:41:00",
+      "exit1": "12:10:00",
+      "entry2": "13:07:00",
+      "exit2": "18:24:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.094847+00:00"
+    },
+    {
+      "id": "5ad4f6c9-4af6-4e89-baaa-9324c1ad1651",
+      "person_id": "3e26b376-8459-46f1-99b0-43d24963081e",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-19",
+      "entry1": "08:05:00",
+      "exit1": "12:28:00",
+      "entry2": "13:27:00",
+      "exit2": "17:25:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:51:17.799387+00:00"
+    },
+    {
+      "id": "a7da2ec7-fc1d-4f96-b000-7524b21dd530",
+      "person_id": "fa0eafa5-d5f7-455a-ae5e-604cdecfc3a7",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-18",
+      "entry1": "07:51:00",
+      "exit1": "12:11:00",
+      "entry2": "13:11:00",
+      "exit2": "17:15:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.059535+00:00"
+    },
+    {
       "id": "c7d8d87c-46e3-494d-b5c0-713c9fd17368",
       "person_id": "801af781-2fbe-46e0-8fc3-df63f8c52199",
       "job_id": "4aa2779f-01af-4be3-830f-a5f1203c820c",
@@ -14087,19 +13099,6 @@
       "entry3": null,
       "exit3": null,
       "created_at": "2026-03-23T22:30:39.482857+00:00"
-    },
-    {
-      "id": "1f2b322a-9ad6-40c0-a656-d5044916542b",
-      "person_id": "801af781-2fbe-46e0-8fc3-df63f8c52199",
-      "job_id": "4aa2779f-01af-4be3-830f-a5f1203c820c",
-      "date": "2026-03-24",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-23T22:30:39.495862+00:00"
     },
     {
       "id": "acc49173-52fd-4378-bbf1-e299f2a2f347",
@@ -14193,32 +13192,6 @@
       "created_at": "2026-03-24T19:00:41.977738+00:00"
     },
     {
-      "id": "a26f1430-0da7-46cb-b7f9-d005a0b60afa",
-      "person_id": "9f1de05f-6869-40b6-b071-550292ec2d5f",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-19",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.129182+00:00"
-    },
-    {
-      "id": "00e8e90b-f445-4404-97e6-fcbd5cbdeded",
-      "person_id": "46059c6b-8b16-456d-a021-27cd8a3a2542",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-15",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.160989+00:00"
-    },
-    {
       "id": "d5b85cf0-6610-4d7b-aff2-67028be75904",
       "person_id": "801af781-2fbe-46e0-8fc3-df63f8c52199",
       "job_id": "4aa2779f-01af-4be3-830f-a5f1203c820c",
@@ -14243,19 +13216,6 @@
       "entry3": null,
       "exit3": null,
       "created_at": "2026-03-24T15:02:21.553556+00:00"
-    },
-    {
-      "id": "35ff2cbf-2515-4d06-9bfe-9ad0fdeb684e",
-      "person_id": "ff61771e-2f81-43ac-a729-e2a8a3e1e49b",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-22",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:00:42.491437+00:00"
     },
     {
       "id": "4ca6b74f-e499-458a-a719-f90ef6fc8f01",
@@ -14427,6 +13387,19 @@
       "created_at": "2026-03-24T19:00:42.060009+00:00"
     },
     {
+      "id": "35ff2cbf-2515-4d06-9bfe-9ad0fdeb684e",
+      "person_id": "ff61771e-2f81-43ac-a729-e2a8a3e1e49b",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-22",
+      "entry1": "08:02:00",
+      "exit1": "12:00:00",
+      "entry2": "13:00:00",
+      "exit2": "23:06:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.491437+00:00"
+    },
+    {
       "id": "138ca02c-45a8-4ed7-a0ee-147c06e57d50",
       "person_id": "bb6b40ca-a06a-4a95-8d30-dfa16a8f3e54",
       "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
@@ -14451,19 +13424,6 @@
       "entry3": null,
       "exit3": null,
       "created_at": "2026-03-24T19:51:17.750766+00:00"
-    },
-    {
-      "id": "b65e466e-536f-40e2-a14c-7b220109cec1",
-      "person_id": "3e26b376-8459-46f1-99b0-43d24963081e",
-      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
-      "date": "2026-02-16",
-      "entry1": null,
-      "exit1": null,
-      "entry2": null,
-      "exit2": null,
-      "entry3": null,
-      "exit3": null,
-      "created_at": "2026-03-24T19:51:17.755338+00:00"
     },
     {
       "id": "17109297-f528-45e9-9466-bd5060cea0f2",
@@ -14581,6 +13541,32 @@
       "entry3": null,
       "exit3": null,
       "created_at": "2026-03-24T20:31:49.439326+00:00"
+    },
+    {
+      "id": "a26f1430-0da7-46cb-b7f9-d005a0b60afa",
+      "person_id": "9f1de05f-6869-40b6-b071-550292ec2d5f",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-19",
+      "entry1": "00:11:00",
+      "exit1": "12:24:00",
+      "entry2": "13:19:00",
+      "exit2": "18:03:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.129182+00:00"
+    },
+    {
+      "id": "b65e466e-536f-40e2-a14c-7b220109cec1",
+      "person_id": "3e26b376-8459-46f1-99b0-43d24963081e",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-16",
+      "entry1": "08:20:00",
+      "exit1": "12:12:00",
+      "entry2": "13:12:00",
+      "exit2": "18:23:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:51:17.755338+00:00"
     },
     {
       "id": "81dae89a-1512-44bb-85f4-fce3204796f4",
@@ -14763,6 +13749,45 @@
       "entry3": null,
       "exit3": null,
       "created_at": "2026-03-24T20:54:25.078188+00:00"
+    },
+    {
+      "id": "744f0a07-0f3b-43ab-b63b-735ef4b99a3b",
+      "person_id": "3e26b376-8459-46f1-99b0-43d24963081e",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-18",
+      "entry1": "08:01:00",
+      "exit1": "12:18:00",
+      "entry2": "13:21:00",
+      "exit2": "18:11:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:51:17.753183+00:00"
+    },
+    {
+      "id": "00e8e90b-f445-4404-97e6-fcbd5cbdeded",
+      "person_id": "46059c6b-8b16-456d-a021-27cd8a3a2542",
+      "job_id": "a7dbd79a-bde5-410e-bcfa-336defa1d285",
+      "date": "2026-02-15",
+      "entry1": "08:04:00",
+      "exit1": "12:19:00",
+      "entry2": "13:08:00",
+      "exit2": "18:07:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-24T19:00:42.160989+00:00"
+    },
+    {
+      "id": "1f2b322a-9ad6-40c0-a656-d5044916542b",
+      "person_id": "801af781-2fbe-46e0-8fc3-df63f8c52199",
+      "job_id": "4aa2779f-01af-4be3-830f-a5f1203c820c",
+      "date": "2026-03-24",
+      "entry1": "08:01:00",
+      "exit1": "12:28:00",
+      "entry2": "13:29:00",
+      "exit2": "18:19:00",
+      "entry3": null,
+      "exit3": null,
+      "created_at": "2026-03-23T22:30:39.495862+00:00"
     }
   ]
 }

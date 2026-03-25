@@ -85,6 +85,7 @@ interface TimeRegistrationTabProps {
   requests?: MealRequest[];
   autoFillTravel?: boolean;
   setAutoFillTravel?: (v: boolean) => void;
+  initialJobFilter?: string;
 }
 
 const TimeRegistrationTab = ({ 
@@ -96,7 +97,8 @@ const TimeRegistrationTab = ({
   onRemoveEntry, 
   requests,
   autoFillTravel,
-  setAutoFillTravel
+  setAutoFillTravel,
+  initialJobFilter = "all"
 }: TimeRegistrationTabProps) => {
 
   const [selectedPerson, setSelectedPerson] = useState("");
@@ -115,8 +117,12 @@ const TimeRegistrationTab = ({
   // Filters
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [filterPerson, setFilterPerson] = useState("all");
-  const [filterJob, setFilterJob] = useState("all");
+  const [filterJob, setFilterJob] = useState(initialJobFilter);
   const [filterDate, setFilterDate] = useState("");
+
+  useEffect(() => {
+    if (initialJobFilter) setFilterJob(initialJobFilter);
+  }, [initialJobFilter]);
 
   const addEntry = () => {
     if (!selectedPerson || !selectedJob) return;

@@ -21,7 +21,8 @@ import {
   FileText, 
   Loader2,
   AlertCircle,
-  Settings
+  Settings,
+  Calculator
 } from "lucide-react";
 import TimeRegistrationTab from "@/components/TimeRegistrationTab";
 import MealRequestTab from "@/components/MealRequestSystem";
@@ -29,6 +30,7 @@ import FoodControlTab from "@/components/FoodControlTab";
 import DiscountsTab from "@/components/DiscountsTab";
 import PaymentTab from "@/components/PaymentTab";
 import StatementTab from "@/components/StatementTab";
+import JobCostTab from "@/components/JobCostTab";
 import { SettingsTab } from "@/components/SettingsTab";
 import { useDatabase } from "@/hooks/use-database";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -70,6 +72,14 @@ const Index = () => {
 
   const [activePage, setActivePage] = useState("horas");
   const [autoFillTravel, setAutoFillTravel] = useState(true);
+  const [jobFilter, setJobFilter] = useState("all");
+
+  // Reset filter when navigating unless it's a deep link from JobCost
+  useEffect(() => {
+    if (activePage !== "pagamento" && activePage !== "horas" && activePage !== "refeicoes" && activePage !== "descontos" && activePage !== "controle" && activePage !== "fechamento") {
+      // Keep filter
+    }
+  }, [activePage]);
 
   const isLoading = people.isLoading || jobs.isLoading || timeEntries.isLoading || mealRequests.isLoading;
   const isError = people.error || jobs.error || timeEntries.error || mealRequests.error;
@@ -125,6 +135,7 @@ const Index = () => {
             requests={mealRequestsData}
             autoFillTravel={autoFillTravel}
             setAutoFillTravel={setAutoFillTravel}
+            initialJobFilter={jobFilter}
           />
         );
       case "refeicoes":
@@ -157,6 +168,7 @@ const Index = () => {
             onRemoveConfirmation={(id) => removePaymentConfirmation.mutate(id)}
             onRemoveRequest={(id) => removeMealRequest.mutate(id)}
             onUpdateDiscountConfirmation={(conf) => updateDiscountConfirmation.mutate(conf)}
+            initialJobFilter={jobFilter}
           />
         );
       case "extrato":
@@ -180,6 +192,7 @@ const Index = () => {
             timeEntries={timeEntriesData}
             foodControl={foodControlData}
             onUpdateEntry={(entry) => updateFoodControl.mutate(entry)}
+            initialJobFilter={jobFilter}
           />
         );
       case "descontos":
@@ -193,6 +206,23 @@ const Index = () => {
             confirmations={allConfirmations}
             setConfirmations={() => {}}
             onUpdateConfirmation={(conf) => updateDiscountConfirmation.mutate(conf)}
+            initialJobFilter={jobFilter}
+          />
+        );
+      case "fechamento":
+        return (
+          <JobCostTab 
+            people={peopleData}
+            jobs={jobsData}
+            requests={mealRequestsData}
+            timeEntries={timeEntriesData}
+            foodControl={foodControlData}
+            confirmations={allConfirmations}
+            onUpdatePaymentConfirmation={(conf) => updatePaymentConfirmation.mutate(conf)}
+            onJobClick={(jobId) => {
+              setJobFilter(jobId);
+              setActivePage("pagamento");
+            }}
           />
         );
       case "configuracoes":
@@ -208,6 +238,7 @@ const Index = () => {
     { id: "pagamento", label: "Pagamento", icon: CreditCard },
     { id: "controle", label: "Controle Alimentar", icon: UtensilsCrossed },
     { id: "descontos", label: "Descontos", icon: AlertTriangle },
+    { id: "fechamento", label: "Fechamento de Jobs", icon: Calculator },
     { id: "extrato", label: "Extrato Geral", icon: FileText },
     { id: "configuracoes", label: "Configurações do Sistema", icon: Settings },
   ];

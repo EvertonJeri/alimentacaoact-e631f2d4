@@ -32,6 +32,7 @@ interface PaymentTabProps {
   onUpdateDiscountConfirmation?: (conf: DiscountConfirmation) => void;
   onRemoveConfirmation?: (id: string) => void;
   onRemoveRequest?: (id: string) => void;
+  initialJobFilter?: string;
 }
 
 const PaymentTab = ({
@@ -45,10 +46,15 @@ const PaymentTab = ({
   onUpdateDiscountConfirmation,
   onRemoveConfirmation,
   onRemoveRequest,
+  initialJobFilter = "all"
 }: PaymentTabProps) => {
 
-  const [filterJob, setFilterJob] = useState("all");
+  const [filterJob, setFilterJob] = useState(initialJobFilter);
   const [expandedRequests, setExpandedRequests] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (initialJobFilter) setFilterJob(initialJobFilter);
+  }, [initialJobFilter]);
   
   // Persistência local para evitar que recarregue e volte para 'Aplicado'
   const [applyBalanceMap, setApplyBalanceMap] = useState<Record<string, boolean>>(() => {
