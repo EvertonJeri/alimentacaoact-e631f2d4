@@ -240,17 +240,25 @@ export function calculateDayDiscount(
   
   // Regra de viagem se for o primeiro dia da solicitação. 
   // Agora só é considerada se houver uma linha correspondente no Registro de Horas (entry).
-  const isTravelDay = entry && date === req.startDate && !!req.travelTime;
-  const hasHours = entry && calcTotalMinutes(entry) > 0;
+  // Se NÃO tem registro no ponto E a data já passou (ONTEM PRA TRÁS) -> É FALTA TOTAL
+  if (!entry) {
+    if (isPast) {
+      const dCafe = dayMeals.includes("cafe") ? refCafe : 0;
+      const dAlmoco = dayMeals.includes("almoco") ? refAlmoco : 0;
+      const dJanta = dayMeals.includes("janta") ? refJanta : 0;
+      return { 
+        discountCafe: dCafe, 
+        discountAlmoco: dAlmoco, 
+        discountJanta: dJanta, 
+        total: dCafe + dAlmoco + dJanta, 
+        reason: "Falta - sem registro de horas" 
+      };
+    }
+    return { discountCafe: 0, discountAlmoco: 0, discountJanta: 0, total: 0, reason: "" };
+  }
 
-  // O desconto agora só é calculado se houver um registro correspondente no Ponto (entry)
-  // Se o ponto foi apagado, o desconto é ZERO por regra de espelhamento 1:1
-  if (!entry) return { discountCafe: 0, discountAlmoco: 0, discountJanta: 0, total: 0, reason: "" };
-
-  // LÓGICA DE LINHA FANTASMA:
-  // Só processamos o desconto se:
-  // 1. A data da linha já é passado (ontem pra trás) - Falta configurada
-  // 2. O usuário já interagiu com a linha (Digitou algum horário ou marcou IDA/VOLTA)
+  const isTravelDay = date === req.startDate && !!req.travelTime;
+  const hasHours = calcTotalMinutes(entry) > 0;
   const hasTouch = !!(entry.entry1 || entry.exit1 || entry.isTravelOut || entry.isTravelReturn || entry.isAutoFilled);
   
   if (!isPast && !hasTouch) {
