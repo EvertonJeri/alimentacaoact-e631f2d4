@@ -294,17 +294,23 @@ export function calculateDayDiscount(
 
   // Se tem controle manual (Food Control), ele se sobrepõe
   if (fc) {
+    // 1. Se pediu e NÃO comeu -> Gera DESCONTO (+ valor)
     if (dayMeals.includes("cafe") && !fc.usedCafe) discountCafe = refCafe;
-    else if (dayMeals.includes("cafe") && fc.usedCafe) discountCafe = 0;
+    // 2. Se NÃO pediu e COMEU -> Gera CRÉDITO (- valor, somando ao saldo)
+    else if (!dayMeals.includes("cafe") && fc.usedCafe) discountCafe = -refCafe;
+    else discountCafe = 0;
 
     if (dayMeals.includes("almoco") && !fc.usedAlmoco) discountAlmoco = refAlmoco;
-    else if (dayMeals.includes("almoco") && fc.usedAlmoco) discountAlmoco = 0;
+    else if (!dayMeals.includes("almoco") && fc.usedAlmoco) discountAlmoco = -refAlmoco;
+    else discountAlmoco = 0;
 
     if (dayMeals.includes("janta") && !fc.usedJanta) discountJanta = refJanta;
-    else if (dayMeals.includes("janta") && fc.usedJanta) discountJanta = 0;
+    else if (!dayMeals.includes("janta") && fc.usedJanta) discountJanta = -refJanta;
+    else discountJanta = 0;
 
     const usedAny = fc.usedCafe || fc.usedAlmoco || fc.usedJanta;
-    reason = "Ajuste via controle de alimentação (" + (usedAny ? "consumiu pacial" : "não consumiu") + ")";
+    const isExtra = (!dayMeals.includes("cafe") && fc.usedCafe) || (!dayMeals.includes("almoco") && fc.usedAlmoco) || (!dayMeals.includes("janta") && fc.usedJanta);
+    reason = "Ajuste via controle de alimentação (" + (isExtra ? "refeição extra" : (usedAny ? "consumiu parcial" : "não consumiu")) + ")";
   }
 
   const total = discountCafe + discountAlmoco + discountJanta;
