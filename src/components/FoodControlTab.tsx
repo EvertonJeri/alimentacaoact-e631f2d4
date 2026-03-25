@@ -53,7 +53,11 @@ const FoodControlTab = ({
     return requests;
   }, [requests]);
 
-  const isPersonRegistered = (id: string) => people.find((p) => p.id === id)?.isRegistered || false;
+  const isPersonRegistered = (id: string) => {
+    const p = people.find((p) => p.id === id);
+    if (!p) return false;
+    return !!(p.isRegistered || (p as any).is_registered);
+  };
 
   const rows = useMemo(() => {
     const processedKeys = new Set<string>();
@@ -127,8 +131,9 @@ const FoodControlTab = ({
     const row = rows.find((r) => r.personId === personId && r.jobId === jobId && r.date === date);
     if (!row) return;
 
+    // Atualização local imediata para o usuário ver o "check" na hora
     const updated: FoodControlEntry = {
-      id: row.id, // Ensure ID is passed
+      id: row.id,
       personId, jobId, date,
       requestedCafe: row.requestedCafe,
       requestedAlmoco: row.requestedAlmoco,
