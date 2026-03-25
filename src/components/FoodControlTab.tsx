@@ -41,6 +41,7 @@ const FoodControlTab = ({
 
   const [filterJob, setFilterJob] = useState(initialJobFilter);
   const [filterDate, setFilterDate] = useState("");
+  const [filterPerson, setFilterPerson] = useState("");
 
   useEffect(() => {
     if (initialJobFilter) setFilterJob(initialJobFilter);
@@ -149,6 +150,7 @@ const FoodControlTab = ({
   const filteredRows = rows.filter((r) => {
     if (filterJob !== "all" && r.jobId !== filterJob) return false;
     if (filterDate && r.date !== filterDate) return false;
+    if (filterPerson && filterPerson !== "all" && r.personId !== filterPerson) return false;
     return true;
   });
 
@@ -166,9 +168,23 @@ const FoodControlTab = ({
             Filtrar Job
           </label>
           <SearchableSelect
-            options={[{ value: "all", label: "Todos" }, ...jobs.map(j => ({ value: j.id, label: j.name }))]}
+            options={[{ value: "all", label: "Todos os Jobs" }, ...jobs.map(j => ({ value: j.id, label: j.name }))]}
             value={filterJob}
             onValueChange={setFilterJob}
+            placeholder="Filtrar Job"
+            className="h-8 text-xs"
+          />
+        </div>
+
+        <div className="min-w-[200px]">
+          <label className="text-2xs uppercase tracking-wider font-medium text-muted-foreground block mb-1.5">
+            Filtrar Pessoa
+          </label>
+          <SearchableSelect
+            options={[{ value: "all", label: "Todas as Pessoas" }, ...people.map(p => ({ value: p.id, label: p.name }))]}
+            value={filterPerson}
+            onValueChange={setFilterPerson}
+            placeholder="Filtrar Pessoa"
             className="h-8 text-xs"
           />
         </div>
