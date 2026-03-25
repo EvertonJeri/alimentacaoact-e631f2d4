@@ -164,7 +164,7 @@ const Index = () => {
             timeEntries={timeEntriesData}
             foodControl={foodControlData}
             confirmations={allConfirmations}
-            onUpdateConfirmation={(conf) => updatePaymentConfirmation.mutate(conf)}
+            onUpdateConfirmation={(conf) => updatePaymentConfirmation.mutateAsync(conf)}
             onRemoveConfirmation={(id) => removePaymentConfirmation.mutate(id)}
             onRemoveRequest={(id) => removeMealRequest.mutate(id)}
             onUpdateDiscountConfirmation={(conf) => updateDiscountConfirmation.mutate(conf)}

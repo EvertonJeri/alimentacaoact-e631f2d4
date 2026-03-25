@@ -129,10 +129,12 @@ const PaymentTab = ({
     return total;
   };
 
-  const confirmPayment = (id: string, type: "request" | "job", paymentDate: string) => {
-    if (type === "request") {
-      const req = requests.find(r => r.id === id);
-      if (req) {
+  const confirmPayment = async (id: string, type: "request" | "job", paymentDate: string) => {
+    try {
+      if (type === "request") {
+        const req = requests.find(r => r.id === id);
+        if (!req) return;
+
         const shouldApply = (applyBalanceMap[id] !== false);
         const currentReqBruto = calcRequestBruto(req);
         const currentReqDiscounts = getRequestDiscounts(req);
@@ -143,8 +145,9 @@ const PaymentTab = ({
 
         const personName = getPersonName(req.personId);
         const jobName = getJobName(req.jobId);
-        
-        onUpdateConfirmation({ 
+
+        // 1. Atualiza o banco de dados primeiro
+        await onUpdateConfirmation({ 
             id, 
             type, 
             paymentDate, 
@@ -153,42 +156,44 @@ const PaymentTab = ({
             appliedBalance: shouldApply ? retroBalance : 0
         });
 
-        toast.success(`Pagamento de ${personName} confirmado!`);
-
-        // Notificação opcional via WhatsApp/Teams
+        // 2. Notificação opcional via WhatsApp de forma segura
         const waMsg = `✅ *Pagamento Confirmado - Sistema ACT*\n\n👤 Funcionário: ${personName}\n🏗️ Projeto: ${jobName}\n📅 Data: ${paymentDate}\n💰 Valor: R$ ${finalValue.toFixed(2)}`;
         
-        // Pequeno delay para permitir que o toast apareça antes de abrir o popup do WA
+        // Timeout pequeno para não travar a UI enquanto o navegador lida com o popup
         setTimeout(() => {
-          if (confirm(`Deseja notificar o pagamento para ${personName} via WhatsApp?`)) {
+          if (confirm(`Pagamento confirmado! Deseja enviar o comprovante para ${personName} via WhatsApp?`)) {
             sendWhatsAppMessage(waMsg);
           }
-        }, 500);
+        }, 100);
       }
-    }
 
-    if (type === "job") {
-      const jobId = id.replace("job-", "");
-      const jobReqs = registeredRequests.filter(r => r.jobId === jobId);
-      onUpdateConfirmation({ id: `job-${jobId}`, type: 'job', paymentDate, confirmed: true });
+      if (type === "job") {
+        const jobId = id.replace("job-", "");
+        const jobReqs = registeredRequests.filter(r => r.jobId === jobId);
+        
+        await onUpdateConfirmation({ id: `job-${jobId}`, type: 'job', paymentDate, confirmed: true });
 
-      jobReqs.forEach(req => {
-        const shouldApply = (applyBalanceMap[req.id] !== false);
-        const totalW = calculatePersonBalance(req.personId, requests, foodControl, confirmations, people, timeEntries);
-        const neto = calcRequestBruto(req) - getRequestDiscounts(req);
-        const retro = totalW - neto;
+        // Atualiza todos os profissionais do job
+        for (const req of jobReqs) {
+          const shouldApply = (applyBalanceMap[req.id] !== false);
+          const totalW = calculatePersonBalance(req.personId, requests, foodControl, confirmations, people, timeEntries);
+          const neto = calcRequestBruto(req) - getRequestDiscounts(req);
+          const retro = totalW - neto;
 
-        onUpdateConfirmation({ 
-            id: req.id, 
-            type: 'request', 
-            paymentDate, 
-            confirmed: true,
-            applyBalance: shouldApply,
-            appliedBalance: shouldApply ? retro : 0
-        });
-      });
-
-      toast.success(`Pagamento integral do projeto confirmado!`);
+          await onUpdateConfirmation({ 
+              id: req.id, 
+              type: 'request', 
+              paymentDate, 
+              confirmed: true,
+              applyBalance: shouldApply,
+              appliedBalance: shouldApply ? retro : 0
+          });
+        }
+        toast.success(`Pagamento integral do projeto confirmado!`);
+      }
+    } catch (error) {
+      console.error("Erro ao confirmar pagamento:", error);
+      toast.error("Houve um erro ao processar o pagamento. Tente novamente.");
     }
   };
 
