@@ -471,14 +471,32 @@ const MealRequestSystem = ({
                     const job = jobs.find(j => j.id === selectedJob);
                     const jobName = job?.name || "";
                     const msg = `🏗️ *RESUMO DO JOB*\n\n📌 *"Job" - "${jobName}"*\n\n👥 Profissionais Ativos: ${financeSummary.count}\n💰 Valor Estimado: R$ ${financeSummary.total.toFixed(2)}\n\n_Enviado via Sistema ACT_`;
-                    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+                    
+                    if (navigator.share) {
+                        // Tenta usar a API de compartilhamento do sistema (Funciona em mobile e navegadores modernos)
+                        navigator.share({
+                            title: `Resumo - ${jobName}`,
+                            text: msg
+                        }).catch(() => {
+                           // Se cancelar ou der erro, cai no clipboard
+                           navigator.clipboard.writeText(msg);
+                           toast.success("Texto copiado! Selecione o grupo no Zap.");
+                           window.open(`https://web.whatsapp.com/`, '_blank');
+                        });
+                    } else {
+                        // Backup para desktops/navegadores antigos (Clipboard)
+                        navigator.clipboard.writeText(msg).then(() => {
+                            toast.success("Relatório copiado! Agora é só colar no grupo.");
+                            window.open(`https://web.whatsapp.com/`, '_blank');
+                        });
+                    }
                   }}
                   disabled={filtered.length === 0}
                   size="sm"
                   variant="outline"
                   className="border-green-600 text-green-700 font-black uppercase text-[10px] tracking-widest h-8 px-4 hover:bg-green-50"
                 >
-                  <Send className="h-3 w-3 mr-1.5 text-green-600" /> WhatsApp Grupo
+                  <Send className="h-3 w-3 mr-1.5 text-green-600" /> Mandar p/ Zap
                 </Button>
               </div>
             </div>
