@@ -420,6 +420,20 @@ export const useDatabase = () => {
     },
   });
 
+  const bulkInsertJobs = useMutation({
+    mutationFn: async (newJobs: { id: string; name: string }[]) => {
+      const { error } = await supabase.from("jobs").upsert(
+        newJobs.map((j) => ({ id: j.id, name: j.name })),
+        { onConflict: "id" }
+      );
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["jobs"] });
+      toast.success("Jobs importados com sucesso!");
+    },
+  });
+
   return {
     people,
     jobs,
@@ -443,5 +457,6 @@ export const useDatabase = () => {
     updateCustomHolidays,
     bulkUpsertPeople,
     clearAllJobs,
+    bulkInsertJobs,
   };
 };
