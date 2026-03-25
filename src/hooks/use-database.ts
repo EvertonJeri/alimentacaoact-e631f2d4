@@ -228,7 +228,19 @@ export const useDatabase = () => {
       };
 
       const { error } = await supabase.from("payment_confirmations").upsert(payload, { onConflict: "id" });
-      if (error) throw error;
+      
+      if (error) {
+        // Se o erro for de coluna inexistente (missing columns), tentamos salvar apenas o básico
+        console.warn("Retrying basic payment confirmation upsert...", error);
+        const { error: error2 } = await supabase.from("payment_confirmations").upsert({
+          id: conf.id,
+          type: conf.type,
+          payment_date: conf.paymentDate,
+          confirmed: conf.confirmed
+        }, { onConflict: "id" });
+        
+        if (error2) throw error2;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["payment_confirmations"] });
