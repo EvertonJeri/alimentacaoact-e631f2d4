@@ -79,8 +79,8 @@ export const sendTeamsNotification = async (title: string, message: string, colo
   }
 };
 
-export const sendWhatsAppMessage = (message: string, phoneNumber?: string) => {
-  const settings = getStoredSettings();
+export const sendWhatsAppMessage = (message: string, phoneNumber?: string, settingsOverride?: SystemSettings) => {
+  const settings = settingsOverride || getStoredSettings();
   if (!settings.enableWhatsApp) return;
 
   const target = phoneNumber || settings.managerWhatsApp;
@@ -95,8 +95,8 @@ export const sendWhatsAppMessage = (message: string, phoneNumber?: string) => {
   toast.success("📲 WhatsApp: Conversa aberta!", { duration: 3000 });
 };
 
-export const sendEmailNotification = (subject: string, body: string, emailsOverride?: string) => {
-  const settings = getStoredSettings();
+export const sendEmailNotification = (subject: string, body: string, emailsOverride?: string, settingsOverride?: SystemSettings) => {
+  const settings = settingsOverride || getStoredSettings();
   const emailTarget = emailsOverride || settings.adminEmails;
   
   if (!settings.enableEmail || !emailTarget) {
@@ -120,7 +120,7 @@ export const notifyFinancePayment = async (details: string) => {
   
   // WhatsApp para financeiro
   if (settings.enableWhatsApp && settings.financeWhatsApp) {
-    sendWhatsAppMessage(message, settings.financeWhatsApp);
+    sendWhatsAppMessage(message, settings.financeWhatsApp, settings);
   }
   
   // Email para financeiro
@@ -128,7 +128,8 @@ export const notifyFinancePayment = async (details: string) => {
     sendEmailNotification(
       "ACT - Novo Pagamento Registrado",
       details.replace(/\*/g, '').replace(/\n/g, '\r\n'),
-      settings.financeEmails
+      settings.financeEmails,
+      settings
     );
   }
 
@@ -145,14 +146,15 @@ export const notifyHRDiscounts = async (details: string) => {
   const message = `📋 *ALERTA DE DESCONTOS - RH*\n\n${details}\n\n📅 ${new Date().toLocaleString('pt-BR')}`;
   
   if (settings.enableWhatsApp && settings.hrWhatsApp) {
-    sendWhatsAppMessage(message, settings.hrWhatsApp);
+    sendWhatsAppMessage(message, settings.hrWhatsApp, settings);
   }
   
   if (settings.enableEmail && settings.hrEmails) {
     sendEmailNotification(
       "ACT - Relatório de Descontos para RH",
       details.replace(/\*/g, '').replace(/\n/g, '\r\n'),
-      settings.hrEmails
+      settings.hrEmails,
+      settings
     );
   }
 

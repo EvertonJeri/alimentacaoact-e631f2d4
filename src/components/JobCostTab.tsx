@@ -44,29 +44,25 @@ const JobCostTab = ({
   const calculateJobCost = (jobId: string) => {
     const jobRequests = requests.filter(r => r.jobId === jobId);
     let totalPaid = 0;
+    let totalPlanned = 0;
     let totalDiscount = 0;
+    let totalPlannedDiscount = 0;
 
     jobRequests.forEach(req => {
       const person = people.find(p => p.id === req.personId);
       const conf = confirmations.find(c => 'id' in c && c.confirmed && (c.id === req.id || c.id === `job-${jobId}`)) as PaymentConfirmation | undefined;
       
-      if (conf) {
-        // Calculation of paid value (crédito)
-        const dates = getDatesInRange(req.startDate, req.endDate);
-        let reqBruto = 0;
-        dates.forEach(d => {
-          const meals = req.dailyOverrides?.[d] ?? req.meals;
-          meals.forEach(m => {
-            reqBruto += getMealValue(m, d, person, req.location);
-          });
+      const dates = getDatesInRange(req.startDate, req.endDate);
+      let reqBruto = 0;
+      dates.forEach(d => {
+        const meals = req.dailyOverrides?.[d] ?? req.meals;
+        meals.forEach(m => {
+          reqBruto += getMealValue(m, d, person, req.location);
         });
-        
-        // Final total considers applied balance? The user wants "total que foi pago".
-        // In PaymentTab, finalTotal = frozenApply ? (currentReqNet + (conf?.appliedBalance || 0)) : reqBruto
-        // currentReqNet = reqBruto - discounts
-        // So finalTotal = (reqBruto - discounts + appliedBalance) OR reqBruto
-        // Let's use the actual gross value if we want to know how much the job "cost" in terms of food benefit,
-        // but the user says "pagamento - desconto = custo".
+      });
+      
+      totalPlanned += reqBruto;
+      if (conf) {
         totalPaid += reqBruto;
       }
     });
@@ -81,26 +77,32 @@ const JobCostTab = ({
       const person = people.find(p => p.id === personId);
       const personConf = confirmations.find(c => 'personId' in c && c.personId === personId && c.confirmed);
       
-      if (personConf) {
-        // Encontrar todas as solicitações desta pessoa neste job para somar os descontos de todo o período
-        const allPersonJobReqs = requests.filter(r => r.personId === personId && r.jobId === jobId);
-        
-        allPersonJobReqs.forEach(pReq => {
-          const dates = getDatesInRange(pReq.startDate, pReq.endDate);
-          dates.forEach(date => {
-              const entry = timeEntries.find(e => e.personId === personId && e.jobId === jobId && e.date === date);
-              const fc = foodControl.find(f => f.personId === personId && f.jobId === jobId && f.date === date);
-              
-              if (entry) {
-                  const dayCalc = calculateDayDiscount(pReq, date, entry, fc, people);
+      const allPersonJobReqs = requests.filter(r => r.personId === personId && r.jobId === jobId);
+      allPersonJobReqs.forEach(pReq => {
+        const dates = getDatesInRange(pReq.startDate, pReq.endDate);
+        dates.forEach(date => {
+            const entry = timeEntries.find(e => e.personId === personId && e.jobId === jobId && e.date === date);
+            const fc = foodControl.find(f => f.personId === personId && f.jobId === jobId && f.date === date);
+            
+            if (entry) {
+                const dayCalc = calculateDayDiscount(pReq, date, entry, fc, people);
+                totalPlannedDiscount += dayCalc.total;
+                if (personConf) {
                   totalDiscount += dayCalc.total;
-              }
-          });
+                }
+            }
         });
-      }
+      });
     });
 
-    return { totalPaid, totalDiscount, netCost: totalPaid - totalDiscount };
+    return { 
+      totalPaid, 
+      totalPlanned, 
+      totalDiscount, 
+      totalPlannedDiscount,
+      netCost: totalPaid - totalDiscount,
+      plannedNetCost: totalPlanned - totalPlannedDiscount
+    };
   };
 
   const handleFinishJob = (jobId: string) => {
@@ -137,11 +139,11 @@ const JobCostTab = ({
           </thead>
           <tbody className="divide-y divide-border">
             {jobs.map(job => {
-              const { totalPaid, totalDiscount, netCost } = calculateJobCost(job.id);
+              const { totalPaid, totalPlanned, totalDiscount, totalPlannedDiscount, netCost, plannedNetCost } = calculateJobCost(job.id);
               const statusConf = getJobStatus(job.id);
               const isFinished = statusConf?.confirmed;
 
-              if (totalPaid === 0 && totalDiscount === 0) return null;
+              if (totalPlanned === 0 && totalPlannedDiscount === 0) return null;
 
               return (
                 <tr key={job.id} className={`hover:bg-muted/30 transition-colors ${isFinished ? "bg-green-50/30" : ""}`}>
@@ -151,14 +153,23 @@ const JobCostTab = ({
                   >
                     {job.name}
                   </td>
-                  <td className="px-4 py-4 text-right tabular-nums text-green-600 font-medium">
-                    R$ {totalPaid.toFixed(2)}
+                  <td className="px-4 py-4 text-right tabular-nums">
+                    <div className="font-medium text-green-600">R$ {totalPaid.toFixed(2)}</div>
+                    {totalPaid < totalPlanned && (
+                      <div className="text-[10px] text-muted-foreground italic">Previsto: R$ {totalPlanned.toFixed(2)}</div>
+                    )}
                   </td>
-                  <td className="px-4 py-4 text-right tabular-nums text-destructive font-medium">
-                    - R$ {totalDiscount.toFixed(2)}
+                  <td className="px-4 py-4 text-right tabular-nums">
+                    <div className="font-medium text-destructive">- R$ {totalDiscount.toFixed(2)}</div>
+                    {totalDiscount < totalPlannedDiscount && (
+                      <div className="text-[10px] text-muted-foreground italic">Previsto: - R$ {totalPlannedDiscount.toFixed(2)}</div>
+                    )}
                   </td>
-                  <td className="px-4 py-4 text-right tabular-nums font-black text-lg tracking-tight">
-                    R$ {netCost.toFixed(2)}
+                  <td className="px-4 py-4 text-right tabular-nums">
+                    <div className="font-black text-lg tracking-tight text-primary">R$ {netCost.toFixed(2)}</div>
+                    {netCost !== plannedNetCost && (
+                      <div className="text-[10px] text-muted-foreground italic">Estimado final: R$ {plannedNetCost.toFixed(2)}</div>
+                    )}
                   </td>
                   <td className="px-4 py-4 text-center">
                     {isFinished ? (
