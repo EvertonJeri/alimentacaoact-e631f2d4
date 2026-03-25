@@ -264,15 +264,17 @@ const PaymentTab = ({
           return (
             <div key={jobId} className="rounded-xl border border-border overflow-hidden shadow-card">
               <div className="bg-muted/50 px-4 py-3 flex items-center justify-between border-b border-border">
-                <div className="flex items-center gap-3">
-                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => toggleJob(jobId)}>
-                    {expandedJobs.has(jobId) ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                  </Button>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-bold text-sm text-foreground">{getJobName(jobId)}</h3>
-                    {isJobPaid && <Badge variant="secondary" className="bg-green-500/10 text-green-600 border-green-200 py-0.5">✓ Pago ({jobConf.paymentDate})</Badge>}
+                  <div className="flex items-center gap-3">
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => toggleJob(jobId)}>
+                      {expandedJobs.has(jobId) ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                    </Button>
+                    <div className="flex flex-col">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-bold text-sm text-foreground">{getJobName(jobId)}</h3>
+                        {isJobPaid && <Badge variant="secondary" className="bg-green-500/10 text-green-600 border-green-200 py-0.5">✓ Pago ({jobConf.paymentDate})</Badge>}
+                      </div>
+                    </div>
                   </div>
-                </div>
                 {!isJobPaid ? (
                   <div className="flex items-center gap-2">
                     <Input type="date" className="h-9 text-xs w-40 px-3 flex-row-reverse" value={jobPaymentDate} onChange={(e) => updatePaymentDate(`job-${jobId}`, 'job', e.target.value)} />
@@ -318,9 +320,14 @@ const PaymentTab = ({
                             {expandedRequests.has(req.id) ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                           </Button>
                           <div>
-                            <p className="text-sm font-bold flex items-center gap-2">
+                            <p className="text-sm font-bold flex items-center flex-wrap">
                               {getPersonName(req.personId)} 
-                              {isPaid && <Badge variant="secondary" className="bg-green-500/10 text-green-600 border-green-200">✓ Pago</Badge>}
+                              {isPaid && <Badge variant="secondary" className="bg-green-500/10 text-green-600 border-green-200 ml-1">✓ Pago</Badge>}
+                              {!isPaid && totalWallet > 0.01 && (
+                                <span className="text-emerald-600 text-[10px] font-bold ml-1.5 tabular-nums">
+                                  (R$ {totalWallet.toFixed(2)} Saldo)
+                                </span>
+                              )}
                             </p>
                             <p className="text-[10px] text-muted-foreground">{req.startDate.split("-").reverse().join("/")} — {req.endDate.split("-").reverse().join("/")}</p>
                           </div>
