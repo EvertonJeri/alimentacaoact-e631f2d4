@@ -52,20 +52,23 @@ const TimeInputCell = ({
   className?: string;
 }) => {
   const [val, setVal] = useState(initialValue || "");
+  const [isFocused, setIsFocused] = useState(false);
 
-  // Sync if external value changes (e.g., from autofill button)
+  // Sync only when not focused (e.g., from autofill button)
   useEffect(() => {
-    if (initialValue !== val) {
+    if (!isFocused && initialValue !== val) {
         setVal(initialValue || "");
     }
-  }, [initialValue]);
+  }, [initialValue, isFocused]);
 
   return (
     <Input
       type="time"
       value={val}
       onChange={(e) => setVal(e.target.value)}
+      onFocus={() => setIsFocused(true)}
       onBlur={() => {
+        setIsFocused(false);
         if (val !== (initialValue || "")) {
           onCommit(val);
         }
