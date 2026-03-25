@@ -55,7 +55,11 @@ export const useDatabase = () => {
   const timeEntries = useQuery({
     queryKey: ["time_entries"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("time_entries").select("*");
+      const { data, error } = await supabase
+        .from("time_entries")
+        .select("*")
+        .order("date", { ascending: false })
+        .order("created_at", { ascending: false });
       if (error) throw error;
       return (data || []).map((e: any) => ({
         id: e.id,
@@ -277,7 +281,6 @@ export const useDatabase = () => {
       const { error } = await supabase
         .from("time_entries")
         .upsert({
-          id: entry.id,
           person_id: entry.personId,
           job_id: entry.jobId,
           date: entry.date,
@@ -287,7 +290,7 @@ export const useDatabase = () => {
           exit2: entry.exit2 || null,
           entry3: entry.entry3 || null,
           exit3: entry.exit3 || null,
-        } as any, { onConflict: "id" });
+        } as any, { onConflict: "person_id,job_id,date" });
       if (error) throw error;
     },
     onSettled: () => {
@@ -301,7 +304,6 @@ export const useDatabase = () => {
         const { error } = await supabase
           .from("time_entries")
           .upsert({
-            id: entry.id,
             person_id: entry.personId,
             job_id: entry.jobId,
             date: entry.date,
@@ -311,7 +313,7 @@ export const useDatabase = () => {
             exit2: entry.exit2 || null,
             entry3: entry.entry3 || null,
             exit3: entry.exit3 || null,
-          } as any, { onConflict: "id" });
+          } as any, { onConflict: "person_id,job_id,date" });
         if (error) throw error;
       }
     },
