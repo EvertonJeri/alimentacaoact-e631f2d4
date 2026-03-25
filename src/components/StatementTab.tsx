@@ -37,6 +37,11 @@ interface StatementDetail {
   value: number;
   jobId: string;
   projectName?: string;
+  mealsBreakdown?: {
+    cafe?: number;
+    almoco?: number;
+    janta?: number;
+  };
 }
 
 interface PersonStatement {
@@ -105,23 +110,43 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
 
         // Calculamos descontos e extras para o Job (Sempre, para manter o histórico no extrato)
         const dayCalc = calculateDayDiscount(req, date, entry || undefined, fc, people);
-        if (dayCalc.total > 0) {
-            data[key].balance -= dayCalc.total;
-            data[key].details.push({ date, type: 'desconto', reason: dayCalc.reason, value: -dayCalc.total, jobId: req.jobId, projectName });
-        }
+          if (dayCalc.total > 0) {
+              data[key].balance -= dayCalc.total;
+              data[key].details.push({ 
+                date, 
+                type: 'desconto', 
+                reason: dayCalc.reason, 
+                value: -dayCalc.total, 
+                jobId: req.jobId, 
+                projectName,
+                mealsBreakdown: {
+                    cafe: dayCalc.discountCafe > 0 ? -dayCalc.discountCafe : undefined,
+                    almoco: dayCalc.discountAlmoco > 0 ? -dayCalc.discountAlmoco : undefined,
+                    janta: dayCalc.discountJanta > 0 ? -dayCalc.discountJanta : undefined,
+                }
+              });
+          }
 
-        if (fc) {
-           (['cafe', 'almoco', 'janta'] as const).forEach(m => {
-             const used = m === 'cafe' ? fc.usedCafe : m === 'almoco' ? fc.usedAlmoco : fc.usedJanta;
-             if (used && !reqMeals.includes(m as any)) {
-               const v = getMealValue(m as any, date, person);
-               if (v > 0) {
-                 data[key].balance += v;
-                 data[key].details.push({ date, type: 'extra', reason: `${MEAL_LABELS[m]} extra`, value: v, jobId: req.jobId, projectName });
+          if (fc) {
+             (['cafe', 'almoco', 'janta'] as const).forEach(m => {
+               const used = m === 'cafe' ? fc.usedCafe : m === 'almoco' ? fc.usedAlmoco : fc.usedJanta;
+               if (used && !reqMeals.includes(m as any)) {
+                 const v = getMealValue(m as any, date, person);
+                 if (v > 0) {
+                   data[key].balance += v;
+                   data[key].details.push({ 
+                     date, 
+                     type: 'extra', 
+                     reason: `${MEAL_LABELS[m]} extra`, 
+                     value: v, 
+                     jobId: req.jobId, 
+                     projectName,
+                     mealsBreakdown: { [m]: v }
+                   });
+                 }
                }
-             }
-           });
-        }
+             });
+          }
       });
     });
 
@@ -331,12 +356,23 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
                     </div>
                     <div className="p-3 space-y-1">
                        {ps.details.map((d, i) => (
-                         <div key={i} className="flex items-center justify-between text-[11px] py-1.5 border-b border-border/50 last:border-0 px-1">
-                            <span className="text-muted-foreground tabular-nums w-16">{d.date.split("-").reverse().join("/").slice(0,5)}</span>
-                            <span className="flex-1 font-medium">{d.reason}</span>
-                            <span className={`font-black ${d.value < 0 ? 'text-destructive' : 'text-green-600'}`}>
-                              {d.value > 0 ? '+' : ''}R$ {d.value.toFixed(2)}
-                            </span>
+                         <div key={i} className="flex flex-col py-2 border-b border-border/40 last:border-0 px-2 hover:bg-muted/10 transition-colors">
+                           <div className="flex items-center justify-between text-[11px]">
+                              <div className="flex items-center gap-2">
+                                 <span className="text-muted-foreground tabular-nums font-bold">{d.date.split("-").reverse().join("/").slice(0,5)}</span>
+                                 <span className="font-semibold text-foreground uppercase tracking-tight">{d.reason}</span>
+                              </div>
+                              <span className={`font-black tabular-nums transition-colors ${d.value < 0 ? 'text-destructive' : 'text-green-600'}`}>
+                                {d.value > 0 ? '+' : ''}R$ {d.value.toFixed(2)}
+                              </span>
+                           </div>
+                           {d.mealsBreakdown && (
+                             <div className="flex gap-3 mt-1 pl-10">
+                               {d.mealsBreakdown.cafe && <span className="text-[9px] uppercase font-bold text-muted-foreground/70">Café: <span className="text-destructive tabular-nums">{d.mealsBreakdown.cafe.toFixed(2)}</span></span>}
+                               {d.mealsBreakdown.almoco && <span className="text-[9px] uppercase font-bold text-muted-foreground/70">Almoço: <span className="text-destructive tabular-nums">{d.mealsBreakdown.almoco.toFixed(2)}</span></span>}
+                               {d.mealsBreakdown.janta && <span className="text-[9px] uppercase font-bold text-muted-foreground/70">Janta: <span className="text-destructive tabular-nums">{d.mealsBreakdown.janta.toFixed(2)}</span></span>}
+                             </div>
+                           )}
                          </div>
                        ))}
                     </div>
