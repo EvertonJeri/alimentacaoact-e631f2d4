@@ -389,7 +389,34 @@ export const useDatabase = () => {
             status: isUsed ? 'consumed' : 'not_consumed'
           } as any, { onConflict: "person_id,job_id,date,meal_type" });
           
-        if (error) throw error;
+        if (error && error.code === '42P10') {
+          // Fallback se a constraint UNIQUE ainda não existir no banco do usuário
+          console.warn("Constraint de unicidade ausente. Tentando localizar ID manualmente...");
+          const { data: existing } = await supabase
+            .from("food_control")
+            .select("id")
+            .match({
+              person_id: entry.personId,
+              job_id: entry.jobId,
+              date: entry.date,
+              meal_type: mealType
+            })
+            .maybeSingle();
+
+          if (existing?.id) {
+            await supabase.from("food_control").update({ status: isUsed ? 'consumed' : 'not_consumed' }).eq("id", existing.id);
+          } else {
+            await supabase.from("food_control").insert({
+              person_id: entry.personId,
+              job_id: entry.jobId,
+              date: entry.date,
+              meal_type: mealType,
+              status: isUsed ? 'consumed' : 'not_consumed'
+            });
+          }
+        } else if (error) {
+          throw error;
+        }
       }
     },
     onMutate: async (newEntry) => {
