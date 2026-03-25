@@ -2,7 +2,7 @@ import { useState, useMemo, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SearchableSelect } from "@/components/ui/searchable-select";
-import { CheckCircle2, FileDown, Filter, Info, User, ChevronDown, ChevronUp, Eye, EyeOff, Calendar, Send } from "lucide-react";
+import { CheckCircle2, FileDown, Filter, Info, User, Users, ChevronDown, ChevronUp, Eye, EyeOff, Calendar, Send } from "lucide-react";
 import {
   type Person,
   type Job,
@@ -189,29 +189,44 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
               });
             }
             
-            // Refeições extras em outros jobs pendentes
-            if (fc) {
-              (['cafe', 'almoco', 'janta'] as const).forEach(m => {
-                const used = m === 'cafe' ? fc.usedCafe : m === 'almoco' ? fc.usedAlmoco : fc.usedJanta;
-                if (used && !reqMeals.includes(m as any)) {
-                  const v = getMealValue(m as any, d, otherPerson);
-                  if (v > 0) {
-                    ps.balance += v;
-                    ps.details.push({ date: d, type: 'extra', reason: `[Outro Job: ${otherProjectName}] ${MEAL_LABELS[m]} extra`, value: v, jobId: otherReq.jobId });
+              // Refeições extras em outros jobs pendentes
+              if (fc) {
+                (['cafe', 'almoco', 'janta'] as const).forEach(m => {
+                  const used = m === 'cafe' ? fc.usedCafe : m === 'almoco' ? fc.usedAlmoco : fc.usedJanta;
+                  if (used && !reqMeals.includes(m as any)) {
+                    const v = getMealValue(m as any, d, otherPerson);
+                    if (v > 0) {
+                      ps.balance += v;
+                      ps.details.push({ date: d, type: 'extra', reason: `[Outro Job: ${otherProjectName}] ${MEAL_LABELS[m]} extra`, value: v, jobId: otherReq.jobId });
+                    }
                   }
-                }
-              });
-            }
+                });
+              }
+            });
           });
-        });
-
+        }
         ps.totalUsed = ps.totalRequested + ps.balance;
-      }
-      return ps;
-    })
-    .filter(ps => selectedJob === "all" || ps.jobId === selectedJob)
-    .sort((a, b) => b.isPaid ? -1 : 1); // Pendentes primeiro
+        return ps;
+      })
+      .filter(ps => selectedJob === "all" || ps.jobId === selectedJob);
   }, [requests, foodControl, people, timeEntries, confirmations, selectedJob, jobs]);
+
+  // AGRUPAMENTO PARA EXIBIÇÃO
+  const { pendingStatements, paidGroups } = useMemo(() => {
+    const pending = personStatements.filter(s => !s.isPaid);
+    const paid = personStatements.filter(s => s.isPaid);
+
+    const groups: Record<string, PersonStatement[]> = {};
+    paid.forEach(s => {
+      groups[s.personId] = groups[s.personId] || [];
+      groups[s.personId].push(s);
+    });
+
+    return { 
+      pendingStatements: pending.sort((a, b) => a.endDate > b.endDate ? -1 : 1), 
+      paidGroups: groups 
+    };
+  }, [personStatements]);
 
   const togglePerson = (id: string) => {
     setExpandedPeople(prev => {
@@ -222,11 +237,17 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
     });
   };
 
-  const handleSettlePerson = (personId: string, jobId: string) => {
-    const pending = requests.filter(r => r.personId === personId && r.jobId === jobId && !getRequestConfirmation(r.id)?.confirmed);
+  const handleSettlePerson = (personId: string) => {
+    // Liquidar TODAS as solicitações pendentes desta pessoa, já que o saldo final é global
+    const pending = requests.filter(r => r.personId === personId && !getRequestConfirmation(r.id)?.confirmed);
     if (onUpdatePaymentConfirmation && pending.length > 0) {
-      pending.forEach(req => onUpdatePaymentConfirmation({ id: req.id, type: 'request', confirmed: true, paymentDate: new Date().toISOString().split("T")[0] }));
-      toast.success("Liquidado!");
+      pending.forEach(req => onUpdatePaymentConfirmation({ 
+        id: req.id, 
+        type: 'request', 
+        confirmed: true, 
+        paymentDate: new Date().toISOString().split("T")[0] 
+      }));
+      toast.success(`Liquidação completa realizada para ${getPersonName(personId)}!`);
     }
   };
 
@@ -271,127 +292,187 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
         </div>
       </div>
 
-      <div className="space-y-4">
-        {personStatements.map((ps) => {
-          const key = `${ps.personId}-${ps.jobId}`;
-          const isExpanded = expandedPeople.has(key);
-          return (
-            <Card key={key} className={`overflow-hidden ${ps.isPaid ? 'opacity-80 border-green-500/20' : 'border-border shadow-md'}`}>
-               <CardHeader className="py-3 px-4 flex-row items-center justify-between cursor-pointer space-y-0" onClick={() => togglePerson(key)}>
-                  <div className="flex items-center gap-3">
-                    <User className={`h-5 w-5 ${ps.isPaid ? 'text-green-600' : 'text-primary'}`} />
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-sm tracking-tight">{getPersonName(ps.personId)}</span>
-                        {ps.isPaid ? (
-                           <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-100 py-0 text-[10px]">PAGO</Badge>
-                        ) : (
-                           <div className="flex items-center gap-2">
-                             <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleSettlePerson(ps.personId, ps.jobId); }} className="h-6 text-[9px] font-black uppercase hover:text-green-600">Liquidar</Button>
-                             <Button 
-                               variant="ghost" 
-                               size="sm" 
-                               onClick={(e) => { 
-                                 e.stopPropagation(); 
-                                 const pName = getPersonName(ps.personId);
-                                 const jNameStr = getJobName(ps.jobId);
-                                 const detailsStr = ps.details.map(d => {
-                                    const date = d.date.split("-").reverse().join("/").slice(0,5);
-                                    let breakdown = '';
-                                    if (d.mealsBreakdown) {
-                                      const parts = [];
-                                      if (d.mealsBreakdown.cafe) parts.push(`Café: ${d.mealsBreakdown.cafe.toFixed(2)}`);
-                                      if (d.mealsBreakdown.almoco) parts.push(`Almoço: ${d.mealsBreakdown.almoco.toFixed(2)}`);
-                                      if (d.mealsBreakdown.janta) parts.push(`Janta: ${d.mealsBreakdown.janta.toFixed(2)}`);
-                                      if (parts.length > 0) breakdown = ` (${parts.join(', ')})`;
-                                    }
-                                    return `• ${date}: ${d.reason}${breakdown} [${d.value > 0 ? '+' : ''}R$ ${d.value.toFixed(2)}]`;
-                                 }).join('\n');
-                                 
-                                 const msg = `📊 *EXTRATO DE ALIMENTAÇÃO*\n\n👤 *Profissional:* ${pName}\n🏗️ *Job:* ${jNameStr}\n\n💰 *Solicitado:* R$ ${ps.totalRequested.toFixed(2)}\n⚙️ *Ajustes:* R$ ${ps.balance.toFixed(2)}\n💵 *VALOR FINAL:* R$ ${ps.totalUsed.toFixed(2)}\n\n*DETALHAMENTO:* \n${detailsStr || 'Nenhum ajuste registrado.'}\n\n_Enviado via Sistema ACT_`;
-                                 
-                                 if (navigator.share) {
-                                    navigator.share({ title: `Extrato ${pName}`, text: msg }).catch(() => {
-                                      navigator.clipboard.writeText(msg);
-                                      toast.success("Extrato copiado! Cole no grupo.");
-                                      window.open('https://web.whatsapp.com/', '_blank');
-                                    });
-                                 } else {
-                                    navigator.clipboard.writeText(msg);
-                                    toast.success("Extrato copiado! Cole no grupo.");
-                                    window.open('https://web.whatsapp.com/', '_blank');
-                                 }
-                               }} 
-                               className="h-6 text-[9px] font-black uppercase text-green-700 hover:text-green-800 hover:bg-green-50"
-                             >
-                               <Send className="h-3 w-3 mr-1" /> Zap
-                             </Button>
-                           </div>
-                        )}
+      <div className="space-y-8 pb-10">
+        {pendingStatements.length > 0 && (
+          <div className="space-y-3">
+            <h3 className="text-[10px] font-black text-muted-foreground/70 uppercase tracking-[0.2em] pl-1 flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+              Extratos em Aberto
+            </h3>
+            <div className="space-y-3">
+              {pendingStatements.map((ps) => {
+                const key = `${ps.personId}-${ps.jobId}`;
+                const isExpanded = expandedPeople.has(key);
+                
+                return (
+                  <Card key={key} className="overflow-hidden border-border shadow-sm hover:shadow-md transition-shadow">
+                    <CardHeader className="py-3 px-4 flex-row items-center justify-between cursor-pointer space-y-0" onClick={() => togglePerson(key)}>
+                      <div className="flex items-center gap-3">
+                        <User className="h-5 w-5 text-primary" />
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-sm tracking-tight">{getPersonName(ps.personId)}</span>
+                          </div>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <Badge variant="outline" className="text-[9px] h-4 bg-muted/30">{getJobName(ps.jobId)}</Badge>
+                            <span className="text-[9px] text-muted-foreground font-medium uppercase tracking-tighter">
+                              {ps.startDate.split("-").reverse().join("/")} — {ps.endDate.split("-").reverse().join("/")}
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <Badge variant="outline" className="text-[9px] h-4">{getJobName(ps.jobId)}</Badge>
-                        <span className="text-[9px] text-muted-foreground font-medium uppercase tracking-tighter">
-                          {ps.startDate.split("-").reverse().join("/")} — {ps.endDate.split("-").reverse().join("/")}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                       <p className="text-[10px] uppercase font-black text-muted-foreground/60 leading-none">Total</p>
-                       <p className={`text-lg font-black tabular-nums leading-none mt-1 ${ps.isPaid ? 'text-green-600' : 'text-foreground'}`}>
-                         R$ {ps.totalUsed.toFixed(2)}
-                       </p>
-                    </div>
-                    {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                  </div>
-               </CardHeader>
-               {isExpanded && (
-                  <CardContent className="p-0 border-t border-border bg-muted/5">
-                    <div className="grid grid-cols-3 divide-x divide-border border-b border-border bg-background">
-                       <div className="p-3 text-center">
-                          <p className="text-[10px] uppercase text-muted-foreground font-bold">Solicitado</p>
-                          <p className="text-sm font-black">R$ {ps.totalRequested.toFixed(2)}</p>
-                       </div>
-                       <div className="p-3 text-center">
-                          <p className="text-[10px] uppercase text-muted-foreground font-bold">Ajustes</p>
-                          <p className={`text-sm font-black ${ps.balance < 0 ? 'text-destructive' : 'text-green-600'}`}>
-                            {ps.isPaid ? '—' : `R$ ${ps.balance.toFixed(2)}`}
-                          </p>
-                       </div>
-                       <div className="p-3 text-center bg-primary/5">
-                          <p className="text-[10px] uppercase text-primary font-bold">Valor {ps.isPaid ? 'Pago' : 'Final'}</p>
-                          <p className="text-base font-black text-primary">R$ {ps.totalUsed.toFixed(2)}</p>
-                       </div>
-                    </div>
-                    <div className="p-3 space-y-1">
-                       {ps.details.map((d, i) => (
-                         <div key={i} className="flex flex-col py-2 border-b border-border/40 last:border-0 px-2 hover:bg-muted/10 transition-colors">
-                           <div className="flex items-center justify-between text-[11px]">
-                              <div className="flex items-center gap-2">
-                                 <span className="text-muted-foreground tabular-nums font-bold">{d.date.split("-").reverse().join("/").slice(0,5)}</span>
-                                 <span className="font-semibold text-foreground uppercase tracking-tight">{d.reason}</span>
-                              </div>
-                              <span className={`font-black tabular-nums transition-colors ${d.value < 0 ? 'text-destructive' : 'text-green-600'}`}>
-                                {d.value > 0 ? '+' : ''}R$ {d.value.toFixed(2)}
-                              </span>
+                      <div className="flex items-center gap-4">
+                         <div className="flex flex-col items-end mr-2">
+                           <div className="flex items-center gap-2 mb-1">
+                              <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleSettlePerson(ps.personId); }} className="h-6 text-[9px] font-black uppercase text-green-700 hover:bg-green-50">Liquidar Tudo</Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={(e) => { 
+                                  e.stopPropagation(); 
+                                  const pName = getPersonName(ps.personId);
+                                  const jNameStr = getJobName(ps.jobId);
+                                  const detailsStr = ps.details.map(d => {
+                                     const date = d.date.split("-").reverse().join("/").slice(0,5);
+                                     let breakdown = '';
+                                     if (d.mealsBreakdown) {
+                                       const parts = [];
+                                       if (d.mealsBreakdown.cafe) parts.push(`Café: ${d.mealsBreakdown.cafe.toFixed(2)}`);
+                                       if (d.mealsBreakdown.almoco) parts.push(`Almoço: ${d.mealsBreakdown.almoco.toFixed(2)}`);
+                                       if (d.mealsBreakdown.janta) parts.push(`Janta: ${d.mealsBreakdown.janta.toFixed(2)}`);
+                                       if (parts.length > 0) breakdown = ` (${parts.join(', ')})`;
+                                     }
+                                     return `• ${date}: ${d.reason}${breakdown} [${d.value > 0 ? '+' : ''}R$ ${d.value.toFixed(2)}]`;
+                                  }).join('\n');
+                                  
+                                  const msg = `📊 *EXTRATO DE ALIMENTAÇÃO*\n\n👤 *Profissional:* ${pName}\n🏗️ *Job:* ${jNameStr}\n\n💰 *Solicitado:* R$ ${ps.totalRequested.toFixed(2)}\n⚙️ *Ajustes:* R$ ${ps.balance.toFixed(2)}\n💵 *VALOR FINAL:* R$ ${ps.totalUsed.toFixed(2)}\n\n*DETALHAMENTO:* \n${detailsStr || 'Nenhum ajuste registrado.'}\n\n_Enviado via Sistema ACT_`;
+                                  
+                                  if (navigator.share) {
+                                     navigator.share({ title: `Extrato ${pName}`, text: msg }).catch(() => {
+                                       navigator.clipboard.writeText(msg);
+                                       toast.success("Extrato copiado!");
+                                       window.open('https://web.whatsapp.com/', '_blank');
+                                     });
+                                  } else {
+                                     navigator.clipboard.writeText(msg);
+                                     toast.success("Extrato copiado!");
+                                     window.open('https://web.whatsapp.com/', '_blank');
+                                  }
+                                }} 
+                                className="h-6 text-[9px] font-black uppercase text-green-700 hover:bg-green-50 border border-green-100"
+                              >
+                                <Send className="h-3 w-3 mr-1" /> Zap
+                              </Button>
                            </div>
-                           {d.mealsBreakdown && (
-                             <div className="flex gap-3 mt-1 pl-10">
-                               {d.mealsBreakdown.cafe && <span className="text-[9px] uppercase font-bold text-muted-foreground/70">Café: <span className="text-destructive tabular-nums">{d.mealsBreakdown.cafe.toFixed(2)}</span></span>}
-                               {d.mealsBreakdown.almoco && <span className="text-[9px] uppercase font-bold text-muted-foreground/70">Almoço: <span className="text-destructive tabular-nums">{d.mealsBreakdown.almoco.toFixed(2)}</span></span>}
-                               {d.mealsBreakdown.janta && <span className="text-[9px] uppercase font-bold text-muted-foreground/70">Janta: <span className="text-destructive tabular-nums">{d.mealsBreakdown.janta.toFixed(2)}</span></span>}
-                             </div>
-                           )}
+                           <div className="text-right">
+                              <p className="text-[10px] uppercase font-black text-muted-foreground/60 leading-none">Total</p>
+                              <p className="text-lg font-black tabular-nums leading-none mt-1">
+                                R$ {ps.totalUsed.toFixed(2)}
+                              </p>
+                           </div>
                          </div>
-                       ))}
-                    </div>
-                  </CardContent>
-               )}
-            </Card>
-          );
-        })}
+                         {isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                      </div>
+                    </CardHeader>
+                    {isExpanded && (
+                      <CardContent className="p-0 border-t border-border bg-muted/5">
+                        <div className="grid grid-cols-3 divide-x divide-border border-b border-border bg-background">
+                           <div className="p-3 text-center">
+                              <p className="text-[10px] uppercase text-muted-foreground font-bold">Solicitado</p>
+                              <p className="text-sm font-black text-foreground/80">R$ {ps.totalRequested.toFixed(2)}</p>
+                           </div>
+                           <div className="p-3 text-center">
+                              <p className="text-[10px] uppercase text-muted-foreground font-bold">Ajustes</p>
+                              <p className={`text-sm font-black ${ps.balance < 0 ? 'text-destructive' : 'text-green-600'}`}>
+                                R$ {ps.balance.toFixed(2)}
+                              </p>
+                           </div>
+                           <div className="p-3 text-center bg-primary/5">
+                              <p className="text-[10px] uppercase text-primary font-bold">Valor Final</p>
+                              <p className="text-base font-black text-primary">R$ {ps.totalUsed.toFixed(2)}</p>
+                           </div>
+                        </div>
+                        <div className="p-3 space-y-1">
+                           {ps.details.map((d, i) => (
+                             <div key={i} className="flex flex-col py-2 border-b border-border/40 last:border-0 px-2 hover:bg-muted/10 transition-colors">
+                               <div className="flex items-center justify-between text-[11px]">
+                                  <div className="flex items-center gap-2">
+                                     <span className="text-muted-foreground tabular-nums font-bold">{d.date.split("-").reverse().join("/").slice(0,5)}</span>
+                                     <span className="font-semibold text-foreground uppercase tracking-tight">{d.reason}</span>
+                                  </div>
+                                  <span className={`font-black tabular-nums transition-colors ${d.value < 0 ? 'text-destructive' : 'text-green-600'}`}>
+                                    {d.value > 0 ? '+' : ''}R$ {d.value.toFixed(2)}
+                                  </span>
+                               </div>
+                               {d.mealsBreakdown && (
+                                 <div className="flex gap-3 mt-1 pl-10">
+                                   {d.mealsBreakdown.cafe && <span className="text-[9px] uppercase font-bold text-muted-foreground/70">Café: <span className="text-destructive tabular-nums">{d.mealsBreakdown.cafe.toFixed(2)}</span></span>}
+                                   {d.mealsBreakdown.almoco && <span className="text-[9px] uppercase font-bold text-muted-foreground/70">Almoço: <span className="text-destructive tabular-nums">{d.mealsBreakdown.almoco.toFixed(2)}</span></span>}
+                                   {d.mealsBreakdown.janta && <span className="text-[9px] uppercase font-bold text-muted-foreground/70">Janta: <span className="text-destructive tabular-nums">{d.mealsBreakdown.janta.toFixed(2)}</span></span>}
+                                 </div>
+                               )}
+                             </div>
+                           ))}
+                        </div>
+                      </CardContent>
+                    )}
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {Object.entries(paidGroups).length > 0 && (
+          <div className="space-y-3 pt-6 border-t border-dashed border-border/60">
+            <h3 className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-[0.2em] pl-1 flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-green-500" />
+              Histórico de Pagamentos (Agrupado)
+            </h3>
+            <div className="space-y-2">
+              {Object.entries(paidGroups).map(([personId, statements]) => {
+                const totalPaid = statements.reduce((acc, s) => acc + s.totalUsed, 0);
+                const isExpanded = expandedPeople.has(`paid-${personId}`);
+                
+                return (
+                  <Card key={`paid-${personId}`} className="border-border/50 bg-muted/20 opacity-90 overflow-hidden">
+                    <CardHeader className="py-2 px-4 flex-row items-center justify-between cursor-pointer space-y-0" onClick={() => togglePerson(`paid-${personId}`)}>
+                      <div className="flex items-center gap-3">
+                        <Users className="h-4 w-4 text-green-600" />
+                        <div>
+                          <p className="font-bold text-xs text-foreground/80">{getPersonName(personId)}</p>
+                          <p className="text-[9px] text-muted-foreground uppercase font-medium">{statements.length} Jobs Quitados</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <p className="text-[9px] uppercase font-bold text-muted-foreground/60 leading-none">Total Pago</p>
+                          <p className="text-sm font-black text-green-700 mt-0.5">R$ {totalPaid.toFixed(2)}</p>
+                        </div>
+                        {isExpanded ? <ChevronUp className="h-3 w-3 text-muted-foreground/60" /> : <ChevronDown className="h-3 w-3 text-muted-foreground/60" />}
+                      </div>
+                    </CardHeader>
+                    {isExpanded && (
+                      <CardContent className="p-0 border-t border-border/30 bg-background/50 text-[11px]">
+                         <div className="divide-y divide-border/20">
+                            {statements.map((s, idx) => (
+                              <div key={idx} className="px-4 py-2 flex items-center justify-between hover:bg-muted/10 cursor-pointer" onClick={() => togglePerson(`${s.personId}-${s.jobId}`)}>
+                                <div>
+                                   <p className="font-bold text-muted-foreground">{getJobName(s.jobId)}</p>
+                                   <p className="text-[9px] text-muted-foreground/60">{s.startDate.split("-").reverse().join("/")} — {s.endDate.split("-").reverse().join("/")}</p>
+                                </div>
+                                <p className="font-black text-green-600">R$ {s.totalUsed.toFixed(2)}</p>
+                              </div>
+                            ))}
+                         </div>
+                      </CardContent>
+                    )}
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
