@@ -139,8 +139,8 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
         ps.totalUsed = ps.totalRequested + ps.balance;
         ps.details.push({ date: ps.endDate, type: 'pago', reason: '✅ Job Quitado / Pago', value: 0, jobId: ps.jobId });
       } else {
-        // BUSCA DETALHES DE OUTROS JOBS PARA COMPOR O SALDO
-        const otherJobsRequests = requests.filter(r => r.personId === ps.personId && r.jobId !== ps.jobId);
+        // BUSCA DETALHES DE OUTROS JOBS QUE AINDA NÃO FORAM PAGOS
+        const otherJobsRequests = requests.filter(r => r.personId === ps.personId && r.jobId !== ps.jobId && !getRequestConfirmation(r.id)?.confirmed);
         
         otherJobsRequests.forEach(otherReq => {
           const otherDates = getDatesInRange(otherReq.startDate, otherReq.endDate);
@@ -158,13 +158,13 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
               ps.details.push({ 
                 date: d, 
                 type: 'desconto', 
-                reason: `[${otherProjectName}] ${dayCalc.reason}`, 
+                reason: `[Outro Job: ${otherProjectName}] ${dayCalc.reason}`, 
                 value: -dayCalc.total, 
                 jobId: otherReq.jobId 
               });
             }
             
-            // Refeições extras em outros jobs
+            // Refeições extras em outros jobs pendentes
             if (fc) {
               (['cafe', 'almoco', 'janta'] as const).forEach(m => {
                 const used = m === 'cafe' ? fc.usedCafe : m === 'almoco' ? fc.usedAlmoco : fc.usedJanta;
@@ -172,25 +172,12 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
                   const v = getMealValue(m as any, d, otherPerson);
                   if (v > 0) {
                     ps.balance += v;
-                    ps.details.push({ date: d, type: 'extra', reason: `[${otherProjectName}] ${MEAL_LABELS[m]} extra`, value: v, jobId: otherReq.jobId });
+                    ps.details.push({ date: d, type: 'extra', reason: `[Outro Job: ${otherProjectName}] ${MEAL_LABELS[m]} extra`, value: v, jobId: otherReq.jobId });
                   }
                 }
               });
             }
           });
-
-          // Também subtrair o que já foi PAGO em outros jobs (senão o saldo fica infinito)
-          const isOtherPaid = (confirmations || []).some(c => 
-            ('id' in c && c.confirmed && (c.id === otherReq.id || c.id === `job-${otherReq.jobId}`))
-          );
-          if (isOtherPaid) {
-             const otherBruto = otherDates.reduce((acc, d) => {
-                const meals = (otherReq.dailyOverrides?.[d] ?? otherReq.meals) || [];
-                return acc + meals.reduce((sum, m) => sum + getMealValue(m, d, otherPerson), 0);
-             }, 0);
-             ps.balance -= otherBruto;
-             // Não precisamos listar o pagamento de outros jobs como linha de detalhe para não poluir
-          }
         });
 
         ps.totalUsed = ps.totalRequested + ps.balance;
