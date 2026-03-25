@@ -2,7 +2,7 @@ import { useState, useMemo, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SearchableSelect } from "@/components/ui/searchable-select";
-import { CheckCircle2, FileDown, Filter, Info, User, ChevronDown, ChevronUp, Eye, EyeOff, Calendar } from "lucide-react";
+import { CheckCircle2, FileDown, Filter, Info, User, ChevronDown, ChevronUp, Eye, EyeOff, Calendar, Send } from "lucide-react";
 import {
   type Person,
   type Job,
@@ -125,22 +125,74 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
       });
     });
 
-    // Pós-processamento para Saldo Retroativo e Congelamento de Pagos
+    requests.forEach(req => {
+      const psKey = `${req.personId}-${req.jobId}`;
+      if (!data[psKey]) return; // Já foi processado acima ou filtrado
+
+      // Se este job que estamos olhando (psKey) NÃO está pago,
+      // ele deve mostrar o histórico de débitos/créditos DE OUTROS JOBS também,
+      // mas de forma detalhada.
+    });
+
     return Object.values(data).map(ps => {
       if (ps.isPaid) {
-        // Se pago, mantemos os detalhes calculados acima, mas sinalizamos o fechamento
         ps.totalUsed = ps.totalRequested + ps.balance;
         ps.details.push({ date: ps.endDate, type: 'pago', reason: '✅ Job Quitado / Pago', value: 0, jobId: ps.jobId });
       } else {
-        // Se NÃO PAGO, injetamos o Saldo Acumulado
-        const totalWallet = calculatePersonBalance(ps.personId, requests, foodControl, confirmations, people, timeEntries);
-        const thisJobNet = ps.totalRequested + ps.balance;
-        const retro = totalWallet - thisJobNet;
+        // BUSCA DETALHES DE OUTROS JOBS PARA COMPOR O SALDO
+        const otherJobsRequests = requests.filter(r => r.personId === ps.personId && r.jobId !== ps.jobId);
+        
+        otherJobsRequests.forEach(otherReq => {
+          const otherDates = getDatesInRange(otherReq.startDate, otherReq.endDate);
+          const otherProjectName = jobs.find(j => j.id === otherReq.jobId)?.name || 'Outro Job';
+          const otherPerson = people.find(p => p.id === ps.personId);
 
-        if (Math.abs(retro) > 0.1) {
-          ps.balance += retro;
-          ps.details.push({ date: ps.startDate, type: 'anterior', reason: 'Saldo Acumulado (Outros Jobs)', value: retro, jobId: ps.jobId });
-        }
+          otherDates.forEach(d => {
+            const entry = timeEntries.find(e => e.personId === otherReq.personId && e.jobId === otherReq.jobId && e.date === d);
+            const fc = foodControl.find(f => f.personId === otherReq.personId && f.jobId === otherReq.jobId && f.date === d);
+            const reqMeals = (otherReq.dailyOverrides?.[d] ?? otherReq.meals) || [];
+
+            const dayCalc = calculateDayDiscount(otherReq, d, entry || undefined, fc, people);
+            if (dayCalc.total > 0) {
+              ps.balance -= dayCalc.total;
+              ps.details.push({ 
+                date: d, 
+                type: 'desconto', 
+                reason: `[${otherProjectName}] ${dayCalc.reason}`, 
+                value: -dayCalc.total, 
+                jobId: otherReq.jobId 
+              });
+            }
+            
+            // Refeições extras em outros jobs
+            if (fc) {
+              (['cafe', 'almoco', 'janta'] as const).forEach(m => {
+                const used = m === 'cafe' ? fc.usedCafe : m === 'almoco' ? fc.usedAlmoco : fc.usedJanta;
+                if (used && !reqMeals.includes(m as any)) {
+                  const v = getMealValue(m as any, d, otherPerson);
+                  if (v > 0) {
+                    ps.balance += v;
+                    ps.details.push({ date: d, type: 'extra', reason: `[${otherProjectName}] ${MEAL_LABELS[m]} extra`, value: v, jobId: otherReq.jobId });
+                  }
+                }
+              });
+            }
+          });
+
+          // Também subtrair o que já foi PAGO em outros jobs (senão o saldo fica infinito)
+          const isOtherPaid = (confirmations || []).some(c => 
+            ('id' in c && c.confirmed && (c.id === otherReq.id || c.id === `job-${otherReq.jobId}`))
+          );
+          if (isOtherPaid) {
+             const otherBruto = otherDates.reduce((acc, d) => {
+                const meals = (otherReq.dailyOverrides?.[d] ?? otherReq.meals) || [];
+                return acc + meals.reduce((sum, m) => sum + getMealValue(m, d, otherPerson), 0);
+             }, 0);
+             ps.balance -= otherBruto;
+             // Não precisamos listar o pagamento de outros jobs como linha de detalhe para não poluir
+          }
+        });
+
         ps.totalUsed = ps.totalRequested + ps.balance;
       }
       return ps;
@@ -197,7 +249,36 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
                         {ps.isPaid ? (
                            <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-100 py-0 text-[10px]">PAGO</Badge>
                         ) : (
-                           <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleSettlePerson(ps.personId, ps.jobId); }} className="h-6 text-[9px] font-black uppercase hover:text-green-600">Liquidar</Button>
+                           <div className="flex items-center gap-2">
+                             <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleSettlePerson(ps.personId, ps.jobId); }} className="h-6 text-[9px] font-black uppercase hover:text-green-600">Liquidar</Button>
+                             <Button 
+                               variant="ghost" 
+                               size="sm" 
+                               onClick={(e) => { 
+                                 e.stopPropagation(); 
+                                 const pName = getPersonName(ps.personId);
+                                 const jNameStr = getJobName(ps.jobId);
+                                 const detailsStr = ps.details.map(d => `• ${d.date.split("-").reverse().join("/").slice(0,5)}: ${d.reason} (${d.value > 0 ? '+' : ''}R$ ${d.value.toFixed(2)})`).join('\n');
+                                 
+                                 const msg = `📊 *EXTRATO DE ALIMENTAÇÃO*\n\n👤 *Profissional:* ${pName}\n🏗️ *Job:* ${jNameStr}\n\n💰 *Solicitado:* R$ ${ps.totalRequested.toFixed(2)}\n⚙️ *Ajustes:* R$ ${ps.balance.toFixed(2)}\n💵 *VALOR FINAL:* R$ ${ps.totalUsed.toFixed(2)}\n\n*DETALHAMENTO:* \n${detailsStr || 'Nenhum ajuste registrado.'}\n\n_Enviado via Sistema ACT_`;
+                                 
+                                 if (navigator.share) {
+                                    navigator.share({ title: `Extrato ${pName}`, text: msg }).catch(() => {
+                                      navigator.clipboard.writeText(msg);
+                                      toast.success("Extrato copiado! Cole no grupo.");
+                                      window.open('https://web.whatsapp.com/', '_blank');
+                                    });
+                                 } else {
+                                    navigator.clipboard.writeText(msg);
+                                    toast.success("Extrato copiado! Cole no grupo.");
+                                    window.open('https://web.whatsapp.com/', '_blank');
+                                 }
+                               }} 
+                               className="h-6 text-[9px] font-black uppercase text-green-700 hover:text-green-800 hover:bg-green-50"
+                             >
+                               <Send className="h-3 w-3 mr-1" /> Zap
+                             </Button>
+                           </div>
                         )}
                       </div>
                       <div className="flex items-center gap-2 mt-0.5">
