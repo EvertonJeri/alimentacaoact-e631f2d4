@@ -287,9 +287,6 @@ export const useDatabase = () => {
           exit2: entry.exit2 || null,
           entry3: entry.entry3 || null,
           exit3: entry.exit3 || null,
-          is_travel_out: entry.isTravelOut,
-          is_travel_return: entry.isTravelReturn,
-          is_auto_filled: entry.isAutoFilled,
         } as any, { onConflict: "id" });
       if (error) throw error;
     },
@@ -314,9 +311,6 @@ export const useDatabase = () => {
             exit2: entry.exit2 || null,
             entry3: entry.entry3 || null,
             exit3: entry.exit3 || null,
-            is_travel_out: entry.isTravelOut,
-            is_travel_return: entry.isTravelReturn,
-            is_auto_filled: entry.isAutoFilled,
           } as any, { onConflict: "id" });
         if (error) throw error;
       }
