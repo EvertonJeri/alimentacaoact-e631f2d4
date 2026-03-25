@@ -288,6 +288,10 @@ export function calculateDayDiscount(
 
     if (!hasHours && !isTravelDay) {
       reason = "Falta - sem registro de horas";
+      // SE NÃO TRABALHOU E NÃO VIAJOU, DESCONTA TUDO QUE FOI SOLICITADO
+      if (dayMeals.includes("cafe")) discountCafe = refCafe;
+      if (dayMeals.includes("almoco")) discountAlmoco = refAlmoco;
+      if (dayMeals.includes("janta")) discountJanta = refJanta;
     } else if (isTravelDay && !hasHours) {
       reason = `Dia de viagem (${req.transportType === "aviao" ? "Avião" : "Ônibus"}) às ${req.travelTime}`;
     } else {
