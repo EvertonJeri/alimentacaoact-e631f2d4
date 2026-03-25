@@ -103,46 +103,37 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
         const dayValue = reqMeals.reduce((acc, m) => acc + getMealValue(m, date, person), 0);
         data[key].totalRequested += dayValue;
 
-        // Se NÃO pago, calculamos descontos e extras para o Job
-        if (!isPaid) {
-          const dayCalc = calculateDayDiscount(req, date, entry || undefined, fc, people);
-          if (dayCalc.total > 0) {
-              data[key].balance -= dayCalc.total;
-              data[key].details.push({ date, type: 'desconto', reason: dayCalc.reason, value: -dayCalc.total, jobId: req.jobId, projectName });
-          }
+        // Calculamos descontos e extras para o Job (Sempre, para manter o histórico no extrato)
+        const dayCalc = calculateDayDiscount(req, date, entry || undefined, fc, people);
+        if (dayCalc.total > 0) {
+            data[key].balance -= dayCalc.total;
+            data[key].details.push({ date, type: 'desconto', reason: dayCalc.reason, value: -dayCalc.total, jobId: req.jobId, projectName });
+        }
 
-          if (fc) {
-             ['cafe', 'almoco', 'janta'].forEach(m => {
-               const used = m === 'cafe' ? fc.usedCafe : m === 'almoco' ? fc.usedAlmoco : fc.usedJanta;
-               if (used && !reqMeals.includes(m as any)) {
-                 const v = getMealValue(m as any, date, person);
-                 if (v > 0) {
-                   data[key].balance += v;
-                   data[key].details.push({ date, type: 'extra', reason: `${MEAL_LABELS[m]} extra`, value: v, jobId: req.jobId, projectName });
-                 }
+        if (fc) {
+           (['cafe', 'almoco', 'janta'] as const).forEach(m => {
+             const used = m === 'cafe' ? fc.usedCafe : m === 'almoco' ? fc.usedAlmoco : fc.usedJanta;
+             if (used && !reqMeals.includes(m as any)) {
+               const v = getMealValue(m as any, date, person);
+               if (v > 0) {
+                 data[key].balance += v;
+                 data[key].details.push({ date, type: 'extra', reason: `${MEAL_LABELS[m]} extra`, value: v, jobId: req.jobId, projectName });
                }
-             });
-          }
+             }
+           });
         }
       });
     });
 
     // Pós-processamento para Saldo Retroativo e Congelamento de Pagos
     return Object.values(data).map(ps => {
-      const conf = getRequestConfirmation(ps.jobId) || getRequestConfirmation(ps.personId); // Simplified check
-      
       if (ps.isPaid) {
-        // Se pago, mostramos o valor bruto original (como pedido pelo usuário para o caso do 598,00)
-        // A menos que tenhamos o value exato salvo. Usaremos o logic do PaymentTab: check localstorage fallback later?
-        // Aqui apenas mostramos o Bruto para manter a transparência do que foi solicitado.
-        ps.totalUsed = ps.totalRequested; 
-        ps.balance = 0;
-        ps.details = [{ date: ps.endDate, type: 'pago', reason: 'Pagamento Integral Realizado', value: ps.totalRequested, jobId: ps.jobId }];
+        // Se pago, mantemos os detalhes calculados acima, mas sinalizamos o fechamento
+        ps.totalUsed = ps.totalRequested + ps.balance;
+        ps.details.push({ date: ps.endDate, type: 'pago', reason: '✅ Job Quitado / Pago', value: 0, jobId: ps.jobId });
       } else {
-        // Se NÃO PAGO, injetamos o Saldo Acumulado (incluindo faltas de jobs passados que foram pagos mas sem descontos)
+        // Se NÃO PAGO, injetamos o Saldo Acumulado
         const totalWallet = calculatePersonBalance(ps.personId, requests, foodControl, confirmations, people, timeEntries);
-        
-        // O Saldo Retroativo é a diferença entre o que ele tem na carteira hoje e o Neto deste job
         const thisJobNet = ps.totalRequested + ps.balance;
         const retro = totalWallet - thisJobNet;
 

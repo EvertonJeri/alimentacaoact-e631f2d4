@@ -210,17 +210,10 @@ export const useDatabase = () => {
         pj_period2_payment_day: settings.pjPeriod2PaymentDay,
       };
 
-      const { error } = await supabase.from("system_settings").upsert(payload);
+      const { error } = await supabase.from("system_settings").upsert(payload, { onConflict: 'id' });
       if (error) {
-        console.warn("Retrying basic upsert...", error);
-        const { error: error2 } = await supabase.from("system_settings").upsert({
-          id: "default",
-          manager_whatsapp: settings.managerWhatsApp,
-          enable_teams: settings.enableTeams,
-          enable_whatsapp: settings.enableWhatsApp,
-          enable_email: settings.enableEmail,
-        });
-        if (error2) throw error2;
+        console.error("Error saving system settings:", error);
+        throw error;
       }
     },
     onSuccess: () => {
