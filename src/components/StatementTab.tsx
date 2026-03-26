@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef } from "react";
+import { APP_LINK } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SearchableSelect } from "@/components/ui/searchable-select";
