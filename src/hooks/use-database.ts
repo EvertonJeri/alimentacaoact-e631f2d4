@@ -21,14 +21,20 @@ export const useDatabase = () => {
     queryFn: async () => {
       const { data, error } = await supabase.from("people").select("*").order("name");
       if (error) throw error;
-      return data as Person[];
+      return (data || []).map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        department: p.department || "",
+        isRegistered: p.is_registered || false,
+        pix: p.pix || "",
+      })) as Person[];
     },
   });
 
   const jobs = useQuery({
     queryKey: ["jobs"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("jobs").select("*").order("name");
+      const { data, error } = await supabase.from("jobs").select("*").order("name").limit(10000);
       if (error) throw error;
       return data as Job[];
     },
@@ -37,7 +43,7 @@ export const useDatabase = () => {
   const requests = useQuery({
     queryKey: ["meal_requests"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("meal_requests").select("*");
+      const { data, error } = await supabase.from("meal_requests").select("*").order("start_date", { ascending: false }).limit(5000);
       if (error) throw error;
       return (data || []).map((r: any) => ({
         id: r.id,
@@ -59,7 +65,7 @@ export const useDatabase = () => {
         .from("time_entries")
         .select("*")
         .order("date", { ascending: false })
-        .order("created_at", { ascending: false });
+        .limit(5000);
       if (error) throw error;
       return (data || []).map((e: any) => ({
         id: e.id,
@@ -82,7 +88,7 @@ export const useDatabase = () => {
   const foodControl = useQuery({
     queryKey: ["food_control"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("food_control").select("*");
+      const { data, error } = await supabase.from("food_control").select("*").order("date", { ascending: false }).limit(5000);
       if (error) throw error;
       
       const grouped = (data || []).reduce((acc: any, f: any) => {
@@ -162,13 +168,16 @@ export const useDatabase = () => {
           discountAlertDate: d.discount_alert_date,
           discountAutoSend: d.discount_auto_send,
           cltAlertDay: d.clt_alert_day || 5,
+          cltAlertDay2: d.clt_alert_day2 || 20,
           pjAlertDay: d.pj_alert_day || 19,
+          pjAlertDay2: d.pj_alert_day2 || 4,
           cltPaymentDay: d.clt_payment_day || 5,
           cltAdvanceDay: d.clt_advance_day || 20,
           cltSheetCloseDay: d.clt_sheet_close_day || 20,
           pjPeriod1EndDay: d.pj_period1_end_day || 15,
           pjPeriod1PaymentDay: d.pj_period1_payment_day || 19,
           pjPeriod2PaymentDay: d.pj_period2_payment_day || 4,
+          flashCardUsers: d.flash_card_users || [],
         } as SystemSettings;
       } catch (e) {
         return DEFAULT_SETTINGS;
@@ -207,19 +216,45 @@ export const useDatabase = () => {
         discount_alert_date: settings.discountAlertDate,
         discount_auto_send: settings.discountAutoSend,
         clt_alert_day: settings.cltAlertDay,
+        clt_alert_day2: settings.cltAlertDay2,
         pj_alert_day: settings.pjAlertDay,
+        pj_alert_day2: settings.pjAlertDay2,
         clt_payment_day: settings.cltPaymentDay,
         clt_advance_day: settings.cltAdvanceDay,
         clt_sheet_close_day: settings.cltSheetCloseDay,
         pj_period1_end_day: settings.pjPeriod1EndDay,
         pj_period1_payment_day: settings.pjPeriod1PaymentDay,
         pj_period2_payment_day: settings.pjPeriod2PaymentDay,
+        flash_card_users: settings.flashCardUsers || [],
       };
 
-      const { error } = await supabase.from("system_settings").upsert(payload, { onConflict: 'id' });
-      if (error) {
-        console.error("Error saving system settings:", error);
-        throw error;
+      try {
+        const { error } = await supabase.from("system_settings").upsert(payload, { onConflict: 'id' });
+        if (error) throw error;
+      } catch (error: any) {
+        console.error("Error saving system settings, trying fallback...", error);
+        
+        // Se der erro de coluna não encontrada, tentamos enviar um payload mínimo com as colunas essenciais que sabemos que existem
+        const minPayload = {
+          id: "default",
+          teams_webhook_url: settings.teamsWebhookUrl,
+          manager_whatsapp: settings.managerWhatsApp,
+          admin_emails: settings.adminEmails,
+          admin_whatsapp: settings.adminWhatsApp,
+          enable_teams: settings.enableTeams,
+          enable_whatsapp: settings.enableWhatsApp,
+          enable_email: settings.enableEmail,
+          finance_whatsapp: settings.financeWhatsApp,
+          finance_emails: settings.financeEmails,
+          hr_whatsapp: settings.hrWhatsApp,
+          hr_emails: settings.hrEmails,
+          discount_alert_date: settings.discountAlertDate,
+          discount_auto_send: settings.discountAutoSend,
+        };
+        const { error: err2 } = await supabase.from("system_settings").upsert(minPayload, { onConflict: 'id' });
+        if (err2) {
+            throw new Error(err2.message || err2.details || JSON.stringify(err2));
+        }
       }
     },
     onSuccess: () => {
@@ -466,12 +501,29 @@ export const useDatabase = () => {
   });
 
   const bulkUpsertPeople = useMutation({
-    mutationFn: async (list: any[]) => {
-      const { error } = await supabase.from("people").upsert(list);
-      if (error) throw error;
+    mutationFn: async (list: Omit<Person, 'id'>[]) => {
+      // 1. Remove duplicatas do próprio Excel (mantém a última ocorrência)
+      const uniqueList = Array.from(
+        new Map(list.map(p => [p.name.toLowerCase().trim(), p])).values()
+      );
+
+      const toUpsert = uniqueList.map(person => ({
+        name: person.name,
+        department: person.department || 'Geral',
+        is_registered: person.isRegistered ?? false,
+        pix: person.pix || null,
+      }));
+
+      // 2. Faz o upsert direto pelo nome. Como o banco tem a constraint unique 'people_name_key', 
+      // isso atualizará corretamente os existentes e inserirá os novos, sem sofrer com o limite 
+      // de 1000 linhas de um SELECT prévio.
+      if (toUpsert.length > 0) {
+        const { error } = await supabase.from('people').upsert(toUpsert, { onConflict: 'name' });
+        if (error) throw new Error(`Erro ao salvar: ${error.message}`);
+      }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["people"] });
+      queryClient.invalidateQueries({ queryKey: ['people'] });
     },
   });
 
@@ -490,11 +542,41 @@ export const useDatabase = () => {
 
   const bulkInsertJobs = useMutation({
     mutationFn: async (newJobs: { id: string; name: string }[]) => {
-      const { error } = await supabase.from("jobs").upsert(
-        newJobs.map((j) => ({ id: j.id, name: j.name })),
-        { onConflict: "id" }
+      // O id que vem do Excel em newJobs.id é o 'Número do Job' (ex: "5246"), não é um UUID.
+      // 1. Remove duplicatas baseadas no nome.
+      const uniqueList = Array.from(
+        new Map(newJobs.map(j => [j.name.toLowerCase().trim(), j.name])).values()
       );
-      if (error) throw error;
+
+      // 2. Busca Jobs existentes
+      const { data: existing, error: fetchError } = await supabase.from("jobs").select("id, name");
+      if (fetchError) throw fetchError;
+
+      const existingMap = new Map<string, string>(
+        (existing || []).map((j: any) => [j.name.toLowerCase().trim(), j.id])
+      );
+
+      const toUpdate: any[] = [];
+      const toInsert: any[] = [];
+
+      // 3. Constrói as tabelas usando um UUID de verdade
+      for (const jobName of uniqueList) {
+        const key = jobName.toLowerCase().trim();
+        if (existingMap.has(key)) {
+          toUpdate.push({ id: existingMap.get(key), name: jobName });
+        } else {
+          toInsert.push({ id: crypto.randomUUID(), name: jobName });
+        }
+      }
+
+      if (toUpdate.length > 0) {
+        const { error } = await supabase.from("jobs").upsert(toUpdate, { onConflict: "id" });
+        if (error) throw new Error(`Erro ao atualizar jobs: ${error.message}`);
+      }
+      if (toInsert.length > 0) {
+        const { error } = await supabase.from("jobs").insert(toInsert);
+        if (error) throw new Error(`Erro ao importar jobs: ${error.message}`);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["jobs"] });

@@ -17,6 +17,7 @@ import {
   determineMealsUsed,
   getMealValue,
   isWeekendOrHoliday,
+  getActiveMeals,
 } from "@/lib/types";
 
 interface FoodControlTabProps {
@@ -48,7 +49,33 @@ const FoodControlTab = ({
   }, [initialJobFilter]);
 
   const getPersonName = (id: string) => people.find((p) => p.id === id)?.name || "—";
-  const getJobName = (id: string) => jobs.find((j) => j.id === id)?.name || "—";
+  const getJobName = (entryOrId: string | { jobId: string, personId: string, date: string }) => {
+    const id = typeof entryOrId === 'string' ? entryOrId : entryOrId.jobId;
+    if (!id) return "—";
+
+    const job = jobs.find((j) => j.id === id);
+    if (job) return job.name;
+    const matchByName = jobs.find(j => j.name.startsWith(id + " - ") || j.name === id);
+    if (matchByName) return matchByName.name;
+
+    if (typeof entryOrId !== 'string') {
+        const req = requests.find(r => r.personId === (entryOrId as any).personId && (entryOrId as any).date >= r.startDate && (entryOrId as any).date <= r.endDate);
+        if (req) {
+            const reqJob = jobs.find(j => j.id === req.jobId);
+            if (reqJob) return reqJob.name; 
+        }
+    }
+
+    if (!id.includes("-") || id.length < 30) return id;
+    return `Removido (${id.substring(0,5)})`;
+  };
+
+  const updateJobId = (entryId: string, newJobId: string) => {
+    const entry = timeEntries.find(e => e.id === entryId);
+    if (!entry) return;
+    const updated = { ...entry, jobId: newJobId };
+    onUpdateEntry(updated as any);
+  };
 
   const registeredRequests = useMemo(() => {
     return requests;
@@ -89,7 +116,8 @@ const FoodControlTab = ({
         const key = `${entry.id}`; // 1:1 com o ID do Ponto
         const existing = foodControl.find(fc => fc.id === entry.id || (fc.personId === entry.personId && fc.jobId === entry.jobId && fc.date === entry.date));
 
-        const dayMeals = req ? (req.dailyOverrides?.[entry.date] ?? req.meals) : [];
+        const personAtTime = people.find(p => p.id === entry.personId);
+        const dayMeals = req ? getActiveMeals(req, entry.date, personAtTime) : [];
         const requestedCafe = Array.isArray(dayMeals) && dayMeals.includes("cafe");
         const requestedAlmoco = Array.isArray(dayMeals) && dayMeals.includes("almoco");
         const requestedJanta = Array.isArray(dayMeals) && dayMeals.includes("janta");
@@ -232,7 +260,24 @@ const FoodControlTab = ({
               filteredRows.map((row) => (
                 <tr key={row.key} className="hover:bg-muted/30 transition-colors">
                   <td className="px-3 py-2 font-medium text-foreground whitespace-nowrap">{getPersonName(row.personId)}</td>
-                  <td className="px-3 py-2 tabular-nums text-muted-foreground whitespace-nowrap max-w-[160px] truncate">{getJobName(row.jobId)}</td>
+                  <td className="px-3 py-2 tabular-nums text-muted-foreground whitespace-nowrap max-w-[160px] truncate">
+                    {(() => {
+                        const name = getJobName(row);
+                        if (name.includes("Removido (")) {
+                          return (
+                            <Select onValueChange={(val) => updateJobId(row.id, val)}>
+                              <SelectTrigger className="h-6 text-[10px] bg-red-50 border-red-200 text-red-600 px-2 py-0">
+                                <SelectValue placeholder="Corrigir Vínculo..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {jobs.map(j => <SelectItem key={j.id} value={j.id} className="text-[10px]">{j.name}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          );
+                        }
+                        return <span>{name}</span>;
+                    })()}
+                  </td>
                   <td className="px-3 py-2 tabular-nums text-muted-foreground">{row.date?.includes("-") ? row.date.split("-").reverse().join("/") : row.date || "—"}</td>
                   
                   <td className="text-center px-1 py-2">

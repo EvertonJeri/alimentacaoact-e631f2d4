@@ -35,6 +35,7 @@ import { SettingsTab } from "@/components/SettingsTab";
 import { useDatabase } from "@/hooks/use-database";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
+import { calculatePersonBalance } from "@/lib/types";
 
 const Index = () => {
   const {
@@ -97,6 +98,8 @@ const Index = () => {
     ...(paymentConfirmations.data || [])
   ], [discountConfirmations.data, paymentConfirmations.data]);
 
+
+
   if (isLoading) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-background">
@@ -127,7 +130,7 @@ const Index = () => {
       case "horas":
         return (
           <TimeRegistrationTab
-            entries={timeEntriesData}
+            entries={timeEntriesData.slice(0, 1000)}
             onUpdateEntry={(entry) => updateTimeEntry.mutate(entry)}
             onRemoveEntry={(id) => removeTimeEntry.mutate(id)}
             people={peopleData}
@@ -143,9 +146,9 @@ const Index = () => {
           <MealRequestTab
             people={peopleData}
             jobs={jobsData}
-            requests={mealRequestsData}
-            timeEntries={timeEntriesData}
-            foodControl={foodControlData}
+            requests={mealRequestsData.slice(0, 1000)}
+            timeEntries={timeEntriesData.slice(0, 1000)}
+            foodControl={foodControlData.slice(0, 1000)}
             confirmations={allConfirmations}
             onUpdateRequest={(req) => updateMealRequest.mutate(req)}
             onRemoveRequest={(id) => removeMealRequest.mutate(id)}
@@ -167,8 +170,10 @@ const Index = () => {
             onUpdateConfirmation={(conf) => updatePaymentConfirmation.mutateAsync(conf)}
             onRemoveConfirmation={(id) => removePaymentConfirmation.mutate(id)}
             onRemoveRequest={(id) => removeMealRequest.mutate(id)}
+            onUpdateManualMealRequest={(req) => updateMealRequest.mutate(req)}
             onUpdateDiscountConfirmation={(conf) => updateDiscountConfirmation.mutate(conf)}
             initialJobFilter={jobFilter}
+            systemSettings={systemSettings.data}
           />
         );
       case "extrato":
@@ -181,6 +186,7 @@ const Index = () => {
             foodControl={foodControlData}
             confirmations={allConfirmations}
             onUpdatePaymentConfirmation={(conf) => updatePaymentConfirmation.mutate(conf)}
+            systemSettings={systemSettings.data}
           />
         );
       case "controle":
@@ -188,9 +194,9 @@ const Index = () => {
           <FoodControlTab
             people={peopleData}
             jobs={jobsData}
-            requests={mealRequestsData}
-            timeEntries={timeEntriesData}
-            foodControl={foodControlData}
+            requests={mealRequestsData.slice(0, 1000)}
+            timeEntries={timeEntriesData.slice(0, 1000)}
+            foodControl={foodControlData.slice(0, 1000)}
             onUpdateEntry={(entry) => updateFoodControl.mutate(entry)}
             initialJobFilter={jobFilter}
           />
@@ -206,6 +212,7 @@ const Index = () => {
             confirmations={allConfirmations}
             setConfirmations={() => {}}
             onUpdateConfirmation={(conf) => updateDiscountConfirmation.mutate(conf)}
+            onUpdatePaymentConfirmation={(conf) => updatePaymentConfirmation.mutate(conf)}
             initialJobFilter={jobFilter}
           />
         );

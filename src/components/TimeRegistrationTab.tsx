@@ -317,8 +317,28 @@ const TimeRegistrationTab = ({
     }));
   };
 
-  const getJobName = (id: string) =>
-    jobs.find((j) => j.id === id)?.name || "—";
+  const getJobName = (entryOrId: string | TimeEntry) => {
+    const id = typeof entryOrId === 'string' ? entryOrId : entryOrId.jobId;
+    if (!id) return "—";
+
+    const job = jobs.find((j) => j.id === id);
+    if (job) return job.name;
+
+    const matchByName = jobs.find(j => j.name.startsWith(id + " - ") || j.name === id);
+    if (matchByName) return matchByName.name;
+
+    // Recuperação Mágica (Sugerida pelo usuário): Se o job_id do ponto sumiu, mas ele fez uma Solicitação de Refeição no MESMO DIA, roubamos o Job de lá!
+    if (typeof entryOrId !== 'string') {
+        const req = requests.find(r => r.personId === entryOrId.personId && entryOrId.date >= r.startDate && entryOrId.date <= r.endDate);
+        if (req) {
+            const reqJob = jobs.find(j => j.id === req.jobId);
+            if (reqJob) return reqJob.name; // Achou pelo espelhamento da aba de Refeições!
+        }
+    }
+
+    if (!id.includes("-") || id.length < 30) return id; 
+    return `Removido (${id.substring(0,5)})`;
+  };
 
   const toggleSort = () => {
     setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
@@ -377,7 +397,7 @@ const TimeRegistrationTab = ({
       const weekday = weekdays[dateObj.getDay()];
       const formattedDate = entry.date?.includes("-") ? entry.date.split("-").reverse().join("/") : entry.date || "—";
       
-      const jobFullName = getJobName(entry.jobId);
+      const jobFullName = getJobName(entry);
       
       // Lógica de separação: "2391A - MONTAGEM SMURF"
       // Nº JOB: "2391A" (até o primeiro espaço)
@@ -611,8 +631,37 @@ const TimeRegistrationTab = ({
                         </span>
                       </div>
                     </td>
-                    <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap max-w-[180px] truncate">
-                      {getJobName(entry.jobId)}
+                    <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap max-w-[200px] truncate">
+                      {(() => {
+                        const jName = getJobName(entry);
+                        if (jName.includes("Removido (")) {
+                          return (
+                            <div className="flex items-center gap-1.5">
+                              <Select
+                                onValueChange={(newJobId) => {
+                                  // Quando o usuário selecionar o Job verdadeiro, atualizamos o TimeEntry no banco e a UI!
+                                  const updated = { ...entry, jobId: newJobId };
+                                  onUpdateEntry?.(updated);
+                                  setEntries?.((prev) => prev.map((e) => (e.id === entry.id ? updated : e)));
+                                  toast.success("Vínculo do Job corrigido para este registro!");
+                                }}
+                              >
+                                <SelectTrigger className="h-6 text-[10px] bg-red-50 border-red-200 text-red-600 px-2 py-0">
+                                  <SelectValue placeholder="Vincular Novo Job..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {(jobs || []).map(j => (
+                                    <SelectItem key={j.id} value={j.id} className="text-[10px]">
+                                      {j.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          );
+                        }
+                        return <span title={jName}>{jName}</span>;
+                      })()}
                     </td>
                     <td className="px-3 py-2 tabular-nums text-muted-foreground whitespace-nowrap">
                       <div className="flex flex-col gap-1">

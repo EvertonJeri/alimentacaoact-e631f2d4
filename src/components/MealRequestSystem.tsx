@@ -21,6 +21,8 @@ import {
   getMealValue,
   calculatePersonBalance,
   isWeekend,
+  isWeekendOrHoliday,
+  getActiveMeals,
   type FoodControlEntry,
   type TimeEntry,
   type DiscountConfirmation,
@@ -123,17 +125,45 @@ const MealRequestSystem = ({
 
     if (activeSubTab === "complement") {
       // MODO COMPLEMENTO: Busca a solicitação existente para este profissional neste job
-      const existing = requests.find(r => r.personId === personId && r.jobId === selectedJob);
+      const existing = requests.find(r => r.personId === personId && r.jobId === selectedJob && startDate >= r.startDate && startDate <= r.endDate);
       if (existing) {
-        const updatedMeals = Array.from(new Set([...existing.meals, ...meals])) as MealType[];
-        const updated: MealRequest = {
-          ...existing,
-          meals: updatedMeals,
-          isLocal: isLocal || existing.isLocal
+        const currentOverrides = { ...(existing.dailyOverrides || {}) };
+        const baseDayMeals = Array.isArray(currentOverrides[startDate]) 
+          ? (currentOverrides[startDate] as MealType[]) 
+          : [...existing.meals];
+        
+        const selectedPerson = people.find(p => p.id === personId);
+        // Ensure "almoco" cannot be added if CLT, or if they already have it
+        const finalComplementMeals = meals.filter(m => {
+          if (m === "almoco" && selectedPerson?.isRegistered) return false;
+          return !baseDayMeals.includes(m);
+        });
+
+        // Add only the new meals for that specific day
+        // Add only the new meals for that specific day
+        if (finalComplementMeals.length === 0) {
+          toast.error("O profissional já possui todas as refeições selecionadas neste dia.", { duration: 5000 });
+          return;
+        }
+
+        const newComplementRequest: MealRequest = {
+          id: crypto.randomUUID(),
+          personId: personId,
+          jobId: selectedJob,
+          startDate: startDate,
+          endDate: endDate,
+          meals: finalComplementMeals,
+          location: existing.location,
+          transportType: existing.transportType,
+          isLocal: existing.isLocal
         };
-        onUpdateRequest(updated);
+
+        onUpdateRequest(newComplementRequest);
         setPersonId("");
-        toast.success(`Complemento de refeição adicionado para ${people.find(p => p.id === personId)?.name}!`);
+        toast.success(`Complemento adicionado para ${selectedPerson?.name} no dia ${startDate.split("-").reverse().join("/")}!`);
+        return;
+      } else {
+        toast.error("Nenhuma solicitação base encontrada para este profissional neste período.", { duration: 5000 });
         return;
       }
     }
@@ -153,6 +183,8 @@ const MealRequestSystem = ({
       }
       return;
     }
+
+    const isPersonCLT = people.find(p => p.id === personId)?.isRegistered || false;
 
     const overrides: Record<string, MealType[]> = {};
     let hasOverride = false;
@@ -184,6 +216,30 @@ const MealRequestSystem = ({
       travelTime: travelTime || undefined,
       isLocal
     };
+
+    // Pós-processo: para CLT, garantir que nenhum dia útil tenha almoço
+    if (isPersonCLT) {
+      const allDates = getDatesInRange(startDate, endDate);
+      const finalOverrides = { ...(newRequest.dailyOverrides || {}) };
+      allDates.forEach(d => {
+        const dayMeals: MealType[] = Array.isArray(finalOverrides[d])
+          ? [...(finalOverrides[d] as MealType[])]
+          : [...meals];
+        const isWkndOrHol = isWeekend(d) || isHoliday(d);
+        if (!isWkndOrHol) {
+          // Dia útil: CLT não tem almoço coberto pela empresa
+          finalOverrides[d] = dayMeals.filter(m => m !== 'almoco');
+        } else {
+          // Fds/feriado: CLT tem direito a almoço, então forçamos a inclusão oficial se não tiver
+          if (!dayMeals.includes('almoco')) {
+            finalOverrides[d] = [...dayMeals, 'almoco'];
+          } else {
+            finalOverrides[d] = dayMeals;
+          }
+        }
+      });
+      newRequest.dailyOverrides = finalOverrides;
+    }
     onUpdateRequest(newRequest);
     setPersonId("");
     toast.success("Solicitação adicionada!", { duration: 5000 });
@@ -295,7 +351,19 @@ const MealRequestSystem = ({
   };
 
   const pName = (id: string) => (people || []).find(p => p.id === id)?.name || "—";
-  const jName = (id: string) => (jobs || []).find(j => j.id === id)?.name || "—";
+  const jName = (idOrReq: string | MealRequest) => {
+    const id = typeof idOrReq === 'string' ? idOrReq : idOrReq.jobId;
+    if (!id) return "—";
+
+    const job = (jobs || []).find(j => j.id === id);
+    if (job) return job.name;
+
+    const matchByName = (jobs || []).find(j => j.name.startsWith(id + " - ") || j.name === id);
+    if (matchByName) return matchByName.name;
+
+    if (!id.includes("-") || id.length < 30) return id;
+    return `Removido (${id.substring(0,5)})`;
+  };
   const fDate = (d: string) => (d && d.includes("-") ? d.split("-").reverse().join("/") : d || "—");
 
   const dayOfWeek = (d: string) => {
@@ -353,7 +421,20 @@ const MealRequestSystem = ({
                   </button>
                 </div>
                 <div className="flex items-center gap-2 text-2xs text-muted-foreground italic">
-                  <Calendar className="h-3 w-3" /> Configurando Job: {jName(selectedJob)}
+                  <Calendar className="h-3 w-3" /> Configurando Job: {(() => {
+                    const name = jName(selectedJob);
+                    if (name.includes("Removido (")) {
+                      return (
+                        <Select onValueChange={setSelectedJob}>
+                          <SelectTrigger className="h-5 text-[10px] w-[150px] bg-red-50 py-0"><SelectValue placeholder="Fix Job..." /></SelectTrigger>
+                          <SelectContent>
+                             {jobs.map(j => <SelectItem key={j.id} value={j.id}>{j.name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      );
+                    }
+                    return name;
+                  })()}
                 </div>
               </div>
               <h2 className="text-sm font-black text-foreground uppercase tracking-widest flex items-center gap-2">
@@ -368,11 +449,20 @@ const MealRequestSystem = ({
                 <SearchableSelect
                   options={(people || []).map(p => ({
                     value: p.id,
-                    label: p.isRegistered ? `(CLT) ${p.name}` : p.name,
-                    description: `${p.department || "Geral"} • ${p.isRegistered ? "CLT" : "Avulso"}`
+                    label: p.isRegistered ? `⚠️ CLT • ${p.name}` : p.name,
+                    description: `${p.department || "Geral"} • ${p.isRegistered ? "CLT (sem almoço seg-sex)" : "Avulso PJ"}`
                   }))}
                   value={personId}
-                  onValueChange={setPersonId}
+                  onValueChange={(val) => {
+                    setPersonId(val);
+                    const selectedPerson = people.find(p => p.id === val);
+                    if (selectedPerson?.isRegistered) {
+                      // CLT: nunca tem almoço no padrão (só em fds/feriado via override)
+                      setMeals(["cafe", "janta"]);
+                    } else if (activeSubTab === "normal") {
+                      setMeals(isLocal === true ? ["almoco"] : ["cafe", "almoco", "janta"]);
+                    }
+                  }}
                   placeholder="Selecione o profissional..."
                 />
                 <div className="p-3 rounded-lg border-2 border-primary/20 bg-primary/5">
@@ -386,8 +476,10 @@ const MealRequestSystem = ({
                       size="sm"
                       className="flex-1"
                       onClick={() => {
+                        const isCLT = people.find(p => p.id === personId)?.isRegistered;
                         setIsLocal(true);
-                        setMeals(["almoco"]);
+                        // CLT local: só cafe (almoço coberto pelo cartão em dias úteis)
+                        setMeals(isCLT ? ["cafe"] : ["almoco"]);
                       }}
                     >
                       ✅ Sim (só almoço)
@@ -398,8 +490,10 @@ const MealRequestSystem = ({
                       size="sm"
                       className="flex-1"
                       onClick={() => {
+                        const isCLT = people.find(p => p.id === personId)?.isRegistered;
                         setIsLocal(false);
-                        setMeals(["cafe", "almoco", "janta"]);
+                        // CLT não-local: sem almoço (só em fds/feriado depois)
+                        setMeals(isCLT ? ["cafe", "janta"] : ["cafe", "almoco", "janta"]);
                       }}
                     >
                       ❌ Não
@@ -439,29 +533,35 @@ const MealRequestSystem = ({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end pt-2">
+            <div className={`grid grid-cols-1 gap-4 items-end pt-2 ${activeSubTab === "complement" ? "md:grid-cols-2" : "md:grid-cols-5"}`}>
               <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Data Início</Label>
+                <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{activeSubTab === "complement" ? "Data do Complemento" : "Data Início"}</Label>
                 <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="h-11 bg-background" />
               </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Data Término</Label>
-                <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="h-11 bg-background" />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Transporte</Label>
-                <Select value={transportType} onValueChange={(v) => setTransportType(v as "onibus" | "aviao")}>
-                  <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="onibus">🚌 Ônibus</SelectItem>
-                    <SelectItem value="aviao">✈️ Avião</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Hora Viagem</Label>
-                <Input type="time" value={travelTime} onChange={e => setTravelTime(e.target.value)} className="h-11 bg-background" />
-              </div>
+              {activeSubTab !== "complement" && (
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Data Término</Label>
+                  <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="h-11 bg-background" />
+                </div>
+              )}
+              {activeSubTab !== "complement" && (
+                <>
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Transporte</Label>
+                    <Select value={transportType} onValueChange={(v) => setTransportType(v as "onibus" | "aviao")}>
+                      <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="onibus">🚌 Ônibus</SelectItem>
+                        <SelectItem value="aviao">✈️ Avião</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Hora Viagem</Label>
+                    <Input type="time" value={travelTime} onChange={e => setTravelTime(e.target.value)} className="h-11 bg-background" />
+                  </div>
+                </>
+              )}
               <Button
                 onClick={handleAdd}
                 disabled={!selectedJob || !personId || !startDate || !endDate || !location}
@@ -534,8 +634,8 @@ const MealRequestSystem = ({
                   const days = getDatesInRange(req.startDate, req.endDate);
                   const person = people.find(p => p.id === req.personId);
                   const totalCost = (days || []).reduce((acc, d) => {
-                    const activeMeals = (req.dailyOverrides?.[d] ?? req.meals) as MealType[];
-                    return acc + (Array.isArray(activeMeals) ? activeMeals.reduce((sum, m) => sum + getMealValue(m, d, person), 0) : 0);
+                    const activeMeals = getActiveMeals(req, d, person);
+                    return acc + (Array.isArray(activeMeals) ? activeMeals.reduce((sum, m) => sum + getMealValue(m, d, person, req.location), 0) : 0);
                   }, 0);
                   const isExpanded = expandedRequests.has(req.id);
 
@@ -553,9 +653,21 @@ const MealRequestSystem = ({
                             {person?.isRegistered && <span className="text-muted-foreground mr-1 opacity-70">(CLT)</span>}
                             {pName(req.personId)}
                           </p>
-                          <p className="text-[9px] text-muted-foreground uppercase font-medium">
-                            {person?.department || "Geral"} • {req.location || 'Local Não Definido'}
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-[9px] text-muted-foreground uppercase font-medium">
+                              {person?.department || "Geral"} • {req.location || 'Local Não Definido'}
+                            </p>
+                            {jName(req).includes("Removido (") && (
+                               <Select onValueChange={(newId) => onUpdateRequest({ ...req, jobId: newId })}>
+                                 <SelectTrigger className="h-5 text-[9px] w-[120px] bg-red-50 border-red-200 py-0">
+                                   <SelectValue placeholder="Vincular Job..." />
+                                 </SelectTrigger>
+                                 <SelectContent>
+                                   {jobs.map(j => <SelectItem key={j.id} value={j.id} className="text-[10px]">{j.name}</SelectItem>)}
+                                 </SelectContent>
+                               </Select>
+                            )}
+                          </div>
                         </div>
                         <div className="text-xs tabular-nums font-bold text-muted-foreground hidden sm:block">
                           {fDate(req.startDate)} <span className="mx-1 text-muted-foreground/30">→</span> {fDate(req.endDate)}
@@ -592,9 +704,7 @@ const MealRequestSystem = ({
                             </div>
                             <div className="divide-y divide-border/50 max-h-[400px] overflow-y-auto">
                               {(days || []).map(date => {
-                                const activeMeals: MealType[] = Array.isArray(req.dailyOverrides?.[date])
-                                  ? (req.dailyOverrides![date] as MealType[])
-                                  : [...(req.meals || [])];
+                                const activeMeals = getActiveMeals(req, date, person);
                                 const weekend = isWeekend(date);
                                 const holiday = isHoliday(date);
                                 const holidayName = holiday ? getHolidayName(date) : "";
@@ -615,19 +725,18 @@ const MealRequestSystem = ({
                                     </div>
                                     {(["cafe", "almoco", "janta"] as MealType[]).map(meal => {
                                       const val = getMealValue(meal, date, person, req.location);
-                                      const isFree = meal === "almoco" && person?.isRegistered && !isWeekendOrHol;
-                                      const isActive = isFree ? false : activeMeals.includes(meal);
+                                      const isCLTFree = meal === "almoco" && person?.isRegistered && !isWeekendOrHoliday(date);
+                                      const isActive = activeMeals.includes(meal);
                                       
                                       return (
                                         <div key={meal} className="flex flex-col items-center gap-0.5">
                                           <Checkbox
                                             checked={isActive}
                                             onCheckedChange={() => toggleDayMeal(req, date, meal)}
-                                            disabled={isFree}
                                             className="h-5 w-5"
                                           />
-                                          <span className={`text-[9px] tabular-nums ${isFree ? 'text-primary font-bold' : 'text-muted-foreground'}`}>
-                                            {isFree ? 'N/A' : (isActive ? `R$${val.toFixed(0)}` : '—')}
+                                          <span className={`text-[9px] tabular-nums ${isCLTFree ? 'text-primary font-bold' : 'text-muted-foreground'}`}>
+                                            {isCLTFree && isActive ? 'ISENTO' : (isActive ? `R$${val.toFixed(0)}` : '—')}
                                           </span>
                                         </div>
                                       );

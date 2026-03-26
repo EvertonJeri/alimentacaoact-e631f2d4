@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef } from "react";
-import { APP_LINK } from "@/lib/types";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SearchableSelect } from "@/components/ui/searchable-select";
@@ -17,6 +17,7 @@ import {
   calculatePersonBalance,
   type DiscountConfirmation,
   type PaymentConfirmation,
+  type SystemSettings,
 } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
@@ -29,6 +30,7 @@ interface StatementTabProps {
   foodControl: FoodControlEntry[];
   confirmations: (DiscountConfirmation | PaymentConfirmation)[];
   onUpdatePaymentConfirmation?: (conf: PaymentConfirmation) => void;
+  systemSettings?: SystemSettings;
 }
 
 interface StatementDetail {
@@ -43,6 +45,8 @@ interface StatementDetail {
     almoco?: number;
     janta?: number;
   };
+  discountId?: string;
+  isDiscountDone?: boolean;
 }
 
 interface PersonStatement {
@@ -50,7 +54,7 @@ interface PersonStatement {
   jobId: string;
   startDate: string;
   endDate: string;
-  isPaid: boolean;
+  isLiquidated: boolean;
   totalRequested: number;
   totalUsed: number;
   balance: number;
@@ -74,7 +78,7 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
     const processedDays = new Set<string>();
 
     (requests || []).forEach(req => {
-      const isPaid = getRequestConfirmation(req.id)?.confirmed || (confirmations || []).some(c => ('id' in c) && c.id === `job-${req.jobId}` && c.confirmed);
+      const isLiquidated = getRequestConfirmation(`stmt-${req.id}`)?.confirmed || getRequestConfirmation(`stmt-job-${req.jobId}`)?.confirmed;
       const person = people.find(p => p.id === req.personId);
       if (!person) return;
 
@@ -85,7 +89,7 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
           jobId: req.jobId,
           startDate: req.startDate || "2000-01-01",
           endDate: req.endDate || "2000-01-01",
-          isPaid: isPaid,
+          isLiquidated: isLiquidated,
           totalRequested: 0,
           totalUsed: 0,
           balance: 0,
@@ -112,7 +116,12 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
         // Calculamos descontos e extras para o Job (Sempre, para manter o histórico no extrato)
         const dayCalc = calculateDayDiscount(req, date, entry || undefined, fc, people);
           if (dayCalc.total > 0) {
-              data[key].balance -= dayCalc.total;
+              const discountId = `discount-${req.id}-${date}`;
+              const isDiscountDone = getRequestConfirmation(discountId)?.confirmed || false;
+              
+              if (!isDiscountDone) {
+                data[key].balance -= dayCalc.total;
+              }
               data[key].details.push({ 
                 date, 
                 type: 'desconto', 
@@ -124,7 +133,9 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
                     cafe: dayCalc.discountCafe > 0 ? -dayCalc.discountCafe : undefined,
                     almoco: dayCalc.discountAlmoco > 0 ? -dayCalc.discountAlmoco : undefined,
                     janta: dayCalc.discountJanta > 0 ? -dayCalc.discountJanta : undefined,
-                }
+                },
+                discountId,
+                isDiscountDone
               });
           }
 
@@ -161,12 +172,12 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
     });
 
     return Object.values(data).map(ps => {
-      if (ps.isPaid) {
+      if (ps.isLiquidated) {
         ps.totalUsed = ps.totalRequested + ps.balance;
-        ps.details.push({ date: ps.endDate, type: 'pago', reason: '✅ Job Quitado / Pago', value: 0, jobId: ps.jobId });
+        ps.details.push({ date: ps.endDate, type: 'pago', reason: '✅ Job Quitado / Liquidado', value: 0, jobId: ps.jobId });
       } else {
-        // BUSCA DETALHES DE OUTROS JOBS QUE AINDA NÃO FORAM PAGOS
-        const otherJobsRequests = requests.filter(r => r.personId === ps.personId && r.jobId !== ps.jobId && !getRequestConfirmation(r.id)?.confirmed);
+        // BUSCA DETALHES DE OUTROS JOBS QUE AINDA NÃO FORAM PAGOS/LIQUIDADOS
+        const otherJobsRequests = requests.filter(r => r.personId === ps.personId && r.jobId !== ps.jobId && !getRequestConfirmation(`stmt-${r.id}`)?.confirmed);
         
         otherJobsRequests.forEach(otherReq => {
           const otherDates = getDatesInRange(otherReq.startDate, otherReq.endDate);
@@ -180,13 +191,20 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
 
             const dayCalc = calculateDayDiscount(otherReq, d, entry || undefined, fc, people);
             if (dayCalc.total > 0) {
-              ps.balance -= dayCalc.total;
+              const discountId = `discount-${otherReq.id}-${d}`;
+              const isDiscountDone = getRequestConfirmation(discountId)?.confirmed || false;
+              
+              if (!isDiscountDone) {
+                ps.balance -= dayCalc.total;
+              }
               ps.details.push({ 
                 date: d, 
                 type: 'desconto', 
                 reason: `[Outro Job: ${otherProjectName}] ${dayCalc.reason}`, 
                 value: -dayCalc.total, 
-                jobId: otherReq.jobId 
+                jobId: otherReq.jobId,
+                discountId,
+                isDiscountDone
               });
             }
             
@@ -214,8 +232,8 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
 
   // AGRUPAMENTO PARA EXIBIÇÃO
   const { pendingStatements, paidGroups } = useMemo(() => {
-    const pending = personStatements.filter(s => !s.isPaid);
-    const paid = personStatements.filter(s => s.isPaid);
+    const pending = personStatements.filter(s => !s.isLiquidated);
+    const paid = personStatements.filter(s => s.isLiquidated);
 
     const groups: Record<string, PersonStatement[]> = {};
     paid.forEach(s => {
@@ -238,17 +256,31 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
     });
   };
 
-  const handleSettlePerson = (personId: string) => {
-    // Liquidar TODAS as solicitações pendentes desta pessoa, já que o saldo final é global
-    const pending = requests.filter(r => r.personId === personId && !getRequestConfirmation(r.id)?.confirmed);
+  const handleSettlePerson = (personId: string, jobId: string) => {
+    // Liquidar TODAS as solicitações deste job para a pessoa (já que o agrupamento é por Job e Pessoa)
+    const pending = requests.filter(r => r.personId === personId && r.jobId === jobId && !getRequestConfirmation(`stmt-${r.id}`)?.confirmed);
     if (onUpdatePaymentConfirmation && pending.length > 0) {
       pending.forEach(req => onUpdatePaymentConfirmation({ 
-        id: req.id, 
+        id: `stmt-${req.id}`, 
         type: 'request', 
         confirmed: true, 
         paymentDate: new Date().toISOString().split("T")[0] 
       }));
-      toast.success(`Liquidação completa realizada para ${getPersonName(personId)}!`);
+      toast.success(`Ajustes Liquidados para ${getPersonName(personId)} no Job ${getJobName(jobId)}!`);
+    }
+  };
+
+  const handleUndoLiquidatedJob = (personId: string, jobId: string) => {
+    // Tirar o liquidado daquela pessoa em determinado job
+    const settled = requests.filter(r => r.personId === personId && r.jobId === jobId && getRequestConfirmation(`stmt-${r.id}`)?.confirmed);
+    if (onUpdatePaymentConfirmation && settled.length > 0) {
+      settled.forEach(req => onUpdatePaymentConfirmation({ 
+        id: `stmt-${req.id}`, 
+        type: 'request', 
+        confirmed: false, 
+        paymentDate: new Date().toISOString().split("T")[0] 
+      }));
+      toast.success(`Liquidação Desfeita para ${getPersonName(personId)} no Job ${getJobName(jobId)}!`);
     }
   };
 
@@ -270,7 +302,7 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
                    const jName = jobs.find(j => j.id === selectedJob)?.name || "";
                    const totalJob = personStatements.reduce((acc, ps) => acc + ps.totalUsed, 0);
                    const list = personStatements.map(ps => `👤 *${getPersonName(ps.personId)}*: R$ ${ps.totalUsed.toFixed(2)}`).join('\n');
-                   const msg = `🏗️ *EXTRATO GERAL - JOB: ${jName}*\n\n${list}\n\n💰 *TOTAL DA MONTAGEM:* R$ ${totalJob.toFixed(2)}\n\n🔗 Acesse o sistema: ${APP_LINK}\n\n_Enviado via Sistema ACT_`;
+                   const msg = `🏗️ *EXTRATO GERAL - JOB: ${jName}*\n\n${list}\n\n💰 *TOTAL DA MONTAGEM:* R$ ${totalJob.toFixed(2)}\n\n_Enviado via Sistema ACT_`;
                    
                    if (navigator.share) {
                       navigator.share({ title: `Extrato ${jName}`, text: msg }).catch(() => {
@@ -325,7 +357,7 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
                       <div className="flex items-center gap-4">
                          <div className="flex flex-col items-end mr-2">
                            <div className="flex items-center gap-2 mb-1">
-                              <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleSettlePerson(ps.personId); }} className="h-6 text-[9px] font-black uppercase text-green-700 hover:bg-green-50">Liquidar Tudo</Button>
+                              <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleSettlePerson(ps.personId, ps.jobId); }} className="h-6 text-[9px] font-black uppercase text-green-700 hover:bg-green-50">Liquidar Ajustes</Button>
                               <Button 
                                 variant="ghost" 
                                 size="sm" 
@@ -333,20 +365,30 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
                                   e.stopPropagation(); 
                                   const pName = getPersonName(ps.personId);
                                   const jNameStr = getJobName(ps.jobId);
-                                  const detailsStr = ps.details.map(d => {
-                                     const date = d.date.split("-").reverse().join("/").slice(0,5);
-                                     let breakdown = '';
-                                     if (d.mealsBreakdown) {
+                                  const discountLines = ps.details
+                                     .filter(d => d.type === 'desconto')
+                                     .map(d => {
+                                       const date = d.date.split("-").reverse().join("/").slice(0,5);
                                        const parts = [];
-                                       if (d.mealsBreakdown.cafe) parts.push(`Café: ${d.mealsBreakdown.cafe.toFixed(2)}`);
-                                       if (d.mealsBreakdown.almoco) parts.push(`Almoço: ${d.mealsBreakdown.almoco.toFixed(2)}`);
-                                       if (d.mealsBreakdown.janta) parts.push(`Janta: ${d.mealsBreakdown.janta.toFixed(2)}`);
-                                       if (parts.length > 0) breakdown = ` (${parts.join(', ')})`;
-                                     }
-                                     return `• ${date}: ${d.reason}${breakdown} [${d.value > 0 ? '+' : ''}R$ ${d.value.toFixed(2)}]`;
-                                  }).join('\n');
-                                  
-                                  const msg = `📊 *EXTRATO DE ALIMENTAÇÃO*\n\n👤 *Profissional:* ${pName}\n🏗️ *Job:* ${jNameStr}\n\n💰 *Solicitado:* R$ ${ps.totalRequested.toFixed(2)}\n⚙️ *Ajustes:* R$ ${ps.balance.toFixed(2)}\n💵 *VALOR FINAL:* R$ ${ps.totalUsed.toFixed(2)}\n\n*DETALHAMENTO:* \n${detailsStr || 'Nenhum ajuste registrado.'}\n\n🔗 Acesse o sistema: ${APP_LINK}\n\n_Enviado via Sistema ACT_`;
+                                       if (d.mealsBreakdown && d.mealsBreakdown.cafe) parts.push("Café: R$ " + Math.abs(d.mealsBreakdown.cafe).toFixed(2));
+                                       if (d.mealsBreakdown && d.mealsBreakdown.almoco) parts.push("Almoço: R$ " + Math.abs(d.mealsBreakdown.almoco).toFixed(2));
+                                       if (d.mealsBreakdown && d.mealsBreakdown.janta) parts.push("Janta: R$ " + Math.abs(d.mealsBreakdown.janta).toFixed(2));
+                                       const breakdown = parts.length > 0 ? "\n       " + parts.join(" | ") : "";
+                                       const retirado = d.isDiscountDone ? " ✅[já retirado]" : "";
+                                       return "  • " + date + ": " + d.reason + retirado + " [-R$ " + Math.abs(d.value).toFixed(2) + "]" + breakdown;
+                                     }).join("\n");
+                                   const extraLines = ps.details
+                                     .filter(d => d.type === "extra")
+                                     .map(d => {
+                                       const date = d.date.split("-").reverse().join("/").slice(0,5);
+                                       return "  • " + date + ": " + d.reason + " [+R$ " + d.value.toFixed(2) + "]";
+                                     }).join("\n");
+                                   const discountSection = discountLines ? "❌ *DESCONTOS:*\n" + discountLines : "";
+                                   const extraSection = extraLines ? "➕ *EXTRAS:*\n" + extraLines : "";
+                                   const sections = [discountSection, extraSection].filter(Boolean).join("\n\n");
+                                   const detailsStr = sections || "Nenhum ajuste registrado.";
+                                   
+                                   const msg = "📊 *EXTRATO DE ALIMENTAÇÃO*\n\n👤 *Profissional:* " + pName + "\n🏗️ *Job:* " + jNameStr + "\n\n💰 *Solicitado:* R$ " + ps.totalRequested.toFixed(2) + "\n⚙️ *Ajustes:* R$ " + ps.balance.toFixed(2) + "\n💵 *VALOR FINAL:* R$ " + ps.totalUsed.toFixed(2) + (detailsStr ? "\n\n" + detailsStr : "") + "\n\n_Enviado via Sistema ACT_";
                                   
                                   if (navigator.share) {
                                      navigator.share({ title: `Extrato ${pName}`, text: msg }).catch(() => {
@@ -399,11 +441,36 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
                                <div className="flex items-center justify-between text-[11px]">
                                   <div className="flex items-center gap-2">
                                      <span className="text-muted-foreground tabular-nums font-bold">{d.date.split("-").reverse().join("/").slice(0,5)}</span>
-                                     <span className="font-semibold text-foreground uppercase tracking-tight">{d.reason}</span>
+                                     <span className={`font-semibold uppercase tracking-tight ${d.isDiscountDone ? 'text-muted-foreground line-through' : 'text-foreground'}`}>{d.reason}</span>
+                                     {d.isDiscountDone && <Badge variant="outline" className="text-[8px] h-3 px-1 ml-1 bg-muted/50 border-muted-foreground/30">JÁ DESCONTADO</Badge>}
                                   </div>
-                                  <span className={`font-black tabular-nums transition-colors ${d.value < 0 ? 'text-destructive' : 'text-green-600'}`}>
-                                    {d.value > 0 ? '+' : ''}R$ {d.value.toFixed(2)}
-                                  </span>
+                                  <div className="flex items-center gap-3">
+                                    <span className={`font-black tabular-nums transition-colors ${d.isDiscountDone ? 'text-muted-foreground line-through' : d.value < 0 ? 'text-destructive' : 'text-green-600'}`}>
+                                      {d.value > 0 && !d.isDiscountDone ? '+' : ''}R$ {Math.abs(d.value).toFixed(2)}
+                                    </span>
+                                    {d.type === 'desconto' && d.discountId && !ps.isLiquidated && (
+                                      <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        className={`h-5 w-auto px-2 text-[8px] font-black uppercase ${d.isDiscountDone ? 'bg-primary/10 text-primary border-primary/20 hover:bg-primary/20' : 'bg-background hover:bg-muted text-muted-foreground border-border/60'}`}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          if (onUpdatePaymentConfirmation) {
+                                            onUpdatePaymentConfirmation({
+                                              id: d.discountId!,
+                                              type: 'discount',
+                                              confirmed: !d.isDiscountDone,
+                                              paymentDate: new Date().toISOString().split("T")[0]
+                                            });
+                                            if (d.isDiscountDone) toast.success("Desconto reativado no extrato.");
+                                            else toast.success("Desconto marcado como já aplicado (não afeta o saldo).");
+                                          }
+                                        }}
+                                      >
+                                        {d.isDiscountDone ? 'Reverter' : '- Retirado'}
+                                      </Button>
+                                    )}
+                                  </div>
                                </div>
                                {d.mealsBreakdown && (
                                  <div className="flex gap-3 mt-1 pl-10">
@@ -460,7 +527,7 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
                                  .join('\n');
                                return `🏗️ *${jn}*\n💵 Valor: R$ ${s.totalUsed.toFixed(2)}${discountDetails ? `\n📋 Descontos:\n${discountDetails}` : ''}`;
                              }).join('\n\n');
-                             const msg = `📊 *EXTRATO LIQUIDADO*\n\n👤 *${pName}*\n\n${statementsDetail}\n\n💰 *Total Pago:* R$ ${totalPaid.toFixed(2)}\n\n🔗 Acesse o sistema: ${APP_LINK}\n\n_Enviado via Sistema ACT_`;
+                             const msg = `📊 *EXTRATO LIQUIDADO*\n\n👤 *${pName}*\n\n${statementsDetail}\n\n💰 *Total Pago:* R$ ${totalPaid.toFixed(2)}\n\n_Enviado via Sistema ACT_`;
                              
                              if (navigator.share) {
                                navigator.share({ title: `Extrato ${pName}`, text: msg }).catch(() => {

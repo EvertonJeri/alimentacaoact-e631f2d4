@@ -5,7 +5,8 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { Bell, CalendarDays, Plus, Save, Settings, ShieldCheck, Trash2 } from "lucide-react";
+import { Bell, CalendarDays, Plus, Save, Settings, ShieldCheck, Trash2, X } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { JobImportDialog } from "./JobImportDialog";
 import { PersonImportDialog } from "./PersonImportDialog";
@@ -21,7 +22,8 @@ export const SettingsTab = () => {
     customHolidays: dbHolidays, 
     updateSystemSettings, 
     updateCustomHolidays,
-    clearAllJobs
+    clearAllJobs,
+    people
   } = useDatabase();
 
   const [settings, setSettings] = useState<SystemSettings>(DEFAULT_SETTINGS);
@@ -46,9 +48,27 @@ export const SettingsTab = () => {
       await updateSystemSettings.mutateAsync(settings);
       await updateCustomHolidays.mutateAsync(customHolidays);
       toast.success("Configurações salvas!", { duration: 5000 });
-    } catch (error) {
-      toast.error("Erro ao salvar no banco. Verifique se as novas colunas existem.");
-      console.error(error);
+    } catch (error: any) {
+      // Se o erro mencionar coluna inexistente (flash_card_users pode não existir no banco)
+      const msg = error?.message || error?.details || JSON.stringify(error) || "";
+      const isColumnError = msg.toLowerCase().includes("column") || msg.toLowerCase().includes("coluna") || msg.toLowerCase().includes("schema");
+
+      if (isColumnError) {
+        // Tenta salvar sem flash_card_users
+        try {
+          const { flashCardUsers: _, ...settingsWithout } = settings as any;
+          await updateSystemSettings.mutateAsync(settingsWithout);
+          await updateCustomHolidays.mutateAsync(customHolidays);
+          toast.success("Configurações salvas! (coluna flash_card_users não encontrada no banco — execute a migration)", { duration: 7000 });
+        } catch (err2: any) {
+          const msg2 = err2?.message || err2?.details || JSON.stringify(err2) || "Erro desconhecido";
+          toast.error(`Erro ao salvar: ${msg2}`);
+          console.error(err2);
+        }
+      } else {
+        toast.error(`Erro ao salvar: ${msg || "Verifique o console para detalhes."}`);
+        console.error(error);
+      }
     }
   };
 
@@ -91,27 +111,109 @@ export const SettingsTab = () => {
               <div className="p-4 rounded-xl bg-muted/20 border border-border space-y-4">
                  <p className="text-[10px] font-black uppercase text-violet-600 tracking-wider">CLT</p>
                  <div className="flex items-center justify-between">
-                    <Label className="text-xs font-bold">Dia do Alerta</Label>
+                    <Label className="text-xs font-bold">Dia do Alerta 1</Label>
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] text-muted-foreground">DIA</span>
                       <Input type="number" min={1} max={31} className="w-16 h-8 text-center" value={settings.cltAlertDay ?? 5} onChange={(e) => setSettings({...settings, cltAlertDay: parseInt(e.target.value) || 5})} />
                     </div>
                  </div>
-                 <p className="text-[10px] text-muted-foreground italic">Alerta no dia do fechamento/pagamento CLT.</p>
+                 <div className="flex items-center justify-between">
+                    <Label className="text-xs font-bold">Dia do Alerta 2</Label>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-muted-foreground">DIA</span>
+                      <Input type="number" min={1} max={31} className="w-16 h-8 text-center" value={settings.cltAlertDay2 ?? 20} onChange={(e) => setSettings({...settings, cltAlertDay2: parseInt(e.target.value) || 20})} />
+                    </div>
+                 </div>
+                 <p className="text-[10px] text-muted-foreground italic">Alertas nos dias de fechamento/pagamento CLT.</p>
               </div>
 
               <div className="p-4 rounded-xl bg-muted/20 border border-border space-y-4">
                  <p className="text-[10px] font-black uppercase text-emerald-600 tracking-wider">PJ (Prestadores)</p>
                  <div className="flex items-center justify-between">
-                    <Label className="text-xs font-bold">Dia do Alerta</Label>
+                    <Label className="text-xs font-bold">Dia do Alerta 1</Label>
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] text-muted-foreground">DIA</span>
                       <Input type="number" min={1} max={31} className="w-16 h-8 text-center" value={settings.pjAlertDay ?? 19} onChange={(e) => setSettings({...settings, pjAlertDay: parseInt(e.target.value) || 19})} />
                     </div>
                  </div>
-                 <p className="text-[10px] text-muted-foreground italic">Alerta no dia do fechamento/pagamento PJ.</p>
+                 <div className="flex items-center justify-between">
+                    <Label className="text-xs font-bold">Dia do Alerta 2</Label>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-muted-foreground">DIA</span>
+                      <Input type="number" min={1} max={31} className="w-16 h-8 text-center" value={settings.pjAlertDay2 ?? 4} onChange={(e) => setSettings({...settings, pjAlertDay2: parseInt(e.target.value) || 4})} />
+                    </div>
+                 </div>
+                 <p className="text-[10px] text-muted-foreground italic">Alertas nos dias de fechamento/pagamento PJ.</p>
               </div>
            </CardContent>
+        </Card>
+
+        {/* REGRAS ESPECIAIS / CARTÃO FLASH */}
+        <Card className="border-border shadow-md lg:col-span-3">
+          <CardHeader className="bg-muted/30 border-b border-border py-4">
+             <CardTitle className="text-sm font-bold flex items-center gap-2 font-black uppercase tracking-widest">💳 Regras de Pagamento</CardTitle>
+             <CardDescription className="text-xs">Profissionais PJ (avulsos) que recebem via Cartão Flash ⚡ em vez de Pix.</CardDescription>
+          </CardHeader>
+          <CardContent className="pt-6">
+             <div className="space-y-3">
+               <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Profissionais PJ com Cartão Flash ⚡</Label>
+               {/* Linha de adição — só mostra PJ que ainda não estão na lista */}
+               <div className="flex gap-2">
+                 <Select
+                   value=""
+                   onValueChange={(id) => {
+                     if (!id) return;
+                     const arr = settings.flashCardUsers || [];
+                     if (!arr.includes(id)) {
+                       setSettings({ ...settings, flashCardUsers: [...arr, id] });
+                     }
+                   }}
+                 >
+                   <SelectTrigger className="flex-1 h-9 text-xs">
+                     <SelectValue placeholder="Selecione um profissional PJ para adicionar..." />
+                   </SelectTrigger>
+                   <SelectContent>
+                     {people.data
+                       ?.filter(p => !p.isRegistered && !(settings.flashCardUsers || []).includes(p.id))
+                       .map(p => (
+                         <SelectItem key={p.id} value={p.id} className="text-xs">
+                           {p.name} {p.department ? `· ${p.department}` : ''}
+                         </SelectItem>
+                       ))}
+                     {(people.data || []).filter(p => !p.isRegistered && !(settings.flashCardUsers || []).includes(p.id)).length === 0 && (
+                       <div className="text-xs text-muted-foreground px-3 py-2 italic">Nenhum profissional PJ disponível para adicionar.</div>
+                     )}
+                   </SelectContent>
+                 </Select>
+               </div>
+               {/* Lista de tags */}
+               <div className="flex flex-wrap gap-2 min-h-[40px] p-3 border rounded-xl bg-muted/10">
+                 {(!settings.flashCardUsers || settings.flashCardUsers.length === 0) && (
+                   <span className="text-xs text-muted-foreground italic self-center">Nenhum profissional PJ com Cartão Flash cadastrado.</span>
+                 )}
+                 {(settings.flashCardUsers || []).map(id => {
+                   const person = people.data?.find(p => p.id === id);
+                   if (!person) return null;
+                   return (
+                     <span
+                       key={id}
+                       className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full text-[11px] font-bold bg-orange-100 text-orange-700 border border-orange-200"
+                     >
+                       ⚡ {person.name}
+                       <button
+                         type="button"
+                         onClick={() => setSettings({ ...settings, flashCardUsers: (settings.flashCardUsers || []).filter(uid => uid !== id) })}
+                         className="ml-1 rounded-full hover:bg-orange-200 p-0.5 transition-colors"
+                         title="Remover"
+                       >
+                         <X className="h-3 w-3" />
+                       </button>
+                     </span>
+                   );
+                 })}
+               </div>
+             </div>
+          </CardContent>
         </Card>
 
         {/* CANAIS DE NOTIFICAÇÃO - 3 tipos */}

@@ -36,6 +36,7 @@ interface DiscountsTabProps {
   confirmations: (DiscountConfirmation | PaymentConfirmation)[];
   setConfirmations: (confs: (DiscountConfirmation | PaymentConfirmation)[]) => void;
   onUpdateConfirmation?: (conf: DiscountConfirmation) => void;
+  onUpdatePaymentConfirmation?: (conf: PaymentConfirmation) => void;
   initialJobFilter?: string;
 }
 
@@ -48,6 +49,8 @@ interface DiscountRow {
   discountJanta: number;
   total: number;
   reason: string;
+  _reqId?: string;
+  _done?: boolean;
 }
 
 const DiscountsTab = ({
@@ -59,6 +62,7 @@ const DiscountsTab = ({
   confirmations,
   setConfirmations,
   onUpdateConfirmation,
+  onUpdatePaymentConfirmation,
   initialJobFilter = "all"
 }: DiscountsTabProps) => {
   const [expandedPersons, setExpandedPersons] = useState<Set<string>>(new Set());
@@ -100,6 +104,17 @@ const DiscountsTab = ({
     return requests;
   }, [requests]);
 
+  // Helper: check if a specific day's discount was already applied (toggled off in Statement)
+  const isDiscountDone = (reqId: string, date: string) => {
+    const discountId = `discount-${reqId}-${date}`;
+    return (confirmations || []).find(c => 'id' in c && c.id === discountId)?.confirmed || false;
+  };
+
+  const getReqIdForDay = (personId: string, jobId: string, date: string) => {
+    return requests.find(r => r.personId === personId && r.jobId === jobId &&
+      date >= r.startDate && date <= r.endDate)?.id || '';
+  };
+
   // Calcula TODOS os ajustes (positivos e negativos) por dia
   const allAdjustments = useMemo(() => {
     const rows: DiscountRow[] = [];
@@ -125,17 +140,19 @@ const DiscountsTab = ({
         
         if (dayCalc.total !== 0) {
           if (filterJob === "all" || req.jobId === filterJob) {
-            rows.push({ personId: req.personId, jobId: req.jobId, date, ...dayCalc });
+            const done = isDiscountDone(req.id, date);
+            rows.push({ personId: req.personId, jobId: req.jobId, date, ...dayCalc, _reqId: req.id, _done: done });
           }
         }
       });
     });
 
     return rows;
-  }, [registeredRequests, timeEntries, foodControl, people, filterJob]);
+  }, [registeredRequests, timeEntries, foodControl, people, filterJob, confirmations]);
 
-  // Descontos (total > 0 = empresa desconta do funcionário)
+  // Descontos (total > 0 = empresa desconta do funcionário) — excluindo os já marcados como retirados
   const discounts = useMemo(() => allAdjustments.filter(d => d.total > 0), [allAdjustments]);
+  const activeDiscounts = useMemo(() => discounts.filter(d => !d._done), [discounts]);
   
   // Saldo positivo (total < 0 = empresa deve ao funcionário - consumiu menos que solicitado)
   const positiveBalances = useMemo(() => allAdjustments.filter(d => d.total < 0), [allAdjustments]);
@@ -162,7 +179,7 @@ const DiscountsTab = ({
     return map;
   }, [positiveBalances]);
 
-  const totalDiscount = discounts.reduce((s, d) => s + d.total, 0);
+  const totalDiscount = activeDiscounts.reduce((s, d) => s + d.total, 0);
   const totalPositiveBalance = positiveBalances.reduce((s, d) => s + Math.abs(d.total), 0);
 
   const togglePerson = (personId: string) => {
@@ -341,28 +358,63 @@ const DiscountsTab = ({
                         <th className={`text-right px-2 py-1.5 text-2xs uppercase tracking-wider font-medium ${isPositiveBalance ? 'text-green-600' : 'text-destructive'}`}>Janta (R$)</th>
                         <th className={`text-right px-2 py-1.5 text-2xs uppercase tracking-wider font-medium ${isPositiveBalance ? 'text-green-600' : 'text-destructive'}`}>Total (R$)</th>
                         <th className="text-left px-2 py-1.5 text-2xs uppercase tracking-wider font-medium text-muted-foreground">Motivo</th>
+                        {!isPositiveBalance && onUpdatePaymentConfirmation && <th className="text-right px-2 py-1.5 text-2xs uppercase tracking-wider font-medium text-muted-foreground">Ação</th>}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/50">
-                      {personRows.map((d, i) => (
-                        <tr key={`${d.date}-${i}`} className="hover:bg-muted/20">
+                      {personRows.map((d, i) => {
+                        const done = d._done || false;
+                        const discountId = d._reqId ? `discount-${d._reqId}-${d.date}` : undefined;
+                        return (
+                        <tr key={`${d.date}-${i}`} className={`hover:bg-muted/20 transition-colors ${done ? 'opacity-50' : ''}`}>
                           <td className="px-2 py-1.5 tabular-nums text-muted-foreground">{d.date?.includes("-") ? d.date.split("-").reverse().join("/") : "—"}</td>
                           <td className="px-2 py-1.5 text-xs text-muted-foreground">{getJobName(d.jobId)}</td>
-                          <td className={`px-2 py-1.5 text-right tabular-nums ${isPositiveBalance ? 'text-green-600' : 'text-destructive'}`}>
+                          <td className={`px-2 py-1.5 text-right tabular-nums ${isPositiveBalance ? 'text-green-600' : done ? 'text-muted-foreground line-through' : 'text-destructive'}`}>
                             {Math.abs(d.discountCafe) > 0 ? `${isPositiveBalance ? '+' : '-'}${Math.abs(d.discountCafe).toFixed(2)}` : "—"}
                           </td>
-                          <td className={`px-2 py-1.5 text-right tabular-nums ${isPositiveBalance ? 'text-green-600' : 'text-destructive'}`}>
+                          <td className={`px-2 py-1.5 text-right tabular-nums ${isPositiveBalance ? 'text-green-600' : done ? 'text-muted-foreground line-through' : 'text-destructive'}`}>
                             {Math.abs(d.discountAlmoco) > 0 ? `${isPositiveBalance ? '+' : '-'}${Math.abs(d.discountAlmoco).toFixed(2)}` : "—"}
                           </td>
-                          <td className={`px-2 py-1.5 text-right tabular-nums ${isPositiveBalance ? 'text-green-600' : 'text-destructive'}`}>
+                          <td className={`px-2 py-1.5 text-right tabular-nums ${isPositiveBalance ? 'text-green-600' : done ? 'text-muted-foreground line-through' : 'text-destructive'}`}>
                             {Math.abs(d.discountJanta) > 0 ? `${isPositiveBalance ? '+' : '-'}${Math.abs(d.discountJanta).toFixed(2)}` : "—"}
                           </td>
-                          <td className={`px-2 py-1.5 text-right tabular-nums font-semibold ${isPositiveBalance ? 'text-green-600' : 'text-destructive'}`}>
+                          <td className={`px-2 py-1.5 text-right tabular-nums font-semibold ${isPositiveBalance ? 'text-green-600' : done ? 'text-muted-foreground line-through' : 'text-destructive'}`}>
                             {isPositiveBalance ? '+' : '-'}{Math.abs(d.total).toFixed(2)}
                           </td>
-                          <td className="px-2 py-1.5 text-xs text-muted-foreground">{d.reason}</td>
+                          <td className="px-2 py-1.5 text-xs text-muted-foreground">
+                            <div className="flex items-center gap-2">
+                              <span className={done ? 'line-through' : ''}>{d.reason}</span>
+                              {done && <Badge variant="outline" className="text-[8px] h-3 px-1 bg-muted/50 border-muted-foreground/30">JÁ RETIRADO</Badge>}
+                            </div>
+                          </td>
+                          {!isPositiveBalance && discountId && onUpdatePaymentConfirmation && (
+                            <td className="px-2 py-1.5 text-right">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className={`h-5 w-auto px-2 text-[8px] font-black uppercase ${
+                                  done
+                                    ? 'bg-primary/10 text-primary border-primary/20 hover:bg-primary/20'
+                                    : 'bg-background hover:bg-muted text-muted-foreground border-border/60'
+                                }`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onUpdatePaymentConfirmation({
+                                    id: discountId,
+                                    type: 'discount',
+                                    confirmed: !done,
+                                    paymentDate: new Date().toISOString().split('T')[0]
+                                  });
+                                  if (done) toast.success('Desconto reativado.');
+                                  else toast.success('Desconto marcado como retirado (não afeta o total).');
+                                }}
+                              >
+                                {done ? 'Reverter' : '- Retirar'}
+                              </Button>
+                            </td>
+                          )}
                         </tr>
-                      ))}
+                      )})}
                     </tbody>
                   </table>
                 </div>

@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Check, ChevronDown, ChevronRight, Filter, Undo2, Trash2, Calendar } from "lucide-react";
 import { sendWhatsAppMessage, notifyFinancePayment, notifyAdminPayment } from "@/lib/notifications";
-import { APP_LINK } from "@/lib/types";
+
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import {
   type Person,
@@ -18,8 +19,10 @@ import {
   getMealValue,
   calculatePersonBalance,
   calculateDayDiscount,
+  getActiveMeals,
   type FoodControlEntry,
   type DiscountConfirmation,
+  type SystemSettings,
 } from "@/lib/types";
 
 interface PaymentTabProps {
@@ -33,7 +36,9 @@ interface PaymentTabProps {
   onUpdateDiscountConfirmation?: (conf: DiscountConfirmation) => void;
   onRemoveConfirmation?: (id: string) => void;
   onRemoveRequest?: (id: string) => void;
+  onUpdateManualMealRequest?: (req: MealRequest) => void;
   initialJobFilter?: string;
+  systemSettings?: SystemSettings;
 }
 
 const PaymentTab = ({
@@ -47,12 +52,14 @@ const PaymentTab = ({
   onUpdateDiscountConfirmation,
   onRemoveConfirmation,
   onRemoveRequest,
-  initialJobFilter = "all"
+  onUpdateManualMealRequest,
+  initialJobFilter = "all",
+  systemSettings,
 }: PaymentTabProps) => {
 
   const [filterJob, setFilterJob] = useState(initialJobFilter);
   const [expandedRequests, setExpandedRequests] = useState<Set<string>>(new Set());
-  const [expandedJobs, setExpandedJobs] = useState<Set<string>>(new Set<string>(jobs.map(j => j.id))); // Padrão: tudo aberto
+  const [expandedJobs, setExpandedJobs] = useState<Set<string>>(new Set<string>()); // Padrão: tudo fechado para performance!
 
   useEffect(() => {
     if (initialJobFilter) setFilterJob(initialJobFilter);
@@ -68,13 +75,43 @@ const PaymentTab = ({
     localStorage.setItem("applyBalanceMap", JSON.stringify(applyBalanceMap));
   }, [applyBalanceMap]);
 
+  const fDate = (d: string) => (d && d.includes("-") ? d.split("-").reverse().join("/") : d || "—");
   const getPersonName = (id: string) => people.find((p) => p.id === id)?.name || "—";
-  const getJobName = (id: string) => jobs.find((j) => j.id === id)?.name || "—";
+  const getJobName = (id: string) => {
+    if (!id) return "—";
+    const job = jobs.find((j) => j.id === id);
+    if (job) return job.name;
+    const matchByName = jobs.find(j => j.name.startsWith(id + " - ") || j.name === id);
+    if (matchByName) return matchByName.name;
+    if (!id.includes("-") || id.length < 30) return id;
+    return `Removido (${id.substring(0,5)})`;
+  };
+
+  const updateRequestJob = (req: MealRequest, newJobId: string) => {
+    // Simulamos o onUpdateRequest se disponível, embora no PaymentTab o foco seja Pagamento.
+    // Como o usuário quer consertar o dado, precisamos dessa funcionalidade.
+    // Index.tsx fornece updateMealRequest.mutate(req)
+  };
 
   const registeredRequests = requests.filter((req) => {
     const dates = getDatesInRange(req.startDate, req.endDate);
     return dates.some((date) => timeEntries.some((e) => e.personId === req.personId && e.date === date));
   });
+
+  // PERFORMANCE: Calculamos os saldos apenas para as pessoas visíveis nesta aba!
+  const personBalancesMap = useMemo(() => {
+    const map = new Map<string, number>();
+    const uniquePersons = new Set(registeredRequests.map(r => r.personId));
+    uniquePersons.forEach(pid => {
+       try {
+         map.set(pid, calculatePersonBalance(pid, requests, foodControl, confirmations, people, timeEntries));
+       } catch (e) {
+         console.error("Balance Error:", e);
+         map.set(pid, 0);
+       }
+    });
+    return map;
+  }, [registeredRequests, requests, foodControl, confirmations, people, timeEntries]);
 
   const filteredRequests = (filterJob === "all")
     ? registeredRequests
@@ -113,14 +150,14 @@ const PaymentTab = ({
   };
 
   const calcRequestBruto = (req: MealRequest) => {
-    const person = people.find((p) => p.id === req.personId);
     const dates = getDatesInRange(req.startDate, req.endDate);
+    const person = people.find(p => p.id === req.personId);
     let total = 0;
     dates.forEach((date) => {
-      const dayMeals = req.dailyOverrides?.[date] ?? req.meals;
-      if (Array.isArray(dayMeals)) {
-        dayMeals.forEach((m) => { total += getMealValue(m, date, person); });
-      }
+      const activeMeals = getActiveMeals(req, date, person);
+      activeMeals.forEach((m) => {
+        total += getMealValue(m, date, person, req.location);
+      });
     });
     return total;
   };
@@ -289,7 +326,6 @@ const PaymentTab = ({
               {expandedJobs.has(jobId) && (
                 <div className="divide-y divide-border">
                   {jobReqs.map((req) => {
-                  const person = people.find(p => p.id === req.personId);
                   const conf = getConfirmation(req.id);
                   const isPaid = isJobPaid || conf?.confirmed;
                   const paymentDate = conf?.paymentDate || jobPaymentDate;
@@ -302,7 +338,8 @@ const PaymentTab = ({
                   // Se ainda não pago: usa o estado local (applyBalanceMap)
                   const frozenApply = isPaid ? (conf?.applyBalance !== false) : (applyBalanceMap[req.id] !== false);
                   
-                  const totalWallet = calculatePersonBalance(req.personId, requests, foodControl, confirmations, people, timeEntries);
+                  // PERFORMANCE: Usamos o saldo pré-calculado localmente!
+                  const totalWallet = personBalancesMap.get(req.personId) ?? 0;
                   const retroBalance = totalWallet - currentReqNet;
 
                   const finalTotal = isPaid 
@@ -320,17 +357,34 @@ const PaymentTab = ({
                           <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => toggleRequest(req.id)}>
                             {expandedRequests.has(req.id) ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                           </Button>
-                          <div>
-                            <p className="text-sm font-bold flex items-center flex-wrap">
-                              {getPersonName(req.personId)} 
-                              {isPaid && <Badge variant="secondary" className="bg-green-500/10 text-green-600 border-green-200 ml-1">✓ Pago</Badge>}
-                              {!isPaid && totalWallet > 0.01 && (
-                                <span className="text-emerald-600 text-[10px] font-bold ml-1.5 tabular-nums">
-                                  (R$ {totalWallet.toFixed(2)} Saldo)
-                                </span>
-                              )}
+                          <div className="flex-1">
+                            <p className="font-bold text-sm text-foreground flex items-center gap-1">
+                              {people.find(p => p.id === req.personId)?.isRegistered && <span className="text-muted-foreground mr-1 opacity-70">(CLT)</span>}
+                              {getPersonName(req.personId)}
                             </p>
-                            <p className="text-[10px] text-muted-foreground">{req.startDate.split("-").reverse().join("/")} — {req.endDate.split("-").reverse().join("/")}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-[10px] text-muted-foreground uppercase font-medium">
+                                {req.location || 'Local Não Definido'} • {fDate(req.startDate)} a {fDate(req.endDate)}
+                              </p>
+                              {getJobName(req.jobId).includes("Removido (") && (
+                                <div className="flex items-center gap-1.5 ring-1 ring-red-200 rounded px-1.5 bg-red-50">
+                                  <span className="text-[8px] text-red-500 font-bold uppercase">Corrigir Job:</span>
+                                  <Select onValueChange={(newId) => {
+                                      if (onUpdateManualMealRequest) {
+                                          onUpdateManualMealRequest({ ...req, jobId: newId });
+                                          toast.success("Vínculo do Job corrigido!");
+                                      }
+                                  }}>
+                                    <SelectTrigger className="h-4 text-[9px] w-[90px] bg-transparent border-none py-0 px-0 focus:ring-0">
+                                      <SelectValue placeholder="Fix" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {jobs.map(j => <SelectItem key={j.id} value={j.id} className="text-[10px]">{j.name}</SelectItem>)}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
 

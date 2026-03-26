@@ -41,7 +41,9 @@ export const fetchSettingsFromDB = async (): Promise<SystemSettings> => {
       discountAlertDate: data.discount_alert_date,
       discountAutoSend: data.discount_auto_send,
       cltAlertDay: (data as any).clt_alert_day,
+      cltAlertDay2: (data as any).clt_alert_day2,
       pjAlertDay: (data as any).pj_alert_day,
+      pjAlertDay2: (data as any).pj_alert_day2,
     };
   } catch {
     return getStoredSettings();

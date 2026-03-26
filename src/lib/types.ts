@@ -1,3 +1,4 @@
+import { type Holiday, isHoliday } from "@/lib/holidays";
 export interface Person {
   id: string;
   name: string;
@@ -55,7 +56,10 @@ export interface SystemSettings {
   discountAlertDate?: number;
   discountAutoSend?: boolean;
   cltAlertDay?: number;  // Dia de alerta para CLT
+  cltAlertDay2?: number; // Segundo dia de alerta para CLT
   pjAlertDay?: number;   // Dia de alerta para PJ
+  pjAlertDay2?: number;  // Segundo dia de alerta para PJ
+  flashCardUsers?: string[]; // IDs of PJ people who use Cartão Flash
   // Datas CLT (mantidas para compatibilidade)
   cltPaymentDay?: number;
   cltAdvanceDay?: number;
@@ -79,13 +83,16 @@ export const DEFAULT_SETTINGS: SystemSettings = {
   discountAlertDate: 25,
   discountAutoSend: false,
   cltAlertDay: 5,
+  cltAlertDay2: 20,
   pjAlertDay: 19,
+  pjAlertDay2: 4,
   cltPaymentDay: 5,
   cltAdvanceDay: 20,
   cltSheetCloseDay: 20,
   pjPeriod1EndDay: 15,
   pjPeriod1PaymentDay: 19,
   pjPeriod2PaymentDay: 4,
+  flashCardUsers: [],
 }
 
 export interface FoodControlEntry {
@@ -110,7 +117,7 @@ export interface DiscountConfirmation {
 
 export interface PaymentConfirmation {
   id: string; // requestId or jobId
-  type: "request" | "job";
+  type: "request" | "job" | "discount";
   paymentDate: string;
   confirmed: boolean;
   appliedBalance?: number;
@@ -175,6 +182,7 @@ export function getDatesInRange(start: string, end: string): string[] {
     if (isNaN(current.getTime()) || isNaN(last.getTime())) return [];
     
     while (current <= last) {
+      if (dates.length > 500) break; // SEGURANÇA CONTRA DATAS INVÁLIDAS / INFINITO (Max 500 dias)
       dates.push(String(current.toISOString() || "").split("T")[0]);
       current.setDate(current.getDate() + 1);
     }
@@ -184,29 +192,54 @@ export function getDatesInRange(start: string, end: string): string[] {
   return dates;
 }
 
+const weekendCache: Record<string, boolean> = {};
 export function isWeekend(dateStr: string): boolean {
+  if (!dateStr) return false;
+  if (weekendCache[dateStr] !== undefined) return weekendCache[dateStr];
   const d = new Date(dateStr + "T12:00:00");
-  return d.getDay() === 0 || d.getDay() === 6;
+  const day = d.getDay();
+  weekendCache[dateStr] = day === 0 || day === 6;
+  return weekendCache[dateStr];
 }
 
-import { isHoliday } from "@/lib/holidays";
-
-// Feriado tem mesma regra do final de semana para CLT (pago normalmente)
+const holidayCache: Record<string, boolean> = {};
 export function isWeekendOrHoliday(dateStr: string): boolean {
-  return isWeekend(dateStr) || isHoliday(dateStr);
+  if (holidayCache[dateStr] !== undefined) return holidayCache[dateStr];
+  const res = isWeekend(dateStr) || isHoliday(dateStr);
+  holidayCache[dateStr] = res;
+  return res;
 }
 
-export function getMealValue(meal: MealType, dateStr: string, person?: Person, location?: string): number {
-  // REGRA RÍGIDA CLT (REGISTRADO) - ALMOÇO
-  // Solo ganha o valor em dinheiro (R$32) se for Fim de Semana ou Feriado.
-  // De Seg-Sex o valor é sempre R$0 (independente de ser Fora SP ou Dentro SP).
-  if (meal === "almoco" && person?.isRegistered) {
+export function getMealValue(meal: MealType, dateStr: string, person?: Person, location?: LocationType): number {
+  if (meal === "almoco" && (person?.isRegistered || (person as any)?.is_registered)) {
     if (isWeekendOrHoliday(dateStr)) return MEAL_VALUES[meal];
     return 0;
   }
-
-  // Regra padrão para demais casos ou outras refeições (Café/Janta)
   return MEAL_VALUES[meal];
+}
+
+export function getActiveMeals(req: MealRequest, dateStr: string, person?: Person): MealType[] {
+  // PRIORIDADE 1: Se o usuário já fez um override manual, respeitamos a decisão dele!
+  if (req.dailyOverrides && req.dailyOverrides[dateStr]) {
+    return [...req.dailyOverrides[dateStr]] as MealType[];
+  }
+
+  // PRIORIDADE 2: Regra base
+  let meals = [...(req.meals || [])] as MealType[];
+  
+  if (person?.isRegistered || (person as any)?.is_registered) {
+    const isWkndOrHol = isWeekendOrHoliday(dateStr);
+    
+    // Regra financeira CLT: Ganha almoço se for FDS/Feriado e não houver override
+    if (isWkndOrHol && !meals.includes("almoco")) {
+      meals.push("almoco");
+    } else if (!isWkndOrHol && meals.includes("almoco")) {
+      // Perde almoço pago se for dia útil e não houver override
+      meals = meals.filter(m => m !== "almoco");
+    }
+  }
+  
+  return meals;
 }
 
 export function getFirstEntryTime(entry: TimeEntry): string | null {
@@ -240,8 +273,7 @@ export function calculateDayDiscount(
   let discountJanta = 0;
   let reason = "";
 
-  const dayMeals = req.dailyOverrides?.[date] ?? req.meals;
-  if (!Array.isArray(dayMeals)) return { discountCafe, discountAlmoco, discountJanta, total: 0, reason: "" };
+  const dayMeals = getActiveMeals(req, date, person);
 
   const localToday = new Date().toISOString().split("T")[0];
   const isPast = date < localToday;
@@ -340,12 +372,22 @@ export function calculatePersonBalance(
   timeEntries: TimeEntry[]
 ): number {
   const person = people.find(p => p.id === personId);
+  if (!person) return 0;
+
   const personRequests = requests.filter(r => r.personId === personId);
-  const personConfs = confirmations.filter(c => ('id' in c && requests.find(r => r.id === c.id)?.personId === personId) || ('personId' in c && c.personId === personId));
+  const reqIds = new Set(personRequests.map(r => r.id));
+  
+  // OTIMIZAÇÃO: Filtramos as confirmações de uma vez só, sem loops aninhados pesados!
+  const personConfs = confirmations.filter(c => {
+    if ('personId' in c) return c.personId === personId;
+    if ('id' in c) return reqIds.has(c.id) || c.id === `job-${personId}`; // Fallback para job IDs legacy
+    return false;
+  });
 
   let walletBalance = 0;
+  
+  // 1. Créditos (O que a pessoa ganha por solicitação)
   const processedDaysReq = new Set<string>();
-
   personRequests.forEach(req => {
     const dates = getDatesInRange(req.startDate, req.endDate);
     dates.forEach(date => {
@@ -353,13 +395,14 @@ export function calculatePersonBalance(
         if (processedDaysReq.has(dayKey)) return;
         processedDaysReq.add(dayKey);
 
-        const dayMeals = (req.dailyOverrides?.[date] ?? req.meals) || [];
+        const dayMeals = getActiveMeals(req, date, person);
         dayMeals.forEach(m => {
             walletBalance += getMealValue(m, date, person, req.location);
         });
     });
   });
 
+  // 2. Débitos (Faltas e refeições não consumidas)
   const processedDaysDisc = new Set<string>();
   personRequests.forEach(req => {
     const dates = getDatesInRange(req.startDate, req.endDate);
@@ -370,33 +413,29 @@ export function calculatePersonBalance(
 
       const entries = timeEntries.filter(e => e.personId === personId && e.jobId === req.jobId && e.date === date);
       const entry = entries.find(e => e.isTravelOut || e.isTravelReturn) || entries[0];
-      
       const fc = foodControl.find(f => f.personId === personId && f.jobId === req.jobId && f.date === date);
       
-      if (entry) {
+      if (entry || fc) {
         const dayCalc = calculateDayDiscount(req, date, entry, fc, people);
         walletBalance -= dayCalc.total;
       }
     });
   });
 
-  personRequests.forEach(req => {
-    const conf = confirmations.find(c => 
-        ('id' in c && c.confirmed && (c.id === req.id || c.id === `job-${req.jobId}`))
-    ) as PaymentConfirmation | undefined;
-
-    if (conf) {
+  // 3. Pagamentos Já Realizados (O que diminui o saldo acumulado)
+  personConfs.forEach(conf => {
+    if (!conf.confirmed) return;
+    
+    // Se for confirmação de solicitação específica
+    const req = personRequests.find(r => r.id === ('id' in conf ? conf.id : ''));
+    if (req) {
         let paidAmount = 0;
-        const dates = getDatesInRange(req.startDate, req.endDate);
-        const personAtTime = people.find(p => p.id === personId);
-        
-        dates.forEach(d => {
-            const meals = (req.dailyOverrides?.[d] ?? req.meals) || [];
-            meals.forEach(m => { paidAmount += getMealValue(m, d, personAtTime, req.location); });
+        getDatesInRange(req.startDate, req.endDate).forEach(d => {
+            getActiveMeals(req, d, person).forEach(m => {
+                paidAmount += getMealValue(m, d, person, req.location);
+            });
         });
-
-        const applied = conf.id === req.id ? (conf.appliedBalance || 0) : 0;
-        
+        const applied = 'appliedBalance' in conf ? (conf.appliedBalance || 0) : 0;
         walletBalance -= (paidAmount + applied);
     }
   });
