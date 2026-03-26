@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Check, ChevronDown, ChevronRight, Filter, Undo2, Trash2, Calendar } from "lucide-react";
-import { sendTeamsNotification, sendWhatsAppMessage, sendEmailNotification, notifyFinancePayment } from "@/lib/notifications";
+import { sendWhatsAppMessage, notifyFinancePayment, notifyAdminPayment } from "@/lib/notifications";
+import { APP_LINK } from "@/lib/types";
 import { toast } from "sonner";
 import {
   type Person,
