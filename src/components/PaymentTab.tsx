@@ -170,11 +170,11 @@ const PaymentTab = ({
             appliedBalance: isNaN(retroBalance) ? 0 : retroBalance
         });
 
-        // 2. Notificação automática via E-mail e WhatsApp para o Financeiro
+        // 2. Notificação automática para o Financeiro e Administrador
         const waMsg = `✅ *Pagamento Confirmado - Sistema ACT*\n\n👤 Funcionário: ${personName}\n🏗️ Projeto: ${jobName}\n📅 Data: ${paymentDate}\n💰 Valor: R$ ${finalValue.toFixed(2)}`;
         
-        // Alerta para o financeiro (usa as configurações do banco)
         notifyFinancePayment(waMsg);
+        notifyAdminPayment(waMsg);
 
         // Alerta opcional diretamente para o funcionário (via WhatsApp)
         setTimeout(() => {
