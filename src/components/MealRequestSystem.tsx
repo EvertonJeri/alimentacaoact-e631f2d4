@@ -74,7 +74,7 @@ const MealRequestSystem = ({
   const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0]);
   const [endDate, setEndDate] = useState(new Date().toISOString().split("T")[0]);
   const [meals, setMeals] = useState<MealType[]>(["cafe", "almoco", "janta"]);
-  const [isLocal, setIsLocal] = useState(false);
+  const [isLocal, setIsLocal] = useState<boolean | null>(null);
   const [activeSubTab, setActiveSubTab] = useState<"normal" | "complement">("normal");
   const [expandedRequests, setExpandedRequests] = useState<Set<string>>(new Set());
   const [showFinanceDialog, setShowFinanceDialog] = useState(false);
@@ -115,6 +115,10 @@ const MealRequestSystem = ({
 
   const handleAdd = () => {
     if (!selectedJob || !personId || !startDate || !endDate || !location) return;
+    if (isLocal === undefined || isLocal === null) {
+      toast.error("Informe se a pessoa é do local (Sim ou Não).", { duration: 4000 });
+      return;
+    }
     const dates = getDatesInRange(startDate, endDate);
 
     if (activeSubTab === "complement") {
@@ -371,17 +375,36 @@ const MealRequestSystem = ({
                   onValueChange={setPersonId}
                   placeholder="Selecione o profissional..."
                 />
-                <div className="flex items-center space-x-2 bg-primary/5 p-2 rounded-lg border border-primary/10">
-                  <Checkbox 
-                    id="isLocal" 
-                    checked={isLocal} 
-                    onCheckedChange={(v) => {
-                      setIsLocal(!!v);
-                      if (!!v) setMeals(["almoco"]); 
-                      else setMeals(["cafe", "almoco", "janta"]);
-                    }} 
-                  />
-                  <Label htmlFor="isLocal" className="text-xs font-bold leading-none cursor-pointer text-primary">Pessoa do local (Recebe só almoço)</Label>
+                <div className="p-3 rounded-lg border-2 border-primary/20 bg-primary/5">
+                  <Label className="text-xs font-black uppercase tracking-widest text-primary mb-2 block">
+                    Pessoa do Local? <span className="text-destructive">*</span>
+                  </Label>
+                  <div className="flex gap-4">
+                    <Button
+                      type="button"
+                      variant={isLocal === true ? "default" : "outline"}
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => {
+                        setIsLocal(true);
+                        setMeals(["almoco"]);
+                      }}
+                    >
+                      ✅ Sim (só almoço)
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={isLocal === false ? "default" : "outline"}
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => {
+                        setIsLocal(false);
+                        setMeals(["cafe", "almoco", "janta"]);
+                      }}
+                    >
+                      ❌ Não
+                    </Button>
+                  </div>
                 </div>
                 {personId && balance !== 0 && (
                   <div className={`p-3 rounded-lg border text-xs flex items-center justify-between gap-2 shadow-inner transition-all ${balance < 0 ? 'bg-destructive/5 border-destructive/20 text-destructive' : 'bg-primary/5 border-primary/20 text-primary'}`}>

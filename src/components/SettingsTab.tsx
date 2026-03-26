@@ -5,8 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Bell, CalendarDays, Mail, Plus, Save, Settings, Share2, ShieldCheck, Smartphone, Trash2, MessageSquare, FileUp, DollarSign, Users, Clock, Briefcase } from "lucide-react";
+import { Bell, CalendarDays, Plus, Save, Settings, ShieldCheck, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { JobImportDialog } from "./JobImportDialog";
 import { PersonImportDialog } from "./PersonImportDialog";
@@ -77,157 +76,113 @@ export const SettingsTab = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         
-        {/* REGRAS DE PAGAMENTO PJ */}
-        <Card className="border-border shadow-md col-span-1 md:col-span-2 lg:col-span-2 border-l-4 border-l-blue-500">
+        {/* DIAS DE ALERTA CLT/PJ */}
+        <Card className="border-border shadow-md col-span-1 md:col-span-2 border-l-4 border-l-blue-500">
            <CardHeader className="bg-blue-50/50">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg text-blue-600"><DollarSign className="h-5 w-5" /></div>
+                <div className="p-2 bg-blue-100 rounded-lg text-blue-600"><Bell className="h-5 w-5" /></div>
                 <div>
-                   <CardTitle className="text-sm font-bold uppercase">Regras de Pagamento PJ (Prestadores)</CardTitle>
-                   <CardDescription className="text-xs">Fechamentos quinzenais conforme nova norma da diretoria.</CardDescription>
+                   <CardTitle className="text-sm font-bold uppercase">Dias de Alerta de Pagamento</CardTitle>
+                   <CardDescription className="text-xs">Configure os dias do mês para receber alertas de fechamento/pagamento.</CardDescription>
                 </div>
               </div>
            </CardHeader>
            <CardContent className="pt-6 grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="p-4 rounded-xl bg-muted/20 border border-border space-y-4">
-                 <p className="text-[10px] font-black uppercase text-blue-600 tracking-wider">1ª Quinzena (01 a 15)</p>
+                 <p className="text-[10px] font-black uppercase text-violet-600 tracking-wider">CLT</p>
                  <div className="flex items-center justify-between">
-                    <Label className="text-xs font-bold">Dia do Pagamento</Label>
+                    <Label className="text-xs font-bold">Dia do Alerta</Label>
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] text-muted-foreground">DIA</span>
-                      <Input type="number" className="w-16 h-8 text-center" value={settings.pjPeriod1PaymentDay} onChange={(e) => setSettings({...settings, pjPeriod1PaymentDay: parseInt(e.target.value) || 19})} />
+                      <Input type="number" min={1} max={31} className="w-16 h-8 text-center" value={settings.cltAlertDay ?? 5} onChange={(e) => setSettings({...settings, cltAlertDay: parseInt(e.target.value) || 5})} />
                     </div>
                  </div>
-                 <p className="text-[10px] text-muted-foreground italic">Pagamento do período de 01 a 15 de cada mês.</p>
+                 <p className="text-[10px] text-muted-foreground italic">Alerta no dia do fechamento/pagamento CLT.</p>
               </div>
 
               <div className="p-4 rounded-xl bg-muted/20 border border-border space-y-4">
-                 <p className="text-[10px] font-black uppercase text-blue-600 tracking-wider">2ª Quinzena (16 a 31)</p>
+                 <p className="text-[10px] font-black uppercase text-emerald-600 tracking-wider">PJ (Prestadores)</p>
                  <div className="flex items-center justify-between">
-                    <Label className="text-xs font-bold">Dia do Pagamento</Label>
+                    <Label className="text-xs font-bold">Dia do Alerta</Label>
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] text-muted-foreground">DIA</span>
-                      <Input type="number" className="w-16 h-8 text-center" value={settings.pjPeriod2PaymentDay} onChange={(e) => setSettings({...settings, pjPeriod2PaymentDay: parseInt(e.target.value) || 4})} />
+                      <Input type="number" min={1} max={31} className="w-16 h-8 text-center" value={settings.pjAlertDay ?? 19} onChange={(e) => setSettings({...settings, pjAlertDay: parseInt(e.target.value) || 19})} />
                     </div>
                  </div>
-                 <p className="text-[10px] text-muted-foreground italic">Pagamento até o 4º dia do mês subsequente.</p>
+                 <p className="text-[10px] text-muted-foreground italic">Alerta no dia do fechamento/pagamento PJ.</p>
               </div>
            </CardContent>
         </Card>
 
-        {/* REGRAS CLT */}
-        <Card className="border-border shadow-md border-l-4 border-l-violet-500">
-           <CardHeader className="bg-violet-50/50">
-              <div className="flex items-center gap-3">
-                 <div className="p-2 bg-violet-100 rounded-lg text-violet-600"><Clock className="h-5 w-5" /></div>
-                 <CardTitle className="text-sm font-bold uppercase">Regras CLT</CardTitle>
-              </div>
-           </CardHeader>
-           <CardContent className="pt-6 space-y-4">
-              <div className="flex items-center justify-between">
-                 <Label className="text-xs font-bold">5º Dia Útil (Pago)</Label>
-                 <Input type="number" className="w-16 h-8 text-center" value={settings.cltPaymentDay} onChange={(e) => setSettings({...settings, cltPaymentDay: parseInt(e.target.value) || 5})} />
-              </div>
-              <div className="flex items-center justify-between">
-                 <Label className="text-xs font-bold">Dia 20 (Adiantamento)</Label>
-                 <Input type="number" className="w-16 h-8 text-center" value={settings.cltAdvanceDay} onChange={(e) => setSettings({...settings, cltAdvanceDay: parseInt(e.target.value) || 20})} />
-              </div>
-              <div className="flex items-center justify-between">
-                 <Label className="text-xs font-bold">Dia 20 (Fecha Folha)</Label>
-                 <Input type="number" className="w-16 h-8 text-center" value={settings.cltSheetCloseDay} onChange={(e) => setSettings({...settings, cltSheetCloseDay: parseInt(e.target.value) || 20})} />
-              </div>
-           </CardContent>
-        </Card>
-
-        {/* WHATSAPP & EMAIL */}
+        {/* CANAIS DE NOTIFICAÇÃO - 3 tipos */}
         <Card className="border-border shadow-md lg:col-span-3">
           <CardHeader className="bg-muted/30 border-b border-border py-4">
              <CardTitle className="text-sm font-bold flex items-center gap-2 font-black uppercase tracking-widest"><ShieldCheck className="h-4 w-4 text-primary" /> Canais de Notificação</CardTitle>
+             <CardDescription className="text-xs">Configure WhatsApp e E-mail para cada setor. Confirmações de pagamento e desconto são direcionadas ao Administrador.</CardDescription>
           </CardHeader>
-          <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-             <div className="space-y-3">
-               <div className="flex items-center justify-between">
-                  <Label className="text-2xs uppercase font-black text-blue-600">WhatsApp Financeiro</Label>
-                  <Switch checked={settings.enableWhatsApp} onCheckedChange={(v) => setSettings({ ...settings, enableWhatsApp: v })} />
-               </div>
-               <Input placeholder="+55..." value={settings.financeWhatsApp || ""} onChange={(e) => setSettings({ ...settings, financeWhatsApp: e.target.value })} className="h-9" />
+          <CardContent className="pt-6 space-y-6">
+             <div className="flex items-center justify-between mb-2">
+                <Label className="text-xs font-bold">Habilitar WhatsApp</Label>
+                <Switch checked={settings.enableWhatsApp} onCheckedChange={(v) => setSettings({ ...settings, enableWhatsApp: v })} />
              </div>
-             <div className="space-y-3">
-                <Label className="text-2xs uppercase font-black text-orange-600">E-mails Financeiro</Label>
-                <Input placeholder="financeiro@..." value={settings.financeEmails || ""} onChange={(e) => setSettings({ ...settings, financeEmails: e.target.value })} className="h-9" />
+             <div className="flex items-center justify-between mb-4">
+                <Label className="text-xs font-bold">Habilitar E-mail</Label>
+                <Switch checked={settings.enableEmail} onCheckedChange={(v) => setSettings({ ...settings, enableEmail: v })} />
              </div>
-             <div className="space-y-3">
-                <Label className="text-2xs uppercase font-black text-violet-600">WhatsApp RH</Label>
-                <Input placeholder="+55..." value={settings.hrWhatsApp || ""} onChange={(e) => setSettings({ ...settings, hrWhatsApp: e.target.value })} className="h-9" />
-             </div>
-             <div className="space-y-3">
-                <Label className="text-2xs uppercase font-black text-pink-600">E-mails RH</Label>
-                <Input placeholder="rh@..." value={settings.hrEmails || ""} onChange={(e) => setSettings({ ...settings, hrEmails: e.target.value })} className="h-9" />
+             
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* ADMINISTRADOR */}
+                <div className="p-4 rounded-xl bg-primary/5 border-2 border-primary/20 space-y-3">
+                   <p className="text-[10px] font-black uppercase text-primary tracking-wider">🔑 Administrador (Alimentação)</p>
+                   <p className="text-[9px] text-muted-foreground italic">Recebe confirmações de pagamento e desconto.</p>
+                   <div className="space-y-2">
+                      <Label className="text-[10px] uppercase font-bold text-muted-foreground">WhatsApp</Label>
+                      <Input placeholder="+55..." value={settings.adminWhatsApp || ""} onChange={(e) => setSettings({ ...settings, adminWhatsApp: e.target.value })} className="h-9" />
+                   </div>
+                   <div className="space-y-2">
+                      <Label className="text-[10px] uppercase font-bold text-muted-foreground">E-mail(s)</Label>
+                      <Input placeholder="admin@..." value={settings.adminEmails || ""} onChange={(e) => setSettings({ ...settings, adminEmails: e.target.value })} className="h-9" />
+                   </div>
+                </div>
+
+                {/* FINANCEIRO */}
+                <div className="p-4 rounded-xl bg-muted/20 border border-border space-y-3">
+                   <p className="text-[10px] font-black uppercase text-orange-600 tracking-wider">💼 Financeiro</p>
+                   <p className="text-[9px] text-muted-foreground italic">Recebe alertas de novos lançamentos.</p>
+                   <div className="space-y-2">
+                      <Label className="text-[10px] uppercase font-bold text-muted-foreground">WhatsApp</Label>
+                      <Input placeholder="+55..." value={settings.financeWhatsApp || ""} onChange={(e) => setSettings({ ...settings, financeWhatsApp: e.target.value })} className="h-9" />
+                   </div>
+                   <div className="space-y-2">
+                      <Label className="text-[10px] uppercase font-bold text-muted-foreground">E-mail(s)</Label>
+                      <Input placeholder="financeiro@..." value={settings.financeEmails || ""} onChange={(e) => setSettings({ ...settings, financeEmails: e.target.value })} className="h-9" />
+                   </div>
+                </div>
+
+                {/* RH */}
+                <div className="p-4 rounded-xl bg-muted/20 border border-border space-y-3">
+                   <p className="text-[10px] font-black uppercase text-violet-600 tracking-wider">👥 RH</p>
+                   <p className="text-[9px] text-muted-foreground italic">Recebe relatórios de descontos.</p>
+                   <div className="space-y-2">
+                      <Label className="text-[10px] uppercase font-bold text-muted-foreground">WhatsApp</Label>
+                      <Input placeholder="+55..." value={settings.hrWhatsApp || ""} onChange={(e) => setSettings({ ...settings, hrWhatsApp: e.target.value })} className="h-9" />
+                   </div>
+                   <div className="space-y-2">
+                      <Label className="text-[10px] uppercase font-bold text-muted-foreground">E-mail(s)</Label>
+                      <Input placeholder="rh@..." value={settings.hrEmails || ""} onChange={(e) => setSettings({ ...settings, hrEmails: e.target.value })} className="h-9" />
+                   </div>
+                </div>
              </div>
           </CardContent>
           <CardFooter className="bg-muted/10 border-t border-border flex justify-between items-center py-4">
              <div className="flex gap-4">
-                <JobImportDialog />
-                <PersonImportDialog />
+               <JobImportDialog />
+               <PersonImportDialog />
              </div>
              <Button onClick={handleSave} className="font-black uppercase tracking-widest text-[10px] px-8 h-10 shadow-lg gap-2">
                <Save className="h-4 w-4" /> Salvar Configurações
              </Button>
           </CardFooter>
-        </Card>
-
-        {/* REGRAS DE PAGAMENTO CLT/PJ */}
-        <Card className="border-border shadow-md md:col-span-2 border-l-4 border-l-blue-500">
-          <CardHeader className="bg-blue-50/40 border-b border-border">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
-                <CalendarDays className="h-5 w-5" />
-              </div>
-              <div>
-                <CardTitle className="text-sm font-bold uppercase tracking-tight">Regras de Pagamento — CLT e PJ</CardTitle>
-                <CardDescription className="text-xs mt-1">Configura os dias de referência para cada tipo de contrato. Esses valores serão usados como base para alertas e vencimentos.</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* CLT */}
-            <div className="space-y-4">
-              <h4 className="text-xs font-black uppercase tracking-widest text-blue-700 border-b border-blue-100 pb-2">Regras CLT</h4>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-[10px] uppercase font-black text-muted-foreground">Adiantamento</Label>
-                  <Input type="number" min={1} max={31} placeholder="20" value={settings.cltAdvanceDay ?? 20} onChange={(e) => setSettings({ ...settings, cltAdvanceDay: parseInt(e.target.value) || 20 })} className="bg-muted/20 h-9" />
-                  <p className="text-[9px] text-muted-foreground italic">Dia do adiantamento</p>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-[10px] uppercase font-black text-muted-foreground">Fechamento Folha</Label>
-                  <Input type="number" min={1} max={31} placeholder="20" value={settings.cltSheetCloseDay ?? 20} onChange={(e) => setSettings({ ...settings, cltSheetCloseDay: parseInt(e.target.value) || 20 })} className="bg-muted/20 h-9" />
-                  <p className="text-[9px] text-muted-foreground italic">Fechamento mensal</p>
-                </div>
-              </div>
-            </div>
-            {/* PJ */}
-            <div className="space-y-4">
-              <h4 className="text-xs font-black uppercase tracking-widest text-emerald-700 border-b border-emerald-100 pb-2">Regras PJ</h4>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-[10px] uppercase font-black text-muted-foreground">Fim Período 1</Label>
-                  <Input type="number" min={1} max={31} placeholder="15" value={settings.pjPeriod1EndDay ?? 15} onChange={(e) => setSettings({ ...settings, pjPeriod1EndDay: parseInt(e.target.value) || 15 })} className="bg-muted/20 h-9" />
-                  <p className="text-[9px] text-muted-foreground italic">Dia 01 até este dia</p>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-[10px] uppercase font-black text-muted-foreground">Pgto. Período 1</Label>
-                  <Input type="number" min={1} max={31} placeholder="19" value={settings.pjPeriod1PaymentDay ?? 19} onChange={(e) => setSettings({ ...settings, pjPeriod1PaymentDay: parseInt(e.target.value) || 19 })} className="bg-muted/20 h-9" />
-                  <p className="text-[9px] text-muted-foreground italic">Pagamento até dia 19</p>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-[10px] uppercase font-black text-muted-foreground">Pgto. Período 2</Label>
-                  <Input type="number" min={1} max={31} placeholder="4" value={settings.pjPeriod2PaymentDay ?? 4} onChange={(e) => setSettings({ ...settings, pjPeriod2PaymentDay: parseInt(e.target.value) || 4 })} className="bg-muted/20 h-9" />
-                  <p className="text-[9px] text-muted-foreground italic">Dia 04 mês seguinte</p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
         </Card>
 
         {/* FERIADOS */}

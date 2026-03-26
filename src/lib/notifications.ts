@@ -1,4 +1,4 @@
-import { type SystemSettings, DEFAULT_SETTINGS } from "./types";
+import { type SystemSettings, DEFAULT_SETTINGS, APP_LINK } from "./types";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -33,16 +33,23 @@ export const fetchSettingsFromDB = async (): Promise<SystemSettings> => {
       managerWhatsApp: data.manager_whatsapp,
       enableEmail: data.enable_email,
       adminEmails: data.admin_emails,
+      adminWhatsApp: (data as any).admin_whatsapp,
       financeWhatsApp: data.finance_whatsapp,
       financeEmails: data.finance_emails,
       hrWhatsApp: data.hr_whatsapp,
       hrEmails: data.hr_emails,
       discountAlertDate: data.discount_alert_date,
       discountAutoSend: data.discount_auto_send,
+      cltAlertDay: (data as any).clt_alert_day,
+      pjAlertDay: (data as any).pj_alert_day,
     };
   } catch {
     return getStoredSettings();
   }
+};
+
+const appendAppLink = (message: string): string => {
+  return `${message}\n\n🔗 Acesse o sistema: ${APP_LINK}`;
 };
 
 export const sendTeamsNotification = async (title: string, message: string, color: string = "0078D4") => {
@@ -61,7 +68,7 @@ export const sendTeamsNotification = async (title: string, message: string, colo
       "sections": [{
         "activityTitle": title,
         "activitySubtitle": new Date().toLocaleString('pt-BR'),
-        "text": message,
+        "text": appendAppLink(message),
         "markdown": true
       }]
     };
@@ -90,7 +97,7 @@ export const sendWhatsAppMessage = (message: string, phoneNumber?: string, setti
   }
 
   const cleanPhone = target.replace(/\D/g, '');
-  const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+  const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(appendAppLink(message))}`;
   window.open(url, '_blank');
   toast.success("📲 WhatsApp: Conversa aberta!", { duration: 3000 });
 };
@@ -107,9 +114,60 @@ export const sendEmailNotification = (subject: string, body: string, emailsOverr
   const emails = emailTarget.split(",").map(e => e.trim()).filter(Boolean);
   if (emails.length === 0) return;
 
-  const mailtoUrl = `mailto:${emails.join(",")}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  const bodyWithLink = `${body}\n\nAcesse o sistema: ${APP_LINK}`;
+  const mailtoUrl = `mailto:${emails.join(",")}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyWithLink)}`;
   window.open(mailtoUrl, '_self');
   toast.success("📧 E-mail: Cliente de e-mail aberto!", { duration: 3000 });
+};
+
+// ===== Notificações para Administrador (Pagamentos e Descontos) =====
+export const notifyAdminPayment = async (details: string) => {
+  const settings = await fetchSettingsFromDB();
+  
+  const message = `💰 *CONFIRMAÇÃO DE PAGAMENTO*\n\n${details}\n\n📅 ${new Date().toLocaleString('pt-BR')}`;
+  
+  // WhatsApp para administrador
+  if (settings.enableWhatsApp && settings.adminWhatsApp) {
+    sendWhatsAppMessage(message, settings.adminWhatsApp, settings);
+  }
+  
+  // Email para administrador
+  if (settings.enableEmail && settings.adminEmails) {
+    sendEmailNotification(
+      "ACT - Confirmação de Pagamento",
+      details.replace(/\*/g, '').replace(/\n/g, '\r\n'),
+      settings.adminEmails,
+      settings
+    );
+  }
+
+  // Teams
+  if (settings.enableTeams && settings.teamsWebhookUrl) {
+    await sendTeamsNotification("💰 Confirmação de Pagamento", details.replace(/\*/g, '**'), "28A745");
+  }
+};
+
+export const notifyAdminDiscount = async (details: string) => {
+  const settings = await fetchSettingsFromDB();
+  
+  const message = `⚠️ *DESCONTO REGISTRADO*\n\n${details}\n\n📅 ${new Date().toLocaleString('pt-BR')}`;
+  
+  if (settings.enableWhatsApp && settings.adminWhatsApp) {
+    sendWhatsAppMessage(message, settings.adminWhatsApp, settings);
+  }
+  
+  if (settings.enableEmail && settings.adminEmails) {
+    sendEmailNotification(
+      "ACT - Desconto Registrado",
+      details.replace(/\*/g, '').replace(/\n/g, '\r\n'),
+      settings.adminEmails,
+      settings
+    );
+  }
+
+  if (settings.enableTeams && settings.teamsWebhookUrl) {
+    await sendTeamsNotification("⚠️ Desconto Registrado", details.replace(/\*/g, '**'), "FF5733");
+  }
 };
 
 // ===== Notificações específicas para Financeiro =====
@@ -118,12 +176,10 @@ export const notifyFinancePayment = async (details: string) => {
   
   const message = `💰 *NOVO PAGAMENTO REGISTRADO*\n\n${details}\n\n📅 ${new Date().toLocaleString('pt-BR')}`;
   
-  // WhatsApp para financeiro
   if (settings.enableWhatsApp && settings.financeWhatsApp) {
     sendWhatsAppMessage(message, settings.financeWhatsApp, settings);
   }
   
-  // Email para financeiro
   if (settings.enableEmail && settings.financeEmails) {
     sendEmailNotification(
       "ACT - Novo Pagamento Registrado",
@@ -133,7 +189,6 @@ export const notifyFinancePayment = async (details: string) => {
     );
   }
 
-  // Teams
   if (settings.enableTeams && settings.teamsWebhookUrl) {
     await sendTeamsNotification("💰 Novo Pagamento Registrado", details.replace(/\*/g, '**'), "28A745");
   }
