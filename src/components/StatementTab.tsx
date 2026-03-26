@@ -270,7 +270,7 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
                    const jName = jobs.find(j => j.id === selectedJob)?.name || "";
                    const totalJob = personStatements.reduce((acc, ps) => acc + ps.totalUsed, 0);
                    const list = personStatements.map(ps => `👤 *${getPersonName(ps.personId)}*: R$ ${ps.totalUsed.toFixed(2)}`).join('\n');
-                   const msg = `🏗️ *EXTRATO GERAL - JOB: ${jName}*\n\n${list}\n\n💰 *TOTAL DA MONTAGEM:* R$ ${totalJob.toFixed(2)}\n\n_Enviado via Sistema ACT_`;
+                   const msg = `🏗️ *EXTRATO GERAL - JOB: ${jName}*\n\n${list}\n\n💰 *TOTAL DA MONTAGEM:* R$ ${totalJob.toFixed(2)}\n\n🔗 Acesse o sistema: ${APP_LINK}\n\n_Enviado via Sistema ACT_`;
                    
                    if (navigator.share) {
                       navigator.share({ title: `Extrato ${jName}`, text: msg }).catch(() => {
@@ -346,7 +346,7 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
                                      return `• ${date}: ${d.reason}${breakdown} [${d.value > 0 ? '+' : ''}R$ ${d.value.toFixed(2)}]`;
                                   }).join('\n');
                                   
-                                  const msg = `📊 *EXTRATO DE ALIMENTAÇÃO*\n\n👤 *Profissional:* ${pName}\n🏗️ *Job:* ${jNameStr}\n\n💰 *Solicitado:* R$ ${ps.totalRequested.toFixed(2)}\n⚙️ *Ajustes:* R$ ${ps.balance.toFixed(2)}\n💵 *VALOR FINAL:* R$ ${ps.totalUsed.toFixed(2)}\n\n*DETALHAMENTO:* \n${detailsStr || 'Nenhum ajuste registrado.'}\n\n_Enviado via Sistema ACT_`;
+                                  const msg = `📊 *EXTRATO DE ALIMENTAÇÃO*\n\n👤 *Profissional:* ${pName}\n🏗️ *Job:* ${jNameStr}\n\n💰 *Solicitado:* R$ ${ps.totalRequested.toFixed(2)}\n⚙️ *Ajustes:* R$ ${ps.balance.toFixed(2)}\n💵 *VALOR FINAL:* R$ ${ps.totalUsed.toFixed(2)}\n\n*DETALHAMENTO:* \n${detailsStr || 'Nenhum ajuste registrado.'}\n\n🔗 Acesse o sistema: ${APP_LINK}\n\n_Enviado via Sistema ACT_`;
                                   
                                   if (navigator.share) {
                                      navigator.share({ title: `Extrato ${pName}`, text: msg }).catch(() => {
