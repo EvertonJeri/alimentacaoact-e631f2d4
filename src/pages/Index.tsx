@@ -237,7 +237,7 @@ const Index = () => {
     { id: "refeicoes", label: "Solicitação de Refeições", icon: Utensils },
     { id: "pagamento", label: "Pagamento", icon: CreditCard },
     { id: "controle", label: "Controle Alimentar", icon: UtensilsCrossed },
-    { id: "descontos", label: "Descontos", icon: AlertTriangle },
+    { id: "descontos", label: "Descontos / Saldo", icon: AlertTriangle },
     { id: "fechamento", label: "Fechamento de Jobs", icon: Calculator },
     { id: "extrato", label: "Extrato Geral", icon: FileText },
     { id: "configuracoes", label: "Configurações do Sistema", icon: Settings },
