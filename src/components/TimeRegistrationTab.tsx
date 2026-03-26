@@ -320,24 +320,26 @@ const TimeRegistrationTab = ({
   const getJobName = (entryOrId: string | TimeEntry) => {
     const id = typeof entryOrId === 'string' ? entryOrId : entryOrId.jobId;
     if (!id) return "—";
+    const cleanId = id.trim();
 
-    const job = jobs.find((j) => j.id === id);
+    const job = jobs.find((j) => j.id === id || j.id === cleanId);
     if (job) return job.name;
 
-    const matchByName = jobs.find(j => j.name.startsWith(id + " - ") || j.name === id);
-    if (matchByName) return matchByName.name;
+    // Busca agressiva pelo número do job no meio do nome (ex: "2401 - MONTAGEM")
+    const matchByNum = jobs.find(j => j.name.startsWith(cleanId + " ") || j.name.startsWith(cleanId + "-") || j.name.includes(` ${cleanId} `));
+    if (matchByNum) return matchByNum.name;
 
-    // Recuperação Mágica (Sugerida pelo usuário): Se o job_id do ponto sumiu, mas ele fez uma Solicitação de Refeição no MESMO DIA, roubamos o Job de lá!
+    // Recuperação Mágica (Sugerida pelo usuário): Se o job_id do ponto sumiu, mas ele fez uma Solicitação de Refeição no período
     if (typeof entryOrId !== 'string') {
-        const req = requests.find(r => r.personId === entryOrId.personId && entryOrId.date >= r.startDate && entryOrId.date <= r.endDate);
+        const req = requests.find(r => r.personId === entryOrId.personId && (entryOrId.date >= r.startDate && entryOrId.date <= r.endDate));
         if (req) {
             const reqJob = jobs.find(j => j.id === req.jobId);
-            if (reqJob) return reqJob.name; // Achou pelo espelhamento da aba de Refeições!
+            if (reqJob) return reqJob.name;
         }
     }
 
-    if (!id.includes("-") || id.length < 30) return id; 
-    return `Removido (${id.substring(0,5)})`;
+    if (!id.includes("-") || id.length < 25) return id; 
+    return `ID #${id.substring(0, 8)}`;
   };
 
   const toggleSort = () => {
@@ -634,33 +636,7 @@ const TimeRegistrationTab = ({
                     <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap max-w-[200px] truncate">
                       {(() => {
                         const jName = getJobName(entry);
-                        if (jName.includes("Removido (")) {
-                          return (
-                            <div className="flex items-center gap-1.5">
-                              <Select
-                                onValueChange={(newJobId) => {
-                                  // Quando o usuário selecionar o Job verdadeiro, atualizamos o TimeEntry no banco e a UI!
-                                  const updated = { ...entry, jobId: newJobId };
-                                  onUpdateEntry?.(updated);
-                                  setEntries?.((prev) => prev.map((e) => (e.id === entry.id ? updated : e)));
-                                  toast.success("Vínculo do Job corrigido para este registro!");
-                                }}
-                              >
-                                <SelectTrigger className="h-6 text-[10px] bg-red-50 border-red-200 text-red-600 px-2 py-0">
-                                  <SelectValue placeholder="Vincular Novo Job..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {(jobs || []).map(j => (
-                                    <SelectItem key={j.id} value={j.id} className="text-[10px]">
-                                      {j.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          );
-                        }
-                        return <span title={jName}>{jName}</span>;
+                        return <span className="px-2 py-0.5 rounded text-[10px] bg-primary/10 text-primary border border-primary/20 font-black uppercase tracking-widest tabular-nums leading-none" title={jName}>{jName}</span>;
                       })()}
                     </td>
                     <td className="px-3 py-2 tabular-nums text-muted-foreground whitespace-nowrap">

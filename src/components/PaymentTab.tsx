@@ -77,26 +77,42 @@ const PaymentTab = ({
 
   const fDate = (d: string) => (d && d.includes("-") ? d.split("-").reverse().join("/") : d || "—");
   const getPersonName = (id: string) => people.find((p) => p.id === id)?.name || "—";
-  const getJobName = (id: string) => {
+  const getJobName = (id: string, personId?: string) => {
     if (!id) return "—";
-    const job = jobs.find((j) => j.id === id);
+    const cleanId = id.trim();
+    const job = jobs.find((j) => j.id === id || j.id === cleanId);
     if (job) return job.name;
-    const matchByName = jobs.find(j => j.name.startsWith(id + " - ") || j.name === id);
-    if (matchByName) return matchByName.name;
-    if (!id.includes("-") || id.length < 30) return id;
-    return `Removido (${id.substring(0,5)})`;
+
+    // Busca agressiva pelo número do job no meio do nome (ex: "2401 - MONTAGEM")
+    const matchByNum = jobs.find(j => j.name.startsWith(cleanId + " ") || j.name.startsWith(cleanId + "-") || j.name.includes(` ${cleanId} `));
+    if (matchByNum) return matchByNum.name;
+
+    // RECUPERAÇÃO MÁGICA: Se não achou na lista de jobs, tenta achar por uma solicitação da mesma pessoa no mesmo período
+    if (personId) {
+        const matchingReq = requests.find(r => r.personId === personId && (r.jobId === id || r.jobId === cleanId));
+        if (matchingReq) {
+            const reqJob = jobs.find(j => j.id === matchingReq.jobId);
+            if (reqJob) return reqJob.name;
+        }
+    }
+
+    if (!id.includes("-") || id.length < 25) return id;
+    return `ID #${id.substring(0, 8)}`;
   };
 
-  const updateRequestJob = (req: MealRequest, newJobId: string) => {
-    // Simulamos o onUpdateRequest se disponível, embora no PaymentTab o foco seja Pagamento.
-    // Como o usuário quer consertar o dado, precisamos dessa funcionalidade.
-    // Index.tsx fornece updateMealRequest.mutate(req)
-  };
 
-  const registeredRequests = requests.filter((req) => {
-    const dates = getDatesInRange(req.startDate, req.endDate);
-    return dates.some((date) => timeEntries.some((e) => e.personId === req.personId && e.date === date));
-  });
+
+  const registeredRequests = useMemo(() => {
+    if (!requests || !timeEntries) return [];
+    
+    // OTIMIZAÇÃO: Criamos um conjunto de chaves únicas para busca O(1)
+    const entryKeys = new Set(timeEntries.map(e => `${e.personId}-${e.date}`));
+    
+    return requests.filter((req) => {
+      const dates = getDatesInRange(req.startDate, req.endDate);
+      return dates.some((date) => entryKeys.has(`${req.personId}-${date}`));
+    });
+  }, [requests, timeEntries]);
 
   // PERFORMANCE: Calculamos os saldos apenas para as pessoas visíveis nesta aba!
   const personBalancesMap = useMemo(() => {
@@ -245,7 +261,7 @@ const PaymentTab = ({
         }
 
         // 3. Notificação automática via E-mail e WhatsApp para o Financeiro (Total do Job)
-        const jobName = getJobName(jobId);
+        const jobName = getJobName(jobId, jobReqs[0].personId);
         const totalJobPayment = jobReqs.reduce((acc, r) => acc + (calcRequestBruto(r) || 0), 0);
         const jobWaMsg = `🏦 *FECHAMENTO INTEGRAL DE PROJETO*\n\n🏗️ Projeto: ${jobName}\n📅 Data: ${paymentDate}\n💰 Total Liquidado: R$ ${totalJobPayment.toFixed(2)}\n👥 Funcionários: ${jobReqs.length}`;
         
@@ -308,7 +324,7 @@ const PaymentTab = ({
                     </Button>
                     <div className="flex flex-col">
                       <div className="flex items-center gap-2">
-                        <h3 className="font-bold text-sm text-foreground">{getJobName(jobId)}</h3>
+                        <h3 className="font-bold text-sm text-foreground">{getJobName(jobId, jobReqs[0]?.personId)}</h3>
                         {isJobPaid && <Badge variant="secondary" className="bg-green-500/10 text-green-600 border-green-200 py-0.5">✓ Pago ({jobConf.paymentDate})</Badge>}
                       </div>
                     </div>

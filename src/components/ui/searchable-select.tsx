@@ -89,7 +89,7 @@ export function SearchableSelect({
           <CommandList>
             <CommandEmpty>{emptyMessage}</CommandEmpty>
             <CommandGroup>
-              {(options || []).map((option) => {
+              {(options || []).slice(0, 100).map((option) => {
                 const parsed = parseCLT(option.label);
                 return (
                   <CommandItem

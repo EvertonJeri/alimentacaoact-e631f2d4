@@ -559,15 +559,19 @@ export const useDatabase = () => {
       const toUpdate: any[] = [];
       const toInsert: any[] = [];
 
-      // 3. Constrói as tabelas usando um UUID de verdade
-      for (const jobName of uniqueList) {
-        const key = jobName.toLowerCase().trim();
-        if (existingMap.has(key)) {
-          toUpdate.push({ id: existingMap.get(key), name: jobName });
-        } else {
-          toInsert.push({ id: crypto.randomUUID(), name: jobName });
-        }
-      }
+       // 3. Constrói as tabelas usando o ID que veio da planilha (Número do Job)
+       const nameToIdMap = new Map(newJobs.map(j => [j.name.toLowerCase().trim(), j.id]));
+       
+       for (const jobName of uniqueList) {
+         const key = jobName.toLowerCase().trim();
+         const targetId = nameToIdMap.get(key) || crypto.randomUUID();
+         
+         if (existingMap.has(key)) {
+           toUpdate.push({ id: existingMap.get(key), name: jobName });
+         } else {
+           toInsert.push({ id: targetId, name: jobName });
+         }
+       }
 
       if (toUpdate.length > 0) {
         const { error } = await supabase.from("jobs").upsert(toUpdate, { onConflict: "id" });
