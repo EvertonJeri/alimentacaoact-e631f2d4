@@ -44,6 +44,7 @@ export interface SystemSettings {
   teamsWebhookUrl?: string;
   managerWhatsApp: string;
   adminEmails?: string;
+  adminWhatsApp?: string;
   enableTeams: boolean;
   enableWhatsApp: boolean;
   enableEmail: boolean;
@@ -51,16 +52,18 @@ export interface SystemSettings {
   financeEmails?: string;
   hrWhatsApp?: string;
   hrEmails?: string;
-  discountAlertDate?: number; // Dia do mês para alerta de desconto
-  discountAutoSend?: boolean; // Enviar automaticamente no dia
-  // Datas CLT
-  cltPaymentDay?: number;    // Até o 5º dia útil
-  cltAdvanceDay?: number;    // Adiantamento no dia 20
-  cltSheetCloseDay?: number; // Fechamento da folha no dia 20
-  // Datas PJ
-  pjPeriod1EndDay?: number;      // Período 01~15 → paga até dia 19
-  pjPeriod1PaymentDay?: number;  // Pagamento do período 1
-  pjPeriod2PaymentDay?: number;  // Período 16~fim → paga até dia 04 do mês seguinte
+  discountAlertDate?: number;
+  discountAutoSend?: boolean;
+  cltAlertDay?: number;  // Dia de alerta para CLT
+  pjAlertDay?: number;   // Dia de alerta para PJ
+  // Datas CLT (mantidas para compatibilidade)
+  cltPaymentDay?: number;
+  cltAdvanceDay?: number;
+  cltSheetCloseDay?: number;
+  // Datas PJ (mantidas para compatibilidade)
+  pjPeriod1EndDay?: number;
+  pjPeriod1PaymentDay?: number;
+  pjPeriod2PaymentDay?: number;
 }
 
 export const DEFAULT_SETTINGS: SystemSettings = {
@@ -72,8 +75,11 @@ export const DEFAULT_SETTINGS: SystemSettings = {
   financeEmails: "",
   hrWhatsApp: "",
   hrEmails: "",
+  adminWhatsApp: "",
   discountAlertDate: 25,
   discountAutoSend: false,
+  cltAlertDay: 5,
+  pjAlertDay: 19,
   cltPaymentDay: 5,
   cltAdvanceDay: 20,
   cltSheetCloseDay: 20,
@@ -107,8 +113,8 @@ export interface PaymentConfirmation {
   type: "request" | "job";
   paymentDate: string;
   confirmed: boolean;
-  appliedBalance?: number; // Valor do saldo retroativo liquidado nesta transação
-  applyBalance?: boolean;  // Se o usuário optou por abater o saldo
+  appliedBalance?: number;
+  applyBalance?: boolean;
 }
 
 
@@ -137,6 +143,8 @@ export const MEAL_VALUES: Record<MealType, number> = {
   almoco: 32.0,
   janta: 32.0,
 };
+
+export const APP_LINK = "https://alimentacaoact.lovable.app";
 
 export function calcTimeDiffMinutes(start: string, end: string): number {
   if (!String(start || "").includes(":") || !String(end || "").includes(":")) return 0;
@@ -238,9 +246,6 @@ export function calculateDayDiscount(
   const localToday = new Date().toISOString().split("T")[0];
   const isPast = date < localToday;
   
-  // Regra de viagem se for o primeiro dia da solicitação. 
-  // Agora só é considerada se houver uma linha correspondente no Registro de Horas (entry).
-  // Se NÃO tem registro no ponto E a data já passou (ONTEM PRA TRÁS) -> É FALTA TOTAL
   if (!entry) {
     if (isPast) {
       const dCafe = dayMeals.includes("cafe") ? refCafe : 0;
@@ -275,7 +280,6 @@ export function calculateDayDiscount(
        usedAlmoco = u.almoco;
        usedJanta = u.janta;
     } else if (isTravelDay) {
-       // Se não tem horas mas é dia de viagem, calculamos baseado no horário da viagem
        const u = determineMealsUsed(undefined, req, date);
        usedCafe = u.cafe;
        usedAlmoco = u.almoco;
@@ -288,7 +292,6 @@ export function calculateDayDiscount(
 
     if (!hasHours && !isTravelDay) {
       reason = "Falta - sem registro de horas";
-      // SE NÃO TRABALHOU E NÃO VIAJOU, DESCONTA TUDO QUE FOI SOLICITADO
       if (dayMeals.includes("cafe")) discountCafe = refCafe;
       if (dayMeals.includes("almoco")) discountAlmoco = refAlmoco;
       if (dayMeals.includes("janta")) discountJanta = refJanta;
@@ -307,9 +310,7 @@ export function calculateDayDiscount(
 
   // Se tem controle manual (Food Control), ele se sobrepõe
   if (fc) {
-    // 1. Se pediu e NÃO comeu -> Gera DESCONTO (+ valor)
     if (dayMeals.includes("cafe") && !fc.usedCafe) discountCafe = refCafe;
-    // 2. Se NÃO pediu e COMEU -> Gera CRÉDITO (- valor, somando ao saldo)
     else if (!dayMeals.includes("cafe") && fc.usedCafe) discountCafe = -refCafe;
     else discountCafe = 0;
 
@@ -345,7 +346,6 @@ export function calculatePersonBalance(
   let walletBalance = 0;
   const processedDaysReq = new Set<string>();
 
-  // 1. Somar todo o valor bruto que o funcionário GANHOU (Créditos das solicitações)
   personRequests.forEach(req => {
     const dates = getDatesInRange(req.startDate, req.endDate);
     dates.forEach(date => {
@@ -361,7 +361,6 @@ export function calculatePersonBalance(
   });
 
   const processedDaysDisc = new Set<string>();
-  // 2. Abater os DESCONTOS por faltas ou inconsistências (Débitos)
   personRequests.forEach(req => {
     const dates = getDatesInRange(req.startDate, req.endDate);
     dates.forEach(date => {
@@ -381,10 +380,7 @@ export function calculatePersonBalance(
     });
   });
 
-  // 3. Abater PAGAMENTOS reais já efetuados (Débitos na carteira)
-  // Um pagamento pode ter sido feito via Confirmação Individual (Request) ou Integral (Job)
   personRequests.forEach(req => {
-    // Verifica se esta solicitação específica ou o Job dela foram quitados
     const conf = confirmations.find(c => 
         ('id' in c && c.confirmed && (c.id === req.id || c.id === `job-${req.jobId}`))
     ) as PaymentConfirmation | undefined;
@@ -394,15 +390,11 @@ export function calculatePersonBalance(
         const dates = getDatesInRange(req.startDate, req.endDate);
         const personAtTime = people.find(p => p.id === personId);
         
-        // Valor Bruto solicitado na época
         dates.forEach(d => {
             const meals = (req.dailyOverrides?.[d] ?? req.meals) || [];
             meals.forEach(m => { paidAmount += getMealValue(m, d, personAtTime, req.location); });
         });
 
-        // Abatemos o que foi pago efetivamente. 
-        // Se for Job, o appliedBalance geralmente se aplica ao Job inteiro? 
-        // No momento, se for individual (Request), abatemos o appliedBalance específico.
         const applied = conf.id === req.id ? (conf.appliedBalance || 0) : 0;
         
         walletBalance -= (paidAmount + applied);
@@ -417,8 +409,6 @@ export function determineMealsUsed(
   req: MealRequest,
   date: string
 ): { cafe: boolean; almoco: boolean; janta: boolean } {
-  // Regra ACT: Se for auto-preenchido pelo sistema (ex: IDA automática)
-  // o controle alimentar não deve contabilizar como utilizado por padrão (Auditoria Manual)
   if (entry?.isAutoFilled) {
       return { cafe: false, almoco: false, janta: false };
   }
@@ -427,17 +417,15 @@ export function determineMealsUsed(
   let almoco = false;
   let janta = false;
 
-  // Regra de Viagem (Prioridade)
   if (req && date && date === req.startDate && req.travelTime) {
     const offset = req.transportType === "aviao" ? 4 : 2;
     const [h, m] = req.travelTime.split(":").map(Number);
     const adjustedMinutes = (h * 60 + m) - (offset * 60);
 
     if (adjustedMinutes <= 8 * 60) cafe = true;
-    if (adjustedMinutes <= 12 * 60) almoco = true; // Sincronizado com pedido user
-    if (adjustedMinutes <= 20 * 60) janta = true;  // Sincronizado com pedido user (20:00)
+    if (adjustedMinutes <= 12 * 60) almoco = true;
+    if (adjustedMinutes <= 20 * 60) janta = true;
     
-    // Se tiver entrada real, ela pode adicionar refeições, mas não tirar as da viagem (regra de benefício)
     if (!entry) return { cafe, almoco, janta };
   }
 
@@ -445,26 +433,19 @@ export function determineMealsUsed(
     const firstEntry = getFirstEntryTime(entry);
     const lastExit = getLastExitTime(entry);
     
-    // 1. REGRA IDA AUTOMÁTICA (1º DIA): 
-    // Se o sistema preencheu as horas sozinho, exige auditoria manual (bolinhas vazias).
     if (entry?.isAutoFilled) {
         return { cafe: false, almoco: false, janta: false };
     }
 
-    // 2. REGRA GERAL VIAGEM (FORA SP):
-    // Em viagem, se a pessoa trabalhou qualquer tempo, o sistema marca tudo como utilizado.
     if (req?.location === "Fora SP" && calcTotalMinutes(entry) > 0) {
         return { cafe: true, almoco: true, janta: true };
     }
 
-    // 3. REGRA DENTRO DE SP OU SEM VIAGEM:
-    // Avaliação estrita pelos horários de batida de ponto.
     if (String(firstEntry || "").includes(":")) {
       const [h, m] = String(firstEntry).split(":").map(Number);
-      if (h < 8 || (h === 8 && m <= 0)) cafe = true; // Até 08:00
+      if (h < 8 || (h === 8 && m <= 0)) cafe = true;
     }
     
-    // Almoço: intervalo ou 6h+
     if (entry.entry1 && entry.exit1 && entry.entry2 && entry.exit2) {
       almoco = true;
     } else if (calcTotalMinutes(entry) >= 360) {
@@ -473,11 +454,10 @@ export function determineMealsUsed(
     
     if (String(lastExit || "").includes(":")) {
       const [h] = String(lastExit).split(":").map(Number);
-      if (h >= 19) janta = true; // Após 19h
+      if (h >= 19) janta = true;
     }
     if (entry.entry3 || entry.exit3) janta = true;
   }
 
   return { cafe, almoco, janta };
 }
-
