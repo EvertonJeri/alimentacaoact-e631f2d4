@@ -235,6 +235,8 @@ export type Database = {
       system_settings: {
         Row: {
           admin_emails: string | null
+          admin_whatsapp: string | null
+          clt_alert_day: number | null
           discount_alert_date: number | null
           discount_auto_send: boolean | null
           enable_email: boolean | null
@@ -246,11 +248,14 @@ export type Database = {
           hr_whatsapp: string | null
           id: string
           manager_whatsapp: string | null
+          pj_alert_day: number | null
           teams_webhook_url: string | null
           updated_at: string | null
         }
         Insert: {
           admin_emails?: string | null
+          admin_whatsapp?: string | null
+          clt_alert_day?: number | null
           discount_alert_date?: number | null
           discount_auto_send?: boolean | null
           enable_email?: boolean | null
@@ -262,11 +267,14 @@ export type Database = {
           hr_whatsapp?: string | null
           id?: string
           manager_whatsapp?: string | null
+          pj_alert_day?: number | null
           teams_webhook_url?: string | null
           updated_at?: string | null
         }
         Update: {
           admin_emails?: string | null
+          admin_whatsapp?: string | null
+          clt_alert_day?: number | null
           discount_alert_date?: number | null
           discount_auto_send?: boolean | null
           enable_email?: boolean | null
@@ -278,6 +286,7 @@ export type Database = {
           hr_whatsapp?: string | null
           id?: string
           manager_whatsapp?: string | null
+          pj_alert_day?: number | null
           teams_webhook_url?: string | null
           updated_at?: string | null
         }
