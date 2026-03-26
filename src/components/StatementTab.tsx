@@ -445,13 +445,45 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
                           <p className="text-[9px] text-muted-foreground uppercase font-medium">{statements.length} Jobs Quitados</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-4">
-                        <div className="text-right">
-                          <p className="text-[9px] uppercase font-bold text-muted-foreground/60 leading-none">Total Pago</p>
-                          <p className="text-sm font-black text-green-700 mt-0.5">R$ {totalPaid.toFixed(2)}</p>
-                        </div>
-                        {isExpanded ? <ChevronUp className="h-3 w-3 text-muted-foreground/60" /> : <ChevronDown className="h-3 w-3 text-muted-foreground/60" />}
-                      </div>
+                       <div className="flex items-center gap-4">
+                         <Button 
+                           variant="ghost" 
+                           size="sm" 
+                           onClick={(e) => {
+                             e.stopPropagation();
+                             const pName = getPersonName(personId);
+                             const statementsDetail = statements.map(s => {
+                               const jn = getJobName(s.jobId);
+                               const discountDetails = s.details
+                                 .filter(d => d.type === 'desconto')
+                                 .map(d => `  • ${d.date.split("-").reverse().join("/").slice(0,5)}: ${d.reason} [R$ ${d.value.toFixed(2)}]`)
+                                 .join('\n');
+                               return `🏗️ *${jn}*\n💵 Valor: R$ ${s.totalUsed.toFixed(2)}${discountDetails ? `\n📋 Descontos:\n${discountDetails}` : ''}`;
+                             }).join('\n\n');
+                             const msg = `📊 *EXTRATO LIQUIDADO*\n\n👤 *${pName}*\n\n${statementsDetail}\n\n💰 *Total Pago:* R$ ${totalPaid.toFixed(2)}\n\n🔗 Acesse o sistema: ${APP_LINK}\n\n_Enviado via Sistema ACT_`;
+                             
+                             if (navigator.share) {
+                               navigator.share({ title: `Extrato ${pName}`, text: msg }).catch(() => {
+                                 navigator.clipboard.writeText(msg);
+                                 toast.success("Extrato copiado!");
+                                 window.open('https://web.whatsapp.com/', '_blank');
+                               });
+                             } else {
+                               navigator.clipboard.writeText(msg);
+                               toast.success("Extrato copiado!");
+                               window.open('https://web.whatsapp.com/', '_blank');
+                             }
+                           }}
+                           className="h-6 text-[9px] font-black uppercase text-green-700 hover:bg-green-50 border border-green-100"
+                         >
+                           <Send className="h-3 w-3 mr-1" /> Zap
+                         </Button>
+                         <div className="text-right">
+                           <p className="text-[9px] uppercase font-bold text-muted-foreground/60 leading-none">Total Pago</p>
+                           <p className="text-sm font-black text-green-700 mt-0.5">R$ {totalPaid.toFixed(2)}</p>
+                         </div>
+                         {isExpanded ? <ChevronUp className="h-3 w-3 text-muted-foreground/60" /> : <ChevronDown className="h-3 w-3 text-muted-foreground/60" />}
+                       </div>
                     </CardHeader>
                     {isExpanded && (
                       <CardContent className="p-0 border-t border-border/30 bg-background/50 text-[11px]">
