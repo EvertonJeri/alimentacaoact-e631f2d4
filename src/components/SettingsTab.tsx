@@ -52,6 +52,11 @@ export const SettingsTab = () => {
 
   const handleSave = async () => {
     try {
+      // PERSISTÊNCIA LOCAL (Fallback para colunas não migradas ainda)
+      if (settings.flashCardUsers) {
+        localStorage.setItem("act_flash_card_users", JSON.stringify(settings.flashCardUsers));
+      }
+
       await updateSystemSettings.mutateAsync(settings);
       await updateCustomHolidays.mutateAsync(customHolidays);
       toast.success("Configurações salvas!", { duration: 5000 });

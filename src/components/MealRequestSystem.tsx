@@ -27,6 +27,7 @@ import {
   type TimeEntry,
   type DiscountConfirmation,
   type PaymentConfirmation,
+  type SystemSettings,
 } from "@/lib/types";
 
 import {
@@ -37,7 +38,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { notifyFinancePayment } from "@/lib/notifications";
+import { notifyFinancePayment, notifyAdminPayment, notifyFinanceAndHRPayment } from "@/lib/notifications";
 
 interface MealRequestSystemProps {
   people: Person[];
@@ -52,6 +53,7 @@ interface MealRequestSystemProps {
   onNavigateToPayment?: () => void;
   autoFillTravel?: boolean;
   setAutoFillTravel?: (v: boolean) => void;
+  systemSettings?: SystemSettings;
 }
 
 const MealRequestSystem = ({
@@ -67,6 +69,7 @@ const MealRequestSystem = ({
   onNavigateToPayment,
   autoFillTravel = true,
   setAutoFillTravel,
+  systemSettings,
 }: MealRequestSystemProps) => {
   const [selectedJob, setSelectedJob] = useState("");
   const [location, setLocation] = useState("");
@@ -107,11 +110,24 @@ const MealRequestSystem = ({
 
   const handleConfirmFinance = async () => {
     const jobName = jobs.find(j => j.id === selectedJob)?.name || "—";
+    
+    // Identificar se há usuários Flash no lote que está sendo enviado
+    const hasFlashUsers = filtered.some(req => systemSettings?.flashCardUsers?.includes(req.personId));
+    
     const details = `⚠️ *NOVOS LANÇAMENTOS PARA PAGAMENTO*\n\n🏗️ Projeto: ${jobName}\n👥 Profissionais Envolvidos: ${financeSummary.count}\n💰 Valor Estimado das Novas Refeições: R$ ${financeSummary.total.toFixed(2)}\n\n*Os valores acima acabaram de ser lançados no sistema e já estão disponíveis para conferência e pagamento na aba 'Pagamentos'.*`;
     
-    await notifyFinancePayment(details);
+    if (hasFlashUsers) {
+      // Se houver gente do Flash, avisa os dois e-mails
+      await notifyFinanceAndHRPayment(details);
+    } else {
+      // Caso contrário, fluxo normal apenas Financeiro
+      await notifyFinancePayment(details);
+    }
+
+    notifyAdminPayment(details);
+    
     setShowFinanceDialog(false);
-    toast.success("Financeiro notificado sobre os novos lançamentos!");
+    toast.success("Financeiro e Setores notificados sobre os novos lançamentos!");
     if (onNavigateToPayment) onNavigateToPayment();
   };
 

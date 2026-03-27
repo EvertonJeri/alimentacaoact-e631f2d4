@@ -177,7 +177,10 @@ export const useDatabase = () => {
           pjPeriod1EndDay: d.pj_period1_end_day || 15,
           pjPeriod1PaymentDay: d.pj_period1_payment_day || 19,
           pjPeriod2PaymentDay: d.pj_period2_payment_day || 4,
-          flashCardUsers: d.flash_card_users || [],
+          flashCardUsers: d.flash_card_users ? d.flash_card_users : (() => {
+            try { return JSON.parse(localStorage.getItem("act_flash_card_users") || "[]"); } 
+            catch { return []; }
+          })(),
         } as SystemSettings;
       } catch (e) {
         return DEFAULT_SETTINGS;

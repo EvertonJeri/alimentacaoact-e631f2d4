@@ -23,7 +23,7 @@ export const fetchSettingsFromDB = async (): Promise<SystemSettings> => {
       .select("*")
       .eq("id", "default")
       .single();
-    
+
     if (error || !data) return getStoredSettings();
 
     return {
@@ -51,7 +51,7 @@ export const fetchSettingsFromDB = async (): Promise<SystemSettings> => {
 };
 
 const appendAppLink = (message: string): string => {
-  return `${message}\n\n🔗 Acesse o sistema: ${APP_LINK}`;
+  return `${message}\n\nAcesse o sistema no link abaixo:\n${APP_LINK}\n`;
 };
 
 export const sendTeamsNotification = async (title: string, message: string, color: string = "0078D4") => {
@@ -107,7 +107,7 @@ export const sendWhatsAppMessage = (message: string, phoneNumber?: string, setti
 export const sendEmailNotification = (subject: string, body: string, emailsOverride?: string, settingsOverride?: SystemSettings) => {
   const settings = settingsOverride || getStoredSettings();
   const emailTarget = emailsOverride || settings.adminEmails;
-  
+
   if (!settings.enableEmail || !emailTarget) {
     toast.error("E-mail: Nenhum e-mail configurado nas Configurações de Alerta.");
     return;
@@ -116,7 +116,7 @@ export const sendEmailNotification = (subject: string, body: string, emailsOverr
   const emails = emailTarget.split(",").map(e => e.trim()).filter(Boolean);
   if (emails.length === 0) return;
 
-  const bodyWithLink = `${body}\n\nAcesse o sistema: ${APP_LINK}`;
+  const bodyWithLink = `${body}\n\nAcesse o sistema no link abaixo:\n${APP_LINK}\n`;
   const mailtoUrl = `mailto:${emails.join(",")}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyWithLink)}`;
   window.open(mailtoUrl, '_self');
   toast.success("📧 E-mail: Cliente de e-mail aberto!", { duration: 3000 });
@@ -125,14 +125,14 @@ export const sendEmailNotification = (subject: string, body: string, emailsOverr
 // ===== Notificações para Administrador (Pagamentos e Descontos) =====
 export const notifyAdminPayment = async (details: string) => {
   const settings = await fetchSettingsFromDB();
-  
+
   const message = `💰 *CONFIRMAÇÃO DE PAGAMENTO*\n\n${details}\n\n📅 ${new Date().toLocaleString('pt-BR')}`;
-  
+
   // WhatsApp para administrador
   if (settings.enableWhatsApp && settings.adminWhatsApp) {
     sendWhatsAppMessage(message, settings.adminWhatsApp, settings);
   }
-  
+
   // Email para administrador
   if (settings.enableEmail && settings.adminEmails) {
     sendEmailNotification(
@@ -151,13 +151,13 @@ export const notifyAdminPayment = async (details: string) => {
 
 export const notifyAdminDiscount = async (details: string) => {
   const settings = await fetchSettingsFromDB();
-  
+
   const message = `⚠️ *DESCONTO REGISTRADO*\n\n${details}\n\n📅 ${new Date().toLocaleString('pt-BR')}`;
-  
+
   if (settings.enableWhatsApp && settings.adminWhatsApp) {
     sendWhatsAppMessage(message, settings.adminWhatsApp, settings);
   }
-  
+
   if (settings.enableEmail && settings.adminEmails) {
     sendEmailNotification(
       "ACT - Desconto Registrado",
@@ -175,13 +175,13 @@ export const notifyAdminDiscount = async (details: string) => {
 // ===== Notificações específicas para Financeiro =====
 export const notifyFinancePayment = async (details: string) => {
   const settings = await fetchSettingsFromDB();
-  
+
   const message = `💰 *NOVO PAGAMENTO REGISTRADO*\n\n${details}\n\n📅 ${new Date().toLocaleString('pt-BR')}`;
-  
+
   if (settings.enableWhatsApp && settings.financeWhatsApp) {
     sendWhatsAppMessage(message, settings.financeWhatsApp, settings);
   }
-  
+
   if (settings.enableEmail && settings.financeEmails) {
     sendEmailNotification(
       "ACT - Novo Pagamento Registrado",
@@ -196,16 +196,44 @@ export const notifyFinancePayment = async (details: string) => {
   }
 };
 
+export const notifyFinanceAndHRPayment = async (details: string) => {
+  const settings = await fetchSettingsFromDB();
+
+  const message = `💰 *NOVO PAGAMENTO (CARTÃO FLASH) REGISTRADO*\n\n${details}\n\n📅 ${new Date().toLocaleString('pt-BR')}`;
+
+  if (settings.enableWhatsApp && settings.financeWhatsApp) {
+    sendWhatsAppMessage(message, settings.financeWhatsApp, settings);
+  }
+
+  // Combina e-mails do Financeiro e do RH num envio só!
+  const combinedEmails = [settings.financeEmails, settings.hrEmails]
+    .filter(Boolean)
+    .join(",");
+
+  if (settings.enableEmail && combinedEmails) {
+    sendEmailNotification(
+      "ACT - Novo Pagamento Registrado (Cartão Flash)",
+      details.replace(/\*/g, '').replace(/\n/g, '\r\n'),
+      combinedEmails,
+      settings
+    );
+  }
+
+  if (settings.enableTeams && settings.teamsWebhookUrl) {
+    await sendTeamsNotification("💰 Pagamento Cartão Flash", details.replace(/\*/g, '**'), "FFA500");
+  }
+};
+
 // ===== Alertas de Desconto para RH =====
 export const notifyHRDiscounts = async (details: string) => {
   const settings = await fetchSettingsFromDB();
-  
+
   const message = `📋 *ALERTA DE DESCONTOS - RH*\n\n${details}\n\n📅 ${new Date().toLocaleString('pt-BR')}`;
-  
+
   if (settings.enableWhatsApp && settings.hrWhatsApp) {
     sendWhatsAppMessage(message, settings.hrWhatsApp, settings);
   }
-  
+
   if (settings.enableEmail && settings.hrEmails) {
     sendEmailNotification(
       "ACT - Relatório de Descontos para RH",

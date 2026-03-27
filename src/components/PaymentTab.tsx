@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Check, ChevronDown, ChevronRight, Filter, Undo2, Trash2, Calendar } from "lucide-react";
-import { sendWhatsAppMessage, notifyFinancePayment, notifyAdminPayment } from "@/lib/notifications";
+import { sendWhatsAppMessage, notifyFinancePayment, notifyAdminPayment, notifyFinanceAndHRPayment } from "@/lib/notifications";
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
@@ -213,7 +213,7 @@ const PaymentTab = ({
         // Segurança: data não pode ser vazia
         const finalPaymentDate = paymentDate || new Date().toISOString().split('T')[0];
 
-        // 1. Atualiza o banco de dados primeiro
+        // 1. Atualiza o banco de dados
         await onUpdateConfirmation({ 
             id, 
             type, 
@@ -223,18 +223,32 @@ const PaymentTab = ({
             appliedBalance: isNaN(retroBalance) ? 0 : retroBalance
         });
 
-        // 2. Notificação automática para o Financeiro e Administrador
-        const waMsg = `✅ *Pagamento Confirmado - Sistema ACT*\n\n👤 Funcionário: ${personName}\n🏗️ Projeto: ${jobName}\n📅 Data: ${paymentDate}\n💰 Valor: R$ ${finalValue.toFixed(2)}`;
-        
-        notifyFinancePayment(waMsg);
-        notifyAdminPayment(waMsg);
+        const isFlashUser = systemSettings?.flashCardUsers?.includes(req.personId);
 
-        // Alerta opcional direcionado para o Administrador (via WhatsApp)
-        setTimeout(() => {
-          if (confirm(`Aviso registrado! Deseja abrir o WhatsApp do Administrador para enviar o comprovante?`)) {
-            sendWhatsAppMessage(waMsg, systemSettings?.adminWhatsApp || systemSettings?.managerWhatsApp);
-          }
-        }, 150);
+        // 2. Notificação automática
+        const waMsg = `✅ *Pagamento Confirmado - Sistema ACT*\n\n👤 Funcionário: ${personName}\n🏗️ Projeto: ${jobName}\n📅 Data: ${paymentDate}\n💰 Valor: R$ ${finalValue.toFixed(2)}${isFlashUser ? '\n💳 Modalidade: Cartão Flash' : ''}`;
+        
+        if (isFlashUser) {
+           // Usuário Flash Card vai para o RH (apenas admin e prompt local)
+           notifyAdminPayment(waMsg); 
+           
+           setTimeout(() => {
+             if (confirm(`Aviso RH! Este usuário recebe via Cartão Flash. Deseja abrir o WhatsApp do RH para enviar o comprovante?`)) {
+               sendWhatsAppMessage(waMsg, systemSettings?.hrWhatsApp || systemSettings?.managerWhatsApp);
+             }
+           }, 150);
+        } else {
+           // Fluxo normal para Financeiro
+           notifyFinancePayment(waMsg);
+           notifyAdminPayment(waMsg);
+
+           // Alerta opcional direcionado para o Administrador (via WhatsApp)
+           setTimeout(() => {
+             if (confirm(`Aviso registrado! Deseja abrir o WhatsApp do Administrador para enviar o comprovante?`)) {
+               sendWhatsAppMessage(waMsg, systemSettings?.adminWhatsApp || systemSettings?.managerWhatsApp);
+             }
+           }, 150);
+        }
       }
 
       if (type === "job") {
@@ -311,8 +325,11 @@ const PaymentTab = ({
       <div className="space-y-4">
         {Array.from(groupedByJob.keys()).map((jobId) => {
           const jobReqs = groupedByJob.get(jobId)!;
+          // Agora o Job só é considerado "Totalmente Pago" se TODO MUNDO dentro dele estiver com confirmação ativa.
+          // Isso garante que se um complemento for adicionado (sem confirmação ainda), o botão "Confirmar Job" ressurge para ele e o painel volta a ficar "pendente".
+          const isJobPaid = jobReqs.every(req => getConfirmation(req.id)?.confirmed);
+          // O último pagamento do Job caso queiramos puxar a data geral
           const jobConf = getConfirmation(`job-${jobId}`);
-          const isJobPaid = jobConf?.confirmed;
           const jobPaymentDate = jobConf?.paymentDate || new Date().toISOString().split("T")[0];
 
           return (
@@ -325,17 +342,17 @@ const PaymentTab = ({
                     <div className="flex flex-col">
                       <div className="flex items-center gap-2">
                         <h3 className="font-bold text-sm text-foreground">{getJobName(jobId, jobReqs[0]?.personId)}</h3>
-                        {isJobPaid && <Badge variant="secondary" className="bg-green-500/10 text-green-600 border-green-200 py-0.5">✓ Pago ({jobConf.paymentDate})</Badge>}
+                        {isJobPaid && <Badge variant="secondary" className="bg-green-500/10 text-green-600 border-green-200 py-0.5">✓ Job 100% Pago</Badge>}
                       </div>
                     </div>
                   </div>
                 {!isJobPaid ? (
                   <div className="flex items-center gap-2">
                     <Input type="date" className="h-9 text-xs w-40 px-3 flex-row-reverse" value={jobPaymentDate} onChange={(e) => updatePaymentDate(`job-${jobId}`, 'job', e.target.value)} />
-                    <Button size="sm" className="h-9 bg-primary" onClick={() => confirmPayment(`job-${jobId}`, "job", jobPaymentDate)}>Confirmar Job</Button>
+                    <Button size="sm" className="h-9 bg-primary" onClick={() => confirmPayment(`job-${jobId}`, "job", jobPaymentDate)}>Confirmar Restantes</Button>
                   </div>
                 ) : (
-                  <Button variant="ghost" size="sm" className="h-8 text-xs text-muted-foreground" onClick={() => removeConfirmation(`job-${jobId}`)}>Estornar Job</Button>
+                  <Button variant="ghost" size="sm" className="h-8 text-xs text-muted-foreground" onClick={() => removeConfirmation(`job-${jobId}`)}>Estornar Header</Button>
                 )}
               </div>
 
@@ -343,7 +360,8 @@ const PaymentTab = ({
                 <div className="divide-y divide-border">
                   {jobReqs.map((req) => {
                   const conf = getConfirmation(req.id);
-                  const isPaid = isJobPaid || conf?.confirmed;
+                  // O req individual é o único fator de estar pago agora. Se for complemento, ele terá conf nulo.
+                  const isPaid = conf?.confirmed;
                   const paymentDate = conf?.paymentDate || jobPaymentDate;
 
                   const currentReqBruto = calcRequestBruto(req);
@@ -366,19 +384,31 @@ const PaymentTab = ({
                     ? (frozenApply ? (conf?.appliedBalance || 0) : 0)
                     : (frozenApply ? retroBalance : 0);
 
+                  const isFlashUser = systemSettings?.flashCardUsers?.includes(req.personId);
+
                   return (
-                    <div key={req.id} className="p-4 bg-background">
+                    <div key={req.id} className={`p-4 transition-colors ${isFlashUser ? 'bg-amber-50/50' : 'bg-background'}`}>
                       <div className="flex items-center justify-between flex-wrap gap-4">
                         <div className="flex items-center gap-3">
                           <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => toggleRequest(req.id)}>
                             {expandedRequests.has(req.id) ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                           </Button>
                           <div className="flex-1">
-                            <p className="font-bold text-sm text-foreground flex items-center gap-1">
-                              {people.find(p => p.id === req.personId)?.isRegistered && <span className="text-muted-foreground mr-1 opacity-70">(CLT)</span>}
-                              {getPersonName(req.personId)}
+                            <p className="font-bold text-sm text-foreground flex flex-wrap items-center gap-2">
+                              {people.find(p => p.id === req.personId)?.isRegistered && <span className="text-muted-foreground opacity-70">(CLT)</span>}
+                              <span>{getPersonName(req.personId)}</span>
+                              {isFlashUser && (
+                                <Badge variant="destructive" className="text-[11px] font-black tracking-widest bg-amber-500 hover:bg-amber-600 border-none px-2 py-0.5 h-5 items-center uppercase text-white shadow-sm">
+                                  💳 Cartão Flash (RH)
+                                </Badge>
+                              )}
+                              {people.find(p => p.id === req.personId)?.pix && !isFlashUser && (
+                                <Badge variant="secondary" className="text-[11px] font-bold tracking-tight text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 h-5 items-center">
+                                  PIX: {people.find(p => p.id === req.personId)?.pix}
+                                </Badge>
+                              )}
                             </p>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 mt-1">
                               <p className="text-[10px] text-muted-foreground uppercase font-medium">
                                 {req.location || 'Local Não Definido'} • {fDate(req.startDate)} a {fDate(req.endDate)}
                               </p>
@@ -406,8 +436,12 @@ const PaymentTab = ({
 
                         <div className="flex items-center gap-6">
                           <div className="text-right flex flex-col items-end gap-0.5">
-                            <p className="text-[10px] uppercase tracking-widest font-black text-muted-foreground/60 leading-none">Total Pix</p>
-                            <p className="text-base font-black tabular-nums tracking-tighter text-foreground leading-none">R$ {finalTotal.toFixed(2)}</p>
+                            <p className={`text-[10px] uppercase tracking-widest font-black leading-none ${isFlashUser ? 'text-amber-600' : 'text-muted-foreground/60'}`}>
+                              {isFlashUser ? 'TOTAL FLASH' : 'TOTAL PIX'}
+                            </p>
+                            <p className={`text-base font-black tabular-nums tracking-tighter leading-none ${isFlashUser ? 'text-amber-600' : 'text-foreground'}`}>
+                              R$ {finalTotal.toFixed(2)}
+                            </p>
                             
                             <div className="flex flex-col items-end pt-1">
                               {/* Se Saldo ON: Mostra o desconto da montagem atual riscado */}

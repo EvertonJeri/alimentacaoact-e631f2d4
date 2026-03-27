@@ -159,6 +159,7 @@ const Index = () => {
             onNavigateToPayment={() => setActivePage("pagamento")}
             autoFillTravel={autoFillTravel}
             setAutoFillTravel={setAutoFillTravel}
+            systemSettings={systemSettings.data}
           />
         );
       case "pagamento":
