@@ -559,8 +559,12 @@ export const useDatabase = () => {
       const toUpdate: any[] = [];
       const toInsert: any[] = [];
 
-       // 3. Constrói as tabelas usando o ID que veio da planilha (Número do Job)
-       const nameToIdMap = new Map(newJobs.map(j => [j.name.toLowerCase().trim(), j.id]));
+       // 3. Constrói as tabelas. Garantimos que o ID usado para novos registros seja um UUID válido.
+       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+       const nameToIdMap = new Map(newJobs.map(j => [
+         j.name.toLowerCase().trim(), 
+         uuidRegex.test(j.id) ? j.id : crypto.randomUUID()
+       ]));
        
        for (const jobName of uniqueList) {
          const key = jobName.toLowerCase().trim();

@@ -117,7 +117,7 @@ export const JobImportDialog = () => {
 
         const fullName = `${jobNumber} - ${description}`;
         if (!seenIds.has(jobNumber)) {
-          jobsToInsert.push({ id: jobNumber, name: fullName });
+          jobsToInsert.push({ id: crypto.randomUUID(), name: fullName });
           seenIds.add(jobNumber);
         }
       }
