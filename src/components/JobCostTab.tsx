@@ -182,10 +182,17 @@ const JobCostTab = ({
               return (
                 <tr key={job.id} className={`hover:bg-muted/30 transition-colors ${isFinished ? "bg-green-50/30" : ""}`}>
                   <td 
-                    className="px-4 py-4 font-bold text-foreground cursor-pointer hover:text-primary hover:underline transition-colors"
+                    className="px-4 py-4 cursor-pointer hover:bg-muted/50 transition-colors group"
                     onClick={() => onJobClick?.(job.id)}
                   >
-                    {job.name}
+                    <div className="flex flex-col min-w-0">
+                      <span className="font-black text-xs text-primary tabular-nums tracking-tighter group-hover:underline">{job.name.split(" - ")[0]}</span>
+                      {job.name.includes(" - ") && (
+                        <span className="text-[10px] uppercase font-bold text-muted-foreground truncate opacity-70 mt-1">
+                          {job.name.split(" - ").slice(1).join(" - ")}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-4 text-right tabular-nums">
                     <div className="font-medium text-green-600">R$ {totalPaid.toFixed(2)}</div>

@@ -289,7 +289,17 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
       <div className="flex flex-wrap gap-4 items-end p-4 rounded-xl border border-border bg-muted/30">
         <div className="flex-1 min-w-[240px]">
           <SearchableSelect
-            options={[{ value: "all", label: "Todos os Jobs" }, ...jobs.map(j => ({ value: j.id, label: j.name }))]}
+            options={[
+              { value: "all", label: "Todos os Jobs" }, 
+              ...jobs.map(j => {
+                const parts = j.name.split(" - ");
+                return { 
+                  value: j.id, 
+                  label: j.name,
+                  description: parts[1] ? `Projeto: ${parts[1]}` : undefined
+                };
+              })
+            ]}
             value={selectedJob} onValueChange={setSelectedJob}
           />
         </div>
@@ -347,7 +357,13 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
                             <span className="font-bold text-sm tracking-tight">{getPersonName(ps.personId)}</span>
                           </div>
                           <div className="flex items-center gap-2 mt-0.5">
-                            <Badge variant="outline" className="text-[9px] h-4 bg-muted/30">{getJobName(ps.jobId)}</Badge>
+                            <Badge variant="outline" className="text-[9px] h-4 bg-muted/30 whitespace-pre">
+                              {(() => {
+                                const n = getJobName(ps.jobId);
+                                const p = n.split(" - ");
+                                return p[0] + (p[1] ? ` • ${p[1]}` : "");
+                              })()}
+                            </Badge>
                             <span className="text-[9px] text-muted-foreground font-medium uppercase tracking-tighter">
                               {ps.startDate.split("-").reverse().join("/")} — {ps.endDate.split("-").reverse().join("/")}
                             </span>

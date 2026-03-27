@@ -8,6 +8,7 @@ import { Plus, Trash2, Filter, Download, Plane, Zap, ArrowRight, ArrowLeft, Arro
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import * as XLSX from "xlsx";
+import { TimeRegistrationImportDialog } from "./TimeRegistrationImportDialog";
 import {
   type Person,
   type Job,
@@ -486,7 +487,15 @@ const TimeRegistrationTab = ({
             Job
           </label>
           <SearchableSelect
-            options={jobs.map(j => ({ value: j.id, label: j.name }))}
+            options={Array.from(new Map(jobs.map(j => [j.name.trim().toLowerCase(), j])).values()).map((j) => {
+              const parts = (j.name || "").split(" - ");
+              const desc = parts.slice(1).join(" - ");
+              return { 
+                value: j.id, 
+                label: j.name || "—",
+                description: desc ? `Projeto: ${desc}` : undefined
+              };
+            })}
             value={selectedJob}
             onValueChange={setSelectedJob}
             placeholder="Selecione o JOB..."
@@ -536,7 +545,17 @@ const TimeRegistrationTab = ({
             Filtrar Job
           </label>
           <SearchableSelect
-            options={[{ value: "all", label: "Todos" }, ...jobs.map(j => ({ value: j.id, label: j.name }))]}
+            options={[
+              { value: "all", label: "Todos" }, 
+              ...Array.from(new Map(jobs.map(j => [j.name.trim().toLowerCase(), j])).values()).map((j) => {
+                const parts = (j.name || "").split(" - ");
+                return { 
+                  value: j.id, 
+                  label: j.name || "—",
+                  description: parts[1] ? `Projeto: ${parts[1]}` : undefined
+                };
+              })
+            ]}
             value={filterJob}
             onValueChange={setFilterJob}
             className="h-8 text-xs"
@@ -569,6 +588,7 @@ const TimeRegistrationTab = ({
             </Button>
         </div>
         <div className="flex-1"></div>
+        <TimeRegistrationImportDialog />
         <Button onClick={exportToExcel} variant="outline" className="h-8 text-xs gap-1.5 shadow-sm">
           <Download className="h-3.5 w-3.5" />
           Exportar .xlsx
@@ -633,10 +653,18 @@ const TimeRegistrationTab = ({
                         </span>
                       </div>
                     </td>
-                    <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap max-w-[200px] truncate">
+                    <td className="px-3 py-2 whitespace-nowrap overflow-hidden">
                       {(() => {
-                        const jName = getJobName(entry);
-                        return <span className="px-2 py-0.5 rounded text-[10px] bg-primary/10 text-primary border border-primary/20 font-black uppercase tracking-widest tabular-nums leading-none" title={jName}>{jName}</span>;
+                        const jNameStr = getJobName(entry);
+                        const parts = jNameStr.split(" - ");
+                        const num = parts[0];
+                        const desc = parts.slice(1).join(" - ");
+                        return (
+                          <div className="flex flex-col min-w-0 max-w-[150px]">
+                            <span className="font-black text-[10px] text-primary tabular-nums tracking-tighter leading-none">{num}</span>
+                            {desc && <span className="text-[9px] uppercase font-bold text-muted-foreground truncate leading-tight mt-0.5" title={desc}>{desc}</span>}
+                          </div>
+                        );
                       })()}
                     </td>
                     <td className="px-3 py-2 tabular-nums text-muted-foreground whitespace-nowrap">

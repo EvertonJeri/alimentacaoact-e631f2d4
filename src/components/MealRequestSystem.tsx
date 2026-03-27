@@ -382,7 +382,14 @@ const MealRequestSystem = ({
               <Utensils className="h-3 w-3" /> Selecionar Job de Montagem
             </Label>
             <SearchableSelect
-              options={(jobs || []).map(j => ({ value: j.id, label: j.name }))}
+              options={Array.from(new Map((jobs || []).map(j => [j.name.toLowerCase().trim(), j])).values()).map(j => {
+                const parts = j.name.split(" - ");
+                return { 
+                  value: j.id, 
+                  label: j.name,
+                  description: parts[1] ? `Projeto: ${parts[1]}` : undefined
+                };
+              })}
               value={selectedJob}
               onValueChange={setSelectedJob}
               placeholder="Escolha o projeto..."
@@ -421,19 +428,16 @@ const MealRequestSystem = ({
                   </button>
                 </div>
                 <div className="flex items-center gap-2 text-2xs text-muted-foreground italic">
-                  <Calendar className="h-3 w-3" /> Configurando Job: {(() => {
+                  <Calendar className="h-3 w-3" /> Job: {(() => {
                     const name = jName(selectedJob);
-                    if (name.includes("Removido (")) {
-                      return (
-                        <Select onValueChange={setSelectedJob}>
-                          <SelectTrigger className="h-5 text-[10px] w-[150px] bg-red-50 py-0"><SelectValue placeholder="Fix Job..." /></SelectTrigger>
-                          <SelectContent>
-                             {jobs.map(j => <SelectItem key={j.id} value={j.id}>{j.name}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      );
-                    }
-                    return name;
+                    const parts = name.split(" - ");
+                    if (name.includes("Removido (")) return name;
+                    return (
+                      <span className="flex items-center gap-1.5 ml-1">
+                        <span className="font-black text-primary tabular-nums">{parts[0]}</span>
+                        {parts[1] && <span className="opacity-60 max-w-[120px] truncate">{parts[1]}</span>}
+                      </span>
+                    );
                   })()}
                 </div>
               </div>

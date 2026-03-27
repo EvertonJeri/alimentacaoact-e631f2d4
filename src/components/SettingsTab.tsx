@@ -5,8 +5,9 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { Bell, CalendarDays, Plus, Save, Settings, ShieldCheck, Trash2, X } from "lucide-react";
+import { Bell, CalendarDays, Plus, Save, Settings, ShieldCheck, Trash2, X, AlertTriangle } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { toast } from "sonner";
 import { JobImportDialog } from "./JobImportDialog";
 import { PersonImportDialog } from "./PersonImportDialog";
@@ -23,7 +24,13 @@ export const SettingsTab = () => {
     updateSystemSettings, 
     updateCustomHolidays,
     clearAllJobs,
-    people
+    people,
+    jobs,
+    timeEntries,
+    requests: mealRequests,
+    updateTimeEntries,
+    updateMealRequests,
+    repairHistoricalData
   } = useDatabase();
 
   const [settings, setSettings] = useState<SystemSettings>(DEFAULT_SETTINGS);
@@ -86,6 +93,31 @@ export const SettingsTab = () => {
   const removeCustomHoliday = (date: string) => {
     setCustomHolidays(prev => prev.filter(h => h.date !== date));
   };
+
+  // ----- RESGATE DE ÓRFÃOS LÓGICA ----- //
+  const [orphanMappings, setOrphanMappings] = useState<Record<string, string>>({});
+  
+  const orphanIds = Object.keys([...(timeEntries.data || []), ...(mealRequests.data || [])].reduce((acc: any, curr: any) => {
+    if (curr.jobId && jobs.data && !jobs.data.find(j => j.id === curr.jobId)) acc[curr.jobId] = true;
+    return acc;
+  }, {}));
+
+  const handleFixOrphans = async () => {
+    const mappedEntries = (timeEntries.data || [])
+      .filter(e => e.jobId && orphanMappings[e.jobId])
+      .map(e => ({...e, jobId: orphanMappings[e.jobId!]}));
+      
+    const mappedReqs = (mealRequests.data || [])
+      .filter(r => r.jobId && orphanMappings[r.jobId])
+      .map(r => ({...r, jobId: orphanMappings[r.jobId!]}));
+      
+    if (mappedEntries.length) await updateTimeEntries.mutateAsync(mappedEntries as any);
+    if (mappedReqs.length) await updateMealRequests.mutateAsync(mappedReqs as any);
+    
+    toast.success(`${mappedEntries.length + mappedReqs.length} registros recuperados com sucesso!`);
+    setOrphanMappings({});
+  };
+  // ------------------------------------ //
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto py-4 animate-in fade-in duration-500 pb-20">
@@ -276,10 +308,32 @@ export const SettingsTab = () => {
                 </div>
              </div>
           </CardContent>
-          <CardFooter className="bg-muted/10 border-t border-border flex justify-between items-center py-4">
-             <div className="flex gap-4">
+          <CardFooter className="bg-muted/10 border-t border-border flex flex-wrap justify-between items-center py-4 gap-4">
+             <div className="flex flex-wrap gap-3">
                <JobImportDialog />
                <PersonImportDialog />
+               <Button 
+                 variant="outline" 
+                 onClick={() => {
+                     if(window.confirm("ATENÇÃO: Isso apagará TODOS os Jobs do sistema (projetos antigos e novos). Suas horas não serão apagadas, mas perderão os nomes até que você importe a planilha novamente e use o botão 'Recuperar Vínculos'. Deseja continuar?")) {
+                         clearAllJobs.mutate();
+                     }
+                 }} 
+                 disabled={clearAllJobs.isPending}
+                 className="font-black uppercase tracking-widest text-[10px] h-10 border-red-200 bg-red-50 text-red-600 hover:bg-red-100 gap-2 shadow-sm"
+               >
+                 <Trash2 className="h-4 w-4" /> 
+                 {clearAllJobs.isPending ? "Apagando..." : "Zerar Jobs"}
+               </Button>
+               <Button 
+                 variant="outline" 
+                 onClick={() => repairHistoricalData.mutate()} 
+                 disabled={repairHistoricalData.isPending}
+                 className="font-black uppercase tracking-widest text-[10px] h-10 border-amber-200 bg-amber-50/50 text-amber-700 hover:bg-amber-100 gap-2 shadow-sm"
+               >
+                 <ShieldCheck className="h-4 w-4" /> 
+                 {repairHistoricalData.isPending ? "Recuperando..." : "Recuperar Vínculos"}
+               </Button>
              </div>
              <Button onClick={handleSave} className="font-black uppercase tracking-widest text-[10px] px-8 h-10 shadow-lg gap-2">
                <Save className="h-4 w-4" /> Salvar Configurações
@@ -316,6 +370,46 @@ export const SettingsTab = () => {
              </div>
           </CardContent>
         </Card>
+
+        {/* RESGATE DE PROJETOS ÓRFÃOS */}
+        {orphanIds.length > 0 && (
+          <Card className="border-red-200 shadow-md lg:col-span-3 bg-red-50/50">
+            <CardHeader className="bg-red-100/50 border-b border-red-200">
+                <div className="flex items-center gap-3">
+                  <AlertTriangle className="h-5 w-5 text-red-600" />
+                  <CardTitle className="text-sm font-bold uppercase text-red-800">Projetos Órfãos Detectados ({orphanIds.length})</CardTitle>
+                </div>
+                <CardDescription className="text-xs text-red-700">
+                  Alguns registros de horas estão apontando para IDs de Jobs que foram apagados. Selecione qual Job atual corresponde a cada ID para resgatar essas horas.
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6 space-y-4 max-h-[400px] overflow-y-auto">
+                {orphanIds.map(oId => (
+                  <div key={oId} className="flex flex-col sm:flex-row gap-3 items-center p-3 bg-white border border-red-100 rounded-lg">
+                    <div className="text-xs font-mono bg-red-100 text-red-800 px-2 py-1 rounded">
+                       ID: {oId.substring(0,8)}...
+                    </div>
+                    <div className="flex-1 w-full">
+                       <SearchableSelect
+                         options={jobs.data?.map(j => ({ value: j.id, label: j.name })) || []}
+                         value={orphanMappings[oId]}
+                         onValueChange={(val) => setOrphanMappings(m => ({...m, [oId]: val}))}
+                         placeholder="Selecione o Job correspondente..."
+                         searchPlaceholder="Buscar Job..."
+                       />
+                    </div>
+                  </div>
+                ))}
+            </CardContent>
+            {Object.keys(orphanMappings).length > 0 && (
+              <CardFooter className="bg-red-100/30 border-t border-red-200 py-3">
+                 <Button onClick={handleFixOrphans} className="w-full bg-red-600 hover:bg-red-700 text-white font-bold uppercase tracking-widest text-xs">
+                    Salvar Resgate de {Object.keys(orphanMappings).length} Projetos
+                 </Button>
+              </CardFooter>
+            )}
+          </Card>
+        )}
 
       </div>
     </div>

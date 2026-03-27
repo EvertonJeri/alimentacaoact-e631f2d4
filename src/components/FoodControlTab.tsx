@@ -88,73 +88,97 @@ const FoodControlTab = ({
   };
 
   const rows = useMemo(() => {
-    const processedKeys = new Set<string>();
+    // 1. Mapas de Busca Rápidos (O(1))
+    const foodControlByKey = new Map<string, FoodControlEntry>();
+    foodControl.forEach(fc => {
+        foodControlByKey.set(`${fc.personId}-${fc.jobId}-${fc.date}`, fc);
+    });
+
+    const requestsByPersonJob = new Map<string, MealRequest[]>();
+    requests.forEach(r => {
+        const key = `${r.personId}-${r.jobId}`;
+        if (!requestsByPersonJob.has(key)) requestsByPersonJob.set(key, []);
+        requestsByPersonJob.get(key)!.push(r);
+    });
+
+    const peopleMap = new Map<string, Person>();
+    people.forEach(p => peopleMap.set(p.id, p));
+
+    const jobsMap = new Map<string, Job>();
+    jobs.forEach(j => jobsMap.set(j.id, j));
+
+    // 2. Deduplicação em Massa O(N)
+    // Para o controle alimentar, nos interessa (Pessoa + Job + Data)
+    const entryBestVersion = new Map<string, TimeEntry>();
+    timeEntries.forEach(e => {
+        const key = `${e.personId}-${e.jobId}-${e.date}`;
+        const existing = entryBestVersion.get(key);
+        // Regra de prioridade: Viagens (Ida/Volta) têm preferência visual na tabela
+        if (!existing || e.isTravelOut || e.isTravelReturn) {
+            entryBestVersion.set(key, e);
+        }
+    });
+
     const result: (FoodControlEntry & { key: string })[] = [];
     
-    // Filtramos entradas duplicadas para evitar linhas repetidas no controle
-    const uniqueEntries: TimeEntry[] = [];
-    timeEntries.forEach(e => {
-      const key = `${e.personId}-${e.jobId}-${e.date}`;
-      if (processedKeys.has(key)) {
-        // Se já existe uma, mas esta nova for de viagem, ela ganha a vez (substitui)
-        if (e.isTravelOut || e.isTravelReturn) {
-          const idx = uniqueEntries.findIndex(ue => `${ue.personId}-${ue.jobId}-${ue.date}` === key);
-          if (idx >= 0) uniqueEntries[idx] = e;
-        }
-        return;
-      }
-      processedKeys.add(key);
-      uniqueEntries.push(e);
-    });
+    try {
+        Array.from(entryBestVersion.values()).forEach((entry) => {
+            if (!entry || !entry.personId) return;
 
-    uniqueEntries.forEach((entry) => {
-        if (!entry) return;
+            const personJobKey = `${entry.personId}-${entry.jobId}`;
+            const possibleReqs = requestsByPersonJob.get(personJobKey) || [];
+            const req = possibleReqs.find(r => entry.date >= r.startDate && entry.date <= r.endDate);
 
-        // Procurar solicitação de refeição associada
-        const req = requests.find(r => r.personId === entry.personId && r.jobId === entry.jobId && entry.date >= r.startDate && entry.date <= r.endDate);
+            const compositeKey = `${entry.personId}-${entry.jobId}-${entry.date}`;
+            const existing = foodControlByKey.get(compositeKey);
 
-        const key = `${entry.id}`; // 1:1 com o ID do Ponto
-        const existing = foodControl.find(fc => fc.id === entry.id || (fc.personId === entry.personId && fc.jobId === entry.jobId && fc.date === entry.date));
+            const personAtTime = peopleMap.get(entry.personId);
+            const dayMeals = req ? getActiveMeals(req, entry.date, personAtTime) : [];
+            const requestedCafe = Array.isArray(dayMeals) && dayMeals.includes("cafe");
+            const requestedAlmoco = Array.isArray(dayMeals) && dayMeals.includes("almoco");
+            const requestedJanta = Array.isArray(dayMeals) && dayMeals.includes("janta");
 
-        const personAtTime = people.find(p => p.id === entry.personId);
-        const dayMeals = req ? getActiveMeals(req, entry.date, personAtTime) : [];
-        const requestedCafe = Array.isArray(dayMeals) && dayMeals.includes("cafe");
-        const requestedAlmoco = Array.isArray(dayMeals) && dayMeals.includes("almoco");
-        const requestedJanta = Array.isArray(dayMeals) && dayMeals.includes("janta");
+            const rowKey = `fc-${entry.id || Math.random()}`;
 
-        if (existing) {
-          result.push({ 
-            ...existing, 
-            key,
-            requestedCafe,
-            requestedAlmoco,
-            requestedJanta
-          });
-        } else {
-          // Se não houver override manual no FoodControl, calculamos o 'sugerido' pelo ponto
-          let used = { cafe: false, almoco: false, janta: false };
-          if (req) {
-            used = determineMealsUsed(entry, req, entry.date);
-          }
+            if (existing) {
+              result.push({ 
+                ...existing, 
+                key: rowKey,
+                requestedCafe,
+                requestedAlmoco,
+                requestedJanta
+              });
+            } else {
+              let used = { cafe: false, almoco: false, janta: false };
+              try {
+                  if (req) {
+                    used = determineMealsUsed(entry, req, entry.date);
+                  }
+              } catch (e) {
+                  console.error("Erro ao determinar uso de refeição:", e);
+              }
 
-          result.push({
-            id: entry.id, // Sincroniza o ID
-            personId: entry.personId,
-            jobId: entry.jobId,
-            date: entry.date,
-            key,
-            requestedCafe,
-            requestedAlmoco,
-            requestedJanta,
-            usedCafe: used.cafe,
-            usedAlmoco: used.almoco,
-            usedJanta: used.janta,
-          });
-        }
-    });
+              result.push({
+                id: entry.id,
+                personId: entry.personId,
+                jobId: entry.jobId,
+                date: entry.date,
+                key: rowKey,
+                requestedCafe,
+                requestedAlmoco,
+                requestedJanta,
+                usedCafe: used.cafe,
+                usedAlmoco: used.almoco,
+                usedJanta: used.janta,
+              });
+            }
+        });
+    } catch (err) {
+        console.error("Critical error calculating FoodControl rows:", err);
+    }
 
-    return result.sort((a, b) => b.date.localeCompare(a.date) || a.personId.localeCompare(b.personId));
-  }, [timeEntries, requests, foodControl]);
+    return result.sort((a, b) => (b.date || "").localeCompare(a.date || "") || (a.personId || "").localeCompare(b.personId || ""));
+  }, [timeEntries, requests, foodControl, people, jobs]);
 
   const updateUsed = (personId: string, jobId: string, date: string, field: "usedCafe" | "usedAlmoco" | "usedJanta", value: boolean) => {
     const row = rows.find((r) => r.personId === personId && r.jobId === jobId && r.date === date);
@@ -196,7 +220,17 @@ const FoodControlTab = ({
             Filtrar Job
           </label>
           <SearchableSelect
-            options={[{ value: "all", label: "Todos os Jobs" }, ...jobs.map(j => ({ value: j.id, label: j.name }))]}
+            options={[
+              { value: "all", label: "Todos os Jobs" }, 
+              ...Array.from(new Map(jobs.map(j => [j.name.toLowerCase().trim(), j])).values()).map(j => {
+                const parts = j.name.split(" - ");
+                return { 
+                  value: j.id, 
+                  label: j.name,
+                  description: parts[1] ? `Projeto: ${parts[1]}` : undefined
+                };
+              })
+            ]}
             value={filterJob}
             onValueChange={setFilterJob}
             placeholder="Filtrar Job"
@@ -262,8 +296,9 @@ const FoodControlTab = ({
                   <td className="px-3 py-2 font-medium text-foreground whitespace-nowrap">{getPersonName(row.personId)}</td>
                   <td className="px-3 py-2 tabular-nums text-muted-foreground whitespace-nowrap max-w-[160px] truncate">
                     {(() => {
-                        const name = getJobName(row);
-                        if (name.includes("Removido (")) {
+                        const jStr = getJobName(row);
+                        const parts = jStr.split(" - ");
+                        if (jStr.includes("Removido (")) {
                           return (
                             <Select onValueChange={(val) => updateJobId(row.id, val)}>
                               <SelectTrigger className="h-6 text-[10px] bg-red-50 border-red-200 text-red-600 px-2 py-0">
@@ -275,7 +310,12 @@ const FoodControlTab = ({
                             </Select>
                           );
                         }
-                        return <span>{name}</span>;
+                        return (
+                          <div className="flex flex-col min-w-0 max-w-[140px] leading-tight">
+                            <span className="font-black text-[10px] text-primary tabular-nums tracking-tighter">{parts[0]}</span>
+                            {parts[1] && <span className="text-[9px] uppercase font-bold text-muted-foreground truncate opacity-70" title={parts[1]}>{parts[1]}</span>}
+                          </div>
+                        );
                     })()}
                   </td>
                   <td className="px-3 py-2 tabular-nums text-muted-foreground">{row.date?.includes("-") ? row.date.split("-").reverse().join("/") : row.date || "—"}</td>

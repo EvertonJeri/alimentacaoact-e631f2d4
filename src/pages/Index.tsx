@@ -35,7 +35,7 @@ import { SettingsTab } from "@/components/SettingsTab";
 import { useDatabase } from "@/hooks/use-database";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
-import { calculatePersonBalance } from "@/lib/types";
+import { calculatePersonBalance, type TimeEntry, type MealRequest } from "@/lib/types";
 
 const Index = () => {
   const {
@@ -98,6 +98,9 @@ const Index = () => {
     ...(paymentConfirmations.data || [])
   ], [discountConfirmations.data, paymentConfirmations.data]);
 
+  // O sincronismo de Jobs agora é manual na aba de Configurações para evitar loops de loading.
+
+
 
 
   if (isLoading) {
@@ -130,7 +133,7 @@ const Index = () => {
       case "horas":
         return (
           <TimeRegistrationTab
-            entries={timeEntriesData.slice(0, 1000)}
+            entries={timeEntriesData}
             onUpdateEntry={(entry) => updateTimeEntry.mutate(entry)}
             onRemoveEntry={(id) => removeTimeEntry.mutate(id)}
             people={peopleData}
@@ -146,9 +149,9 @@ const Index = () => {
           <MealRequestTab
             people={peopleData}
             jobs={jobsData}
-            requests={mealRequestsData.slice(0, 1000)}
-            timeEntries={timeEntriesData.slice(0, 1000)}
-            foodControl={foodControlData.slice(0, 1000)}
+            requests={mealRequestsData}
+            timeEntries={timeEntriesData}
+            foodControl={foodControlData}
             confirmations={allConfirmations}
             onUpdateRequest={(req) => updateMealRequest.mutate(req)}
             onRemoveRequest={(id) => removeMealRequest.mutate(id)}
@@ -194,9 +197,9 @@ const Index = () => {
           <FoodControlTab
             people={peopleData}
             jobs={jobsData}
-            requests={mealRequestsData.slice(0, 1000)}
-            timeEntries={timeEntriesData.slice(0, 1000)}
-            foodControl={foodControlData.slice(0, 1000)}
+            requests={mealRequestsData}
+            timeEntries={timeEntriesData}
+            foodControl={foodControlData}
             onUpdateEntry={(entry) => updateFoodControl.mutate(entry)}
             initialJobFilter={jobFilter}
           />

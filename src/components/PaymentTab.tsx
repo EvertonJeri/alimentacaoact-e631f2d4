@@ -229,10 +229,10 @@ const PaymentTab = ({
         notifyFinancePayment(waMsg);
         notifyAdminPayment(waMsg);
 
-        // Alerta opcional diretamente para o funcionário (via WhatsApp)
+        // Alerta opcional direcionado para o Administrador (via WhatsApp)
         setTimeout(() => {
-          if (confirm(`Aviso financeiro enviado! Deseja abrir o WhatsApp para o funcionário ${personName}?`)) {
-            sendWhatsAppMessage(waMsg);
+          if (confirm(`Aviso registrado! Deseja abrir o WhatsApp do Administrador para enviar o comprovante?`)) {
+            sendWhatsAppMessage(waMsg, systemSettings?.adminWhatsApp || systemSettings?.managerWhatsApp);
           }
         }, 150);
       }

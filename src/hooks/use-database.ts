@@ -393,6 +393,27 @@ export const useDatabase = () => {
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["meal_requests"] }),
   });
 
+  const updateMealRequests = useMutation({
+    mutationFn: async (reqs: MealRequest[]) => {
+      for (const req of reqs) {
+        const { error } = await supabase
+          .from("meal_requests")
+          .upsert({
+            id: req.id,
+            person_id: req.personId,
+            job_id: req.jobId,
+            start_date: req.startDate,
+            end_date: req.endDate,
+            meals: req.meals,
+            location: req.location,
+            daily_overrides: req.dailyOverrides,
+          } as any, { onConflict: "id" });
+        if (error) throw error;
+      }
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["meal_requests"] }),
+  });
+
   const deleteMealRequest = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("meal_requests").delete().eq("id", id);
@@ -413,43 +434,29 @@ export const useDatabase = () => {
         if (mealType === 'almoco') { isUsed = entry.usedAlmoco; isRequested = entry.requestedAlmoco; }
         if (mealType === 'janta') { isUsed = entry.usedJanta; isRequested = entry.requestedJanta; }
 
-        const { error } = await supabase
+        const { data: existing, error: matchError } = await supabase
           .from("food_control")
-          .upsert({
+          .select("id")
+          .match({
+            person_id: entry.personId,
+            job_id: entry.jobId,
+            date: entry.date,
+            meal_type: mealType
+          })
+          .maybeSingle();
+
+        if (existing?.id) {
+          const { error: updErr } = await supabase.from("food_control").update({ status: isUsed ? 'consumed' : 'not_consumed' }).eq("id", existing.id);
+          if (updErr) throw updErr;
+        } else {
+          const { error: insErr } = await supabase.from("food_control").insert({
             person_id: entry.personId,
             job_id: entry.jobId,
             date: entry.date,
             meal_type: mealType,
             status: isUsed ? 'consumed' : 'not_consumed'
-          } as any, { onConflict: "person_id,job_id,date,meal_type" });
-          
-        if (error && error.code === '42P10') {
-          // Fallback se a constraint UNIQUE ainda não existir no banco do usuário
-          console.warn("Constraint de unicidade ausente. Tentando localizar ID manualmente...");
-          const { data: existing } = await supabase
-            .from("food_control")
-            .select("id")
-            .match({
-              person_id: entry.personId,
-              job_id: entry.jobId,
-              date: entry.date,
-              meal_type: mealType
-            })
-            .maybeSingle();
-
-          if (existing?.id) {
-            await supabase.from("food_control").update({ status: isUsed ? 'consumed' : 'not_consumed' }).eq("id", existing.id);
-          } else {
-            await supabase.from("food_control").insert({
-              person_id: entry.personId,
-              job_id: entry.jobId,
-              date: entry.date,
-              meal_type: mealType,
-              status: isUsed ? 'consumed' : 'not_consumed'
-            });
-          }
-        } else if (error) {
-          throw error;
+          });
+          if (insErr) throw insErr;
         }
       }
     },
@@ -542,53 +549,188 @@ export const useDatabase = () => {
 
   const bulkInsertJobs = useMutation({
     mutationFn: async (newJobs: { id: string; name: string }[]) => {
-      // O id que vem do Excel em newJobs.id é o 'Número do Job' (ex: "5246"), não é um UUID.
-      // 1. Remove duplicatas baseadas no nome.
-      const uniqueList = Array.from(
-        new Map(newJobs.map(j => [j.name.toLowerCase().trim(), j.name])).values()
-      );
-
-      // 2. Busca Jobs existentes
+      // 1. Higienização e Deduplicação inicial
+      const sanitizeName = (name: string) => name.trim().replace(/\s+/g, ' ');
+      const newJobsSanitized = newJobs.map(j => ({ ...j, name: sanitizeName(j.name) }));
+      
       const { data: existing, error: fetchError } = await supabase.from("jobs").select("id, name");
       if (fetchError) throw fetchError;
 
-      const existingMap = new Map<string, string>(
-        (existing || []).map((j: any) => [j.name.toLowerCase().trim(), j.id])
-      );
-
+      const existingJobs = existing || [];
       const toUpdate: any[] = [];
       const toInsert: any[] = [];
+      const usedExistingIds = new Set<string>();
+      
+      const uniqueNewNames = Array.from(new Set(newJobsSanitized.map(j => j.name)));
 
-       // 3. Constrói as tabelas. Garantimos que o ID usado para novos registros seja um UUID válido.
-       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-       const nameToIdMap = new Map(newJobs.map(j => [
-         j.name.toLowerCase().trim(), 
-         uuidRegex.test(j.id) ? j.id : crypto.randomUUID()
-       ]));
-       
-       for (const jobName of uniqueList) {
-         const key = jobName.toLowerCase().trim();
-         const targetId = nameToIdMap.get(key) || crypto.randomUUID();
-         
-         if (existingMap.has(key)) {
-           toUpdate.push({ id: existingMap.get(key), name: jobName });
-         } else {
-           toInsert.push({ id: targetId, name: jobName });
-         }
-       }
+      for (const newName of uniqueNewNames) {
+        const newKey = newName.toLowerCase();
+        const newNumber = newName.split(" - ")[0].trim();
 
-      if (toUpdate.length > 0) {
-        const { error } = await supabase.from("jobs").upsert(toUpdate, { onConflict: "id" });
-        if (error) throw new Error(`Erro ao atualizar jobs: ${error.message}`);
+        const match = existingJobs.find(ej => {
+          const eKey = sanitizeName(ej.name).toLowerCase();
+          const eNumber = ej.name.split(" - ")[0].trim();
+          return eKey === newKey || eNumber === newNumber || ej.name === newNumber;
+        });
+
+        if (match && !usedExistingIds.has(match.id)) {
+          toUpdate.push({ id: match.id, name: newName });
+          usedExistingIds.add(match.id);
+        } else {
+          toInsert.push({ id: crypto.randomUUID(), name: newName });
+        }
       }
-      if (toInsert.length > 0) {
-        const { error } = await supabase.from("jobs").insert(toInsert);
-        if (error) throw new Error(`Erro ao importar jobs: ${error.message}`);
+
+      // 2. Execução Atômica em Lotes (Batching de 500)
+      const BATCH_SIZE = 500;
+
+      // Upsert (Update) em lotes
+      for (let i = 0; i < toUpdate.length; i += BATCH_SIZE) {
+        const chunk = toUpdate.slice(i, i + BATCH_SIZE);
+        const { error } = await supabase.from("jobs").upsert(chunk, { onConflict: "id" });
+        if (error) throw new Error(`Erro ao atualizar lote de jobs: ${error.message}`);
+      }
+
+      // Insert em lotes
+      for (let i = 0; i < toInsert.length; i += BATCH_SIZE) {
+        const chunk = toInsert.slice(i, i + BATCH_SIZE);
+        const { error } = await supabase.from("jobs").insert(chunk);
+        if (error) throw new Error(`Erro ao importar lote de jobs: ${error.message}`);
+      }
+
+      // 3. Limpeza de obsoletos
+      const idsToDelete: string[] = [];
+      existingJobs.forEach(ej => {
+          if (usedExistingIds.has(ej.id)) return;
+          const eNumber = ej.name.split(" - ")[0].trim();
+          const hasBetterVersion = uniqueNewNames.some(nn => nn.startsWith(eNumber + " - ") || nn === eNumber);
+          if (hasBetterVersion) idsToDelete.push(ej.id);
+      });
+
+      if (idsToDelete.length > 0) {
+          for (let i = 0; i < idsToDelete.length; i += BATCH_SIZE) {
+              const chunk = idsToDelete.slice(i, i + BATCH_SIZE);
+              await supabase.from("jobs").delete().in("id", chunk);
+          }
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["jobs"] });
       toast.success("Jobs importados com sucesso!");
+    },
+  });
+
+  const repairHistoricalData = useMutation({
+    mutationFn: async () => {
+      // 1. Busca todos os Jobs para identificar duplicatas e ganhadores
+      const { data: allJobs } = await supabase.from("jobs").select("id, name");
+      if (!allJobs || allJobs.length === 0) return;
+
+      const sanitizeName = (name: string) => name.trim().replace(/\s+/g, ' ');
+      
+      // Identifica "Winner IDs" por Número de Job
+      const jobByNumber = new Map<string, string>(); // Number -> WinnerID
+      const jobByName = new Map<string, string>();   // Name -> WinnerID
+      const allJobIds = new Set<string>();
+
+      allJobs.forEach(j => {
+          const sName = sanitizeName(j.name);
+          const iName = sName.toLowerCase();
+          const iNum = sName.split(" - ")[0].trim();
+          
+          if (!jobByNumber.has(iNum)) jobByNumber.set(iNum, j.id);
+          if (!jobByNumber.has(iName)) jobByNumber.set(iName, j.id);
+          allJobIds.add(j.id);
+      });
+
+      // 2. Busca dados históricos
+      const { data: entries } = await supabase.from("time_entries").select("*");
+      const { data: requests } = await supabase.from("meal_requests").select("*");
+
+      const BATCH_SIZE = 500;
+
+      // 3. Reparo de Time Entries (O(N))
+      const entriesToFix: any[] = [];
+      (entries || []).forEach(e => {
+          const currentId = String(e.job_id || "").trim();
+          if (!currentId) return;
+
+          // Se o ID atual existe e está OK, não fazemos nada
+          if (allJobIds.has(currentId)) return;
+
+          // Se não existe, tentamos encontrar o "Winner" por sorte (talvez o ID era o Número do Job como String?)
+          const winnerId = jobByNumber.get(currentId) || jobByNumber.get(currentId.toLowerCase());
+          
+          if (winnerId) {
+              entriesToFix.push({ ...e, job_id: winnerId });
+          }
+      });
+
+      if (entriesToFix.length > 0) {
+          for (let i = 0; i < entriesToFix.length; i += BATCH_SIZE) {
+              const chunk = entriesToFix.slice(i, i + BATCH_SIZE);
+              await supabase.from("time_entries").upsert(chunk);
+          }
+      }
+
+      // 4. Reparo de Meal Requests (O(N))
+      const reqsToFix: any[] = [];
+      (requests || []).forEach(r => {
+          const currentId = String(r.job_id || "").trim();
+          if (!currentId || allJobIds.has(currentId)) return;
+
+          const winnerId = jobByNumber.get(currentId) || jobByNumber.get(currentId.toLowerCase());
+          if (winnerId) {
+              reqsToFix.push({ ...r, job_id: winnerId });
+          }
+      });
+
+      if (reqsToFix.length > 0) {
+          for (let i = 0; i < reqsToFix.length; i += BATCH_SIZE) {
+              const chunk = reqsToFix.slice(i, i + BATCH_SIZE);
+              await supabase.from("meal_requests").upsert(chunk);
+          }
+      }
+      
+      // 5. Unificação de Jobs Duplicados (Se houver IDs diferentes com o mesmo nome exato)
+      const jobsToMergeMap = new Map<string, string[]>(); // WinnerName -> [LoserIDs]
+      allJobs.forEach(j => {
+          const sName = sanitizeName(j.name).toLowerCase();
+          const winner = jobByNumber.get(sName);
+          if (winner && winner !== j.id) {
+              const losers = jobsToMergeMap.get(sName) || [];
+              jobsToMergeMap.set(sName, [...losers, j.id]);
+          }
+      });
+
+      if (jobsToMergeMap.size > 0) {
+          const moreEntriesToFix: any[] = [];
+          const moreReqsToFix: any[] = [];
+          const jobsToDelete: string[] = [];
+
+          for (const [name, losers] of Array.from(jobsToMergeMap.entries())) {
+              const winnerId = jobByNumber.get(name)!;
+              
+              // Move registros dos perdedores para o vencedor
+              (entries || []).forEach(e => {
+                  if (losers.includes(e.job_id)) moreEntriesToFix.push({ ...e, job_id: winnerId });
+              });
+              (requests || []).forEach(r => {
+                  if (losers.includes(r.job_id)) moreReqsToFix.push({ ...r, job_id: winnerId });
+              });
+              jobsToDelete.push(...losers);
+          }
+
+          if (moreEntriesToFix.length > 0) await supabase.from("time_entries").upsert(moreEntriesToFix);
+          if (moreReqsToFix.length > 0) await supabase.from("meal_requests").upsert(moreReqsToFix);
+          if (jobsToDelete.length > 0) await supabase.from("jobs").delete().in("id", jobsToDelete);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["time_entries"] });
+      queryClient.invalidateQueries({ queryKey: ["meal_requests"] });
+      queryClient.invalidateQueries({ queryKey: ["jobs"] });
+      toast.success("Fusão de Jobs e Reparo de vínculos concluídos!");
     },
   });
 
@@ -603,18 +745,20 @@ export const useDatabase = () => {
     systemSettings,
     customHolidays,
     updateSystemSettings,
+    updateDiscountConfirmation,
     updatePaymentConfirmation,
     deletePaymentConfirmation,
-    updateDiscountConfirmation,
     updateTimeEntry,
     updateTimeEntries,
     deleteTimeEntry,
     updateMealRequest,
+    updateMealRequests,
     deleteMealRequest,
     updateFoodControl,
     updateCustomHolidays,
     bulkUpsertPeople,
     clearAllJobs,
     bulkInsertJobs,
+    repairHistoricalData,
   };
 };

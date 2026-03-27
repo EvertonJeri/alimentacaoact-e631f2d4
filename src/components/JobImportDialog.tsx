@@ -108,17 +108,57 @@ export const JobImportDialog = () => {
       const seenIds = new Set<string>();
 
       for (let r = dataStartRow; r <= totalRows; r++) {
-        const description = getCellValue(r, 0); // Coluna A = Descrição
-        const jobNumber = getCellValue(r, 1);   // Coluna B = Nº Job
+        const valA = getCellValue(r, 0).trim();
+        const valB = getCellValue(r, 1).trim();
 
-        if (!description || !jobNumber) continue;
-        // Pula linhas que claramente são totalizadores ou vazias
-        if (jobNumber.toLowerCase() === "total" || description.toLowerCase() === "total") continue;
+        if (!valA && !valB) continue;
 
-        const fullName = `${jobNumber} - ${description}`;
-        if (!seenIds.has(jobNumber)) {
+        let jobNumber = "";
+        let description = "";
+
+        // Heurística de uma ou duas colunas:
+        if (valA && valB) {
+          // Duas colunas preenchidas
+          if (valA.length < valB.length && valA.length < 15) {
+            jobNumber = valA;
+            description = valB;
+          } else {
+            jobNumber = valB;
+            description = valA;
+          }
+        } else if (valA) {
+          // Apenas coluna A preenchida
+          if (valA.includes(" - ")) {
+            const parts = valA.split(" - ");
+            jobNumber = parts[0];
+            description = parts.slice(1).join(" - ");
+          } else {
+            // Se for curta, assume que é o número. Se for longa, assume que é a descrição.
+            if (valA.length <= 15) {
+                jobNumber = valA;
+                description = valA; // Usa o mesmo se não tiver descrição
+            } else {
+                description = valA;
+                jobNumber = "SN"; // Sem Número
+            }
+          }
+        } else if (valB) {
+            // Apenas coluna B preenchida
+            jobNumber = valB;
+            description = valB;
+        }
+
+        if (!jobNumber && !description) continue;
+        if (jobNumber.toLowerCase() === "total" || description.toLowerCase() === "total" || description.toLowerCase() === "obs") continue;
+
+        // Higienização rigorosa (remove caracteres invisíveis e espaços duplicados)
+        const cleanNum = jobNumber.toString().replace(/[\u200B-\u200D\uFEFF]/g, '').replace(/\s+/g, '').toUpperCase();
+        const cleanDesc = description.toString().replace(/[\u200B-\u200D\uFEFF]/g, '').replace(/\s+/g, ' ').trim();
+        const fullName = cleanNum + (cleanDesc && cleanDesc !== cleanNum ? ` - ${cleanDesc}` : "");
+
+        if (cleanNum && !seenIds.has(cleanNum)) {
           jobsToInsert.push({ id: crypto.randomUUID(), name: fullName });
-          seenIds.add(jobNumber);
+          seenIds.add(cleanNum);
         }
       }
 
