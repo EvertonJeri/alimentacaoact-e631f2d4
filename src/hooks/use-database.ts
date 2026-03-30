@@ -443,7 +443,7 @@ export const useDatabase = () => {
 
   const updateFoodControl = useMutation({
     mutationFn: async (entry: FoodControlEntry) => {
-      const mealTypes: ('cafe' | 'almoco' | 'janta')[] = ['cafe', 'almoco', 'janta'];
+      const mealTypes: ('cafe' | 'almoco' | 'janta')[] = entry.updatedFields || ['cafe', 'almoco', 'janta'];
       let dbDate = entry.date;
       if (dbDate && dbDate.includes("/")) {
         const parts = dbDate.split("/");
