@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronRight, Check, Mail, Download, Bell, Users, Send, TrendingUp } from "lucide-react";
 import { sendTeamsNotification, sendWhatsAppMessage, sendEmailNotification, notifyHRDiscounts, notifyAdminDiscount, checkDiscountAlertDate } from "@/lib/notifications";
@@ -69,6 +70,7 @@ const DiscountsTab = ({
   const [showAlertBanner, setShowAlertBanner] = useState(false);
   const [filterJob, setFilterJob] = useState(initialJobFilter);
   const [activeView, setActiveView] = useState<"descontos" | "saldo">("descontos");
+  const [showHistory, setShowHistory] = useState(false);
 
   useEffect(() => {
     if (initialJobFilter) setFilterJob(initialJobFilter);
@@ -179,20 +181,21 @@ const DiscountsTab = ({
     return map;
   }, [positiveBalances]);
 
-  // Cálculo do saldo líquido (saldo positivo - descontos) por pessoa
+  // Cálculo do saldo líquido (saldo positivo - descontos pendentes) por pessoa
   const personNetBalanceMap = useMemo(() => {
     const map = new Map<string, number>();
     const allPids = new Set([...Array.from(groupedByPerson.keys()), ...Array.from(groupedBalanceByPerson.keys())]);
     allPids.forEach(pid => {
-      const descTotal = (groupedByPerson.get(pid) || []).reduce((s, d) => s + Math.abs(d.total), 0);
-      const saldTotal = (groupedBalanceByPerson.get(pid) || []).reduce((s, d) => s + Math.abs(d.total), 0);
+      // Importante: Só somamos para o saldo líquido o que NÃO está marcado como retirado (_done)
+      const descTotal = (groupedByPerson.get(pid) || []).filter(d => !d._done).reduce((s, d) => s + Math.abs(d.total), 0);
+      const saldTotal = (groupedBalanceByPerson.get(pid) || []).filter(d => !d._done).reduce((s, d) => s + Math.abs(d.total), 0);
       map.set(pid, saldTotal - descTotal); // (+) é crédito, (-) é débito
     });
     return map;
   }, [groupedByPerson, groupedBalanceByPerson]);
 
   const totalDiscount = activeDiscounts.reduce((s, d) => s + Math.abs(d.total), 0);
-  const totalPositiveBalance = positiveBalances.reduce((s, d) => s + Math.abs(d.total), 0);
+  const totalPositiveBalance = positiveBalances.filter(d => !d._done).reduce((s, d) => s + Math.abs(d.total), 0);
 
   const togglePerson = (personId: string) => {
     setExpandedPersons((prev) => {
@@ -206,7 +209,13 @@ const DiscountsTab = ({
   const isConfirmed = (personId: string) => confirmations.find((c) => 'personId' in c && c.personId === personId)?.confirmed || false;
 
   const undoDiscount = (personId: string) => {
-    const unconfirmed: DiscountConfirmation = { personId, paymentDate: "", confirmed: false };
+    const existing = confirmations.find((c) => 'personId' in c && c.personId === personId);
+    const unconfirmed: DiscountConfirmation = { 
+      id: existing?.id,
+      personId, 
+      paymentDate: null as any, 
+      confirmed: false 
+    };
     onUpdateConfirmation?.(unconfirmed);
 
     const idx = confirmations.findIndex((c) => 'personId' in c && c.personId === personId);
@@ -225,7 +234,7 @@ const DiscountsTab = ({
     }
 
     const personName = getPersonName(personId);
-    const personRows = discounts.filter(d => d.personId === personId);
+    const personRows = allAdjustments.filter(d => d.personId === personId);
     const totalDesc = personRows.reduce((s, d) => s + Math.abs(d.total), 0);
     const reasons = personRows.map(d => `${d.date?.includes("-") ? d.date.split("-").reverse().join("/") : d.date}: ${d.reason} (R$ ${Math.abs(d.total).toFixed(2)})`).join("\n");
 
@@ -299,8 +308,19 @@ const DiscountsTab = ({
 
     return (
       <div className="divide-y divide-border">
-        {Array.from(grouped.entries()).map(([personId, personRows]) => {
-          const personTotal = personRows.reduce((s, d) => s + Math.abs(d.total), 0);
+        {Array.from(grouped.entries())
+          .filter(([personId, personRows]) => {
+             if (showHistory) return true;
+             // Senão estiver no modo histórico, só mostramos se:
+             // 1. Tiver algum saldo pendente (personTotal > 0)
+             // 2. OU se NÃO estiver confirmado como pago ainda
+             const personTotal = personRows.filter(d => !d._done).reduce((s, d) => s + Math.abs(d.total), 0);
+             const personConfirmation = confirmations.find((c) => 'personId' in c && c.personId === personId) as DiscountConfirmation | undefined;
+             const confirmed = personConfirmation?.confirmed || false;
+             return personTotal > 0.01 || !confirmed;
+          })
+          .map(([personId, personRows]) => {
+          const personTotal = personRows.filter(d => !d._done).reduce((s, d) => s + Math.abs(d.total), 0);
           const expanded = expandedPersons.has(`${isPositiveBalance ? 'bal-' : ''}${personId}`);
           const personConfirmation = confirmations.find((c) => 'personId' in c && c.personId === personId) as DiscountConfirmation | undefined;
           const confirmed = !isPositiveBalance && (personConfirmation?.confirmed || false);
@@ -342,28 +362,28 @@ const DiscountsTab = ({
                       </span>
                     );
                   })()}
-                  {!isPositiveBalance && (
-                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                      <label className="text-2xs text-muted-foreground whitespace-nowrap">Data Desconto:</label>
-                      <Input
-                        type="date"
-                        className="h-10 text-xs w-40 px-3 border-border shadow-sm flex-row-reverse"
-                        value={paymentDate}
-                        onChange={(e) => updatePaymentDate(personId, e.target.value)}
-                      />
-                      {confirmed && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => undoDiscount(personId)}
-                          className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                          title="Desmarcar desconto"
-                        >
-                          Desfazer
-                        </Button>
-                      )}
-                    </div>
-                  )}
+                  <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                    <label className="text-2xs text-muted-foreground whitespace-nowrap">
+                      {isPositiveBalance ? "Data Pagamento:" : "Data Desconto:"}
+                    </label>
+                    <Input
+                      type="date"
+                      className="h-10 text-xs w-40 px-3 border-border shadow-sm flex-row-reverse"
+                      value={paymentDate}
+                      onChange={(e) => updatePaymentDate(personId, e.target.value)}
+                    />
+                    {confirmed && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => undoDiscount(personId)}
+                        className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        title={isPositiveBalance ? "Desmarcar pagamento" : "Desmarcar desconto"}
+                      >
+                        Desfazer
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -379,7 +399,7 @@ const DiscountsTab = ({
                         <th className={`text-right px-2 py-1.5 text-2xs uppercase tracking-wider font-medium ${isPositiveBalance ? 'text-green-600' : 'text-destructive'}`}>Janta (R$)</th>
                         <th className={`text-right px-2 py-1.5 text-2xs uppercase tracking-wider font-medium ${isPositiveBalance ? 'text-green-600' : 'text-destructive'}`}>Total (R$)</th>
                         <th className="text-left px-2 py-1.5 text-2xs uppercase tracking-wider font-medium text-muted-foreground">Motivo</th>
-                        {!isPositiveBalance && onUpdatePaymentConfirmation && <th className="text-right px-2 py-1.5 text-2xs uppercase tracking-wider font-medium text-muted-foreground">Ação</th>}
+                        {onUpdatePaymentConfirmation && <th className="text-right px-2 py-1.5 text-2xs uppercase tracking-wider font-medium text-muted-foreground">Ação</th>}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/50">
@@ -408,7 +428,7 @@ const DiscountsTab = ({
                               {done && <Badge variant="outline" className="text-[8px] h-3 px-1 bg-muted/50 border-muted-foreground/30">JÁ RETIRADO</Badge>}
                             </div>
                           </td>
-                          {!isPositiveBalance && discountId && onUpdatePaymentConfirmation && (
+                          {discountId && onUpdatePaymentConfirmation && (
                             <td className="px-2 py-1.5 text-right">
                               <Button
                                 variant="outline"
@@ -475,11 +495,22 @@ const DiscountsTab = ({
               {positiveBalances.length > 0 && <Badge className="text-2xs ml-1 h-4 px-1 bg-green-100 text-green-700">{positiveBalances.length}</Badge>}
             </TabsTrigger>
           </TabsList>
-          {discounts.length > 0 && activeView === "descontos" && (
-            <Button size="sm" variant="outline" className="gap-1.5 text-xs border-violet-300 text-violet-700 hover:bg-violet-50" onClick={handleSendToHR}>
-              <Users className="h-3.5 w-3.5" /> Enviar para RH
-            </Button>
-          )}
+          <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-full ring-1 ring-border cursor-pointer hover:bg-muted transition-all">
+                  <Checkbox 
+                    checked={showHistory} 
+                    onCheckedChange={(v) => setShowHistory(!!v)}
+                    className="h-3.5 w-3.5 border-primary/40 data-[state=checked]:bg-primary"
+                  />
+                  Ver Resolvidos
+              </label>
+
+              {discounts.length > 0 && activeView === "descontos" && (
+                <Button size="sm" variant="outline" className="gap-1.5 text-xs border-violet-300 text-violet-700 hover:bg-violet-50" onClick={handleSendToHR}>
+                  <Users className="h-3.5 w-3.5" /> Enviar para RH
+                </Button>
+              )}
+          </div>
         </div>
 
         <TabsContent value="descontos" className="mt-4">

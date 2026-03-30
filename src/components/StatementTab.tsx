@@ -581,7 +581,20 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
                                    <p className="font-bold text-muted-foreground">{getJobName(s.jobId)}</p>
                                    <p className="text-[9px] text-muted-foreground/60">{s.startDate.split("-").reverse().join("/")} — {s.endDate.split("-").reverse().join("/")}</p>
                                 </div>
-                                <p className="font-black text-green-600">R$ {s.totalUsed.toFixed(2)}</p>
+                                <div className="flex items-center gap-4">
+                                  <p className="font-black text-green-600">R$ {s.totalUsed.toFixed(2)}</p>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    onClick={(e) => { 
+                                      e.stopPropagation(); 
+                                      handleUndoLiquidatedJob(s.personId, s.jobId); 
+                                    }}
+                                    className="h-5 text-[8px] font-black uppercase text-destructive hover:bg-destructive/10 border border-destructive/20"
+                                  >
+                                    Desfazer
+                                  </Button>
+                                </div>
                               </div>
                             ))}
                          </div>

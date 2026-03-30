@@ -98,31 +98,31 @@ const MealRequestSystem = ({
     if (filtered.length === 0) return { total: 0, count: 0 };
     let total = 0;
     filtered.forEach(req => {
-        const days = getDatesInRange(req.startDate, req.endDate);
-        const person = people.find(p => p.id === req.personId);
-        total += (days || []).reduce((acc, d) => {
-          const activeMeals = (req.dailyOverrides?.[d] ?? req.meals) as MealType[];
-          return acc + (Array.isArray(activeMeals) ? activeMeals.reduce((sum, m) => sum + getMealValue(m, d, person), 0) : 0);
-        }, 0);
+      const days = getDatesInRange(req.startDate, req.endDate);
+      const person = people.find(p => p.id === req.personId);
+      total += (days || []).reduce((acc, d) => {
+        const activeMeals = (req.dailyOverrides?.[d] ?? req.meals) as MealType[];
+        return acc + (Array.isArray(activeMeals) ? activeMeals.reduce((sum, m) => sum + getMealValue(m, d, person), 0) : 0);
+      }, 0);
     });
     return { total, count: filtered.length };
   }, [filtered, people]);
 
   const handleConfirmFinance = async () => {
     const jobName = jobs.find(j => j.id === selectedJob)?.name || "—";
-    
+
     // Identificar se há usuários Flash no lote que está sendo enviado
     const hasFlashUsers = filtered.some(req => systemSettings?.flashCardUsers?.includes(req.personId));
-    
+
     const details = `⚠️ *NOVOS LANÇAMENTOS PARA PAGAMENTO*\n\n🏗️ Projeto: ${jobName}\n👥 Profissionais Envolvidos: ${financeSummary.count}\n💰 Valor Estimado das Novas Refeições: R$ ${financeSummary.total.toFixed(2)}\n\n*Os valores acima acabaram de ser lançados no sistema e já estão disponíveis para conferência e pagamento na aba 'Pagamentos'.*`;
-    
+
     if (hasFlashUsers) {
       // Se houver gente do Flash, avisa os dois e-mails
       await notifyFinanceAndHRPayment(details);
-    } 
+    }
 
     notifyAdminPayment(details);
-    
+
     setShowFinanceDialog(false);
     toast.success("Financeiro e Setores notificados sobre os novos lançamentos!");
     if (onNavigateToPayment) onNavigateToPayment();
@@ -141,10 +141,10 @@ const MealRequestSystem = ({
       const existing = requests.find(r => r.personId === personId && r.jobId === selectedJob && startDate >= r.startDate && startDate <= r.endDate);
       if (existing) {
         const currentOverrides = { ...(existing.dailyOverrides || {}) };
-        const baseDayMeals = Array.isArray(currentOverrides[startDate]) 
-          ? (currentOverrides[startDate] as MealType[]) 
+        const baseDayMeals = Array.isArray(currentOverrides[startDate])
+          ? (currentOverrides[startDate] as MealType[])
           : [...existing.meals];
-        
+
         const selectedPerson = people.find(p => p.id === personId);
         // Ensure "almoco" cannot be added if CLT, or if they already have it
         const finalComplementMeals = meals.filter(m => {
@@ -182,11 +182,11 @@ const MealRequestSystem = ({
     }
 
     // VERIFICAÇÃO DE DUPLICIDADE (Modo Normal)
-    const conflict = requests.find(r => 
-      r.personId === personId && 
+    const conflict = requests.find(r =>
+      r.personId === personId &&
       dates.some(d => getDatesInRange(r.startDate, r.endDate).includes(d))
     );
-    
+
     if (conflict) {
       if (conflict.jobId === selectedJob) {
         toast.error("Esta pessoa já possui uma solicitação neste projeto! Use a aba 'Complemento' se quiser adicionar mais refeições.", { duration: 6000 });
@@ -273,7 +273,7 @@ const MealRequestSystem = ({
       toast.info("Não há solicitações para o job selecionado.");
       return;
     }
-    
+
     let createdCount = 0;
     let requestsProcessed = 0;
 
@@ -283,8 +283,8 @@ const MealRequestSystem = ({
 
       dates.forEach((date, idx) => {
         // Verifica se já existe registro de horas para esta pessoa nesta data e job
-        const existing = timeEntries.find(e => 
-          e.personId === req.personId && 
+        const existing = timeEntries.find(e =>
+          e.personId === req.personId &&
           e.jobId === req.jobId &&
           e.date === date
         );
@@ -299,17 +299,17 @@ const MealRequestSystem = ({
           let isAutoFilled = false;
 
           const isFirstDay = idx === 0;
-          
+
           if (isFirstDay) {
             if (req.location === "Fora SP") {
-                isTravelOut = true;
-                isAutoFilled = true;
-                entry1 = "08:00"; exit1 = "12:00"; 
-                entry2 = "13:00"; exit2 = "18:00";
+              isTravelOut = true;
+              isAutoFilled = true;
+              entry1 = "08:00"; exit1 = "12:00";
+              entry2 = "13:00"; exit2 = "18:00";
             } else if (req.location === "Dentro SP" && req.travelTime) {
-                isTravelOut = true;
-                isAutoFilled = true;
-                entry1 = "08:00"; exit1 = "10:00";
+              isTravelOut = true;
+              isAutoFilled = true;
+              entry1 = "08:00"; exit1 = "10:00";
             }
           }
 
@@ -345,7 +345,7 @@ const MealRequestSystem = ({
     } else {
       toast.info(`Processado: ${requestsProcessed} solicitações. Todos os dias já estavam registrados.`, { duration: 5000 });
     }
-    
+
     setShowFinanceDialog(true);
   };
 
@@ -385,7 +385,7 @@ const MealRequestSystem = ({
     if (matchByName) return matchByName.name;
 
     if (!id.includes("-") || id.length < 30) return id;
-    return `Removido (${id.substring(0,5)})`;
+    return `Removido (${id.substring(0, 5)})`;
   };
   const fDate = (d: string) => (d && d.includes("-") ? d.split("-").reverse().join("/") : d || "—");
 
@@ -407,8 +407,8 @@ const MealRequestSystem = ({
             <SearchableSelect
               options={Array.from(new Map((jobs || []).map(j => [j.name.toLowerCase().trim(), j])).values()).map(j => {
                 const parts = j.name.split(" - ");
-                return { 
-                  value: j.id, 
+                return {
+                  value: j.id,
                   label: j.name,
                   description: parts[1] ? `Projeto: ${parts[1]}` : undefined
                 };
@@ -434,363 +434,362 @@ const MealRequestSystem = ({
         </div>
 
         <div className={`rounded-2xl border border-border p-6 shadow-lg space-y-6 ring-1 ring-primary/5 transition-opacity bg-muted/10`}>
-           <div className="flex flex-col gap-4 border-b border-border pb-4">
-              <div className="flex items-center justify-between">
-                <div className="flex gap-4">
-                  <button 
-                    onClick={() => setActiveSubTab("normal")}
-                    className={`text-[10px] font-black uppercase tracking-widest pb-1 transition-all border-b-2 ${activeSubTab === "normal" ? "text-primary border-primary" : "text-muted-foreground border-transparent opacity-60 hover:opacity-100"}`}
-                  >
-                    Solicitação Normal
-                  </button>
-                  <button 
-                    onClick={() => setActiveSubTab("complement")}
-                    className={`text-[10px] font-black uppercase tracking-widest pb-1 transition-all border-b-2 ${activeSubTab === "complement" ? "text-primary border-primary" : "text-muted-foreground border-transparent opacity-60 hover:opacity-100"}`}
-                  >
-                    Complemento
-                  </button>
-                </div>
-                <div className="flex items-center gap-2 text-2xs text-muted-foreground italic">
-                  <Calendar className="h-3 w-3" /> Job: {(() => {
-                    const name = jName(selectedJob);
-                    const parts = name.split(" - ");
-                    if (name.includes("Removido (")) return name;
-                    return (
-                      <span className="flex items-center gap-1.5 ml-1">
-                        <span className="font-black text-primary tabular-nums">{parts[0]}</span>
-                        {parts[1] && <span className="opacity-60 max-w-[120px] truncate">{parts[1]}</span>}
-                      </span>
-                    );
-                  })()}
-                </div>
+          <div className="flex flex-col gap-4 border-b border-border pb-4">
+            <div className="flex items-center justify-between">
+              <div className="flex gap-4">
+                <button
+                  onClick={() => setActiveSubTab("normal")}
+                  className={`text-[10px] font-black uppercase tracking-widest pb-1 transition-all border-b-2 ${activeSubTab === "normal" ? "text-primary border-primary" : "text-muted-foreground border-transparent opacity-60 hover:opacity-100"}`}
+                >
+                  Solicitação Normal
+                </button>
+                <button
+                  onClick={() => setActiveSubTab("complement")}
+                  className={`text-[10px] font-black uppercase tracking-widest pb-1 transition-all border-b-2 ${activeSubTab === "complement" ? "text-primary border-primary" : "text-muted-foreground border-transparent opacity-60 hover:opacity-100"}`}
+                >
+                  Complemento
+                </button>
               </div>
-              <h2 className="text-sm font-black text-foreground uppercase tracking-widest flex items-center gap-2">
-                <Utensils className="h-4 w-4 text-primary" />
-                {activeSubTab === "normal" ? "Registrar Novas Refeições" : "Adicionar Complemento de Refeição"}
-              </h2>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-3">
-                <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Pessoa no Projeto</Label>
-                <SearchableSelect
-                  options={(people || []).map(p => ({
-                    value: p.id,
-                    label: p.isRegistered ? `⚠️ CLT • ${p.name}` : p.name,
-                    description: `${p.department || "Geral"} • ${p.isRegistered ? "CLT (sem almoço seg-sex)" : "Avulso PJ"}`
-                  }))}
-                  value={personId}
-                  onValueChange={(val) => {
-                    setPersonId(val);
-                    const selectedPerson = people.find(p => p.id === val);
-                    if (selectedPerson?.isRegistered) {
-                      // CLT: nunca tem almoço no padrão (só em fds/feriado via override)
-                      setMeals(["cafe", "janta"]);
-                    } else if (activeSubTab === "normal") {
-                      setMeals(isLocal === true ? ["almoco"] : ["cafe", "almoco", "janta"]);
-                    }
-                  }}
-                  placeholder="Selecione o profissional..."
-                />
-                <div className="p-3 rounded-lg border-2 border-primary/20 bg-primary/5">
-                  <Label className="text-xs font-black uppercase tracking-widest text-primary mb-2 block">
-                    Pessoa do Local? <span className="text-destructive">*</span>
-                  </Label>
-                  <div className="flex gap-4">
-                    <Button
-                      type="button"
-                      variant={isLocal === true ? "default" : "outline"}
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => {
-                        const isCLT = people.find(p => p.id === personId)?.isRegistered;
-                        setIsLocal(true);
-                        // CLT local: só cafe (almoço coberto pelo cartão em dias úteis)
-                        setMeals(isCLT ? ["cafe"] : ["almoco"]);
-                      }}
-                    >
-                      ✅ Sim (só almoço)
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={isLocal === false ? "default" : "outline"}
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => {
-                        const isCLT = people.find(p => p.id === personId)?.isRegistered;
-                        setIsLocal(false);
-                        // CLT não-local: sem almoço (só em fds/feriado depois)
-                        setMeals(isCLT ? ["cafe", "janta"] : ["cafe", "almoco", "janta"]);
-                      }}
-                    >
-                      ❌ Não
-                    </Button>
-                  </div>
-                </div>
-                {personId && balance !== 0 && (
-                  <div className={`p-3 rounded-lg border text-xs flex items-center justify-between gap-2 shadow-inner transition-all ${balance < 0 ? 'bg-destructive/5 border-destructive/20 text-destructive' : 'bg-primary/5 border-primary/20 text-primary'}`}>
-                    <div className="flex items-center gap-2">
-                      <AlertCircle className="h-4 w-4" />
-                      <span className="font-bold">Saldo: R$ {balance.toFixed(2)}</span>
-                    </div>
-                    <span className="font-black uppercase tracking-tighter text-[9px] px-2 py-0.5 rounded-full bg-background/50 border border-current">
-                      {balance < 0 ? 'Débito' : 'Crédito'}
+              <div className="flex items-center gap-2 text-2xs text-muted-foreground italic">
+                <Calendar className="h-3 w-3" /> Job: {(() => {
+                  const name = jName(selectedJob);
+                  const parts = name.split(" - ");
+                  if (name.includes("Removido (")) return name;
+                  return (
+                    <span className="flex items-center gap-1.5 ml-1">
+                      <span className="font-black text-primary tabular-nums">{parts[0]}</span>
+                      {parts[1] && <span className="opacity-60 max-w-[120px] truncate">{parts[1]}</span>}
                     </span>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
-              
-              <div className="space-y-3">
-                <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Regimes de Refeição</Label>
-                <div className="flex gap-6 p-3 border rounded-xl bg-background/60 backdrop-blur-sm">
-                  {(["cafe", "almoco", "janta"] as MealType[]).map(m => (
-                    <div key={m} className="flex items-center gap-3">
-                      <Checkbox
-                        id={`meal-${m}`}
-                        checked={meals.includes(m)}
-                        onCheckedChange={(checked) => {
-                          if (checked) setMeals([...meals, m]);
-                          else setMeals(meals.filter(x => x !== m));
-                        }}
-                      />
-                      <Label htmlFor={`meal-${m}`} className="text-xs font-bold cursor-pointer select-none">{MEAL_LABELS[m]}</Label>
-                    </div>
-                  ))}
+            </div>
+            <h2 className="text-sm font-black text-foreground uppercase tracking-widest flex items-center gap-2">
+              <Utensils className="h-4 w-4 text-primary" />
+              {activeSubTab === "normal" ? "Registrar Novas Refeições" : "Adicionar Complemento de Refeição"}
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-3">
+              <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Pessoa no Projeto</Label>
+              <SearchableSelect
+                options={(people || []).map(p => ({
+                  value: p.id,
+                  label: p.isRegistered ? `⚠️ CLT • ${p.name}` : p.name,
+                  description: `${p.department || "Geral"} • ${p.isRegistered ? "CLT (sem almoço seg-sex)" : "Avulso PJ"}`
+                }))}
+                value={personId}
+                onValueChange={(val) => {
+                  setPersonId(val);
+                  const selectedPerson = people.find(p => p.id === val);
+                  if (selectedPerson?.isRegistered) {
+                    // CLT: nunca tem almoço no padrão (só em fds/feriado via override)
+                    setMeals(["cafe", "janta"]);
+                  } else if (activeSubTab === "normal") {
+                    setMeals(isLocal === true ? ["almoco"] : ["cafe", "almoco", "janta"]);
+                  }
+                }}
+                placeholder="Selecione o profissional..."
+              />
+              <div className="p-3 rounded-lg border-2 border-primary/20 bg-primary/5">
+                <Label className="text-xs font-black uppercase tracking-widest text-primary mb-2 block">
+                  Pessoa do Local? <span className="text-destructive">*</span>
+                </Label>
+                <div className="flex gap-4">
+                  <Button
+                    type="button"
+                    variant={isLocal === true ? "default" : "outline"}
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => {
+                      const isCLT = people.find(p => p.id === personId)?.isRegistered;
+                      setIsLocal(true);
+                      // CLT local: só cafe (almoço coberto pelo cartão em dias úteis)
+                      setMeals(isCLT ? ["cafe"] : ["almoco"]);
+                    }}
+                  >
+                    ✅ Sim (só almoço)
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={isLocal === false ? "default" : "outline"}
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => {
+                      const isCLT = people.find(p => p.id === personId)?.isRegistered;
+                      setIsLocal(false);
+                      // CLT não-local: sem almoço (só em fds/feriado depois)
+                      setMeals(isCLT ? ["cafe", "janta"] : ["cafe", "almoco", "janta"]);
+                    }}
+                  >
+                    ❌ Não
+                  </Button>
                 </div>
               </div>
+              {personId && balance !== 0 && (
+                <div className={`p-3 rounded-lg border text-xs flex items-center justify-between gap-2 shadow-inner transition-all ${balance < 0 ? 'bg-destructive/5 border-destructive/20 text-destructive' : 'bg-primary/5 border-primary/20 text-primary'}`}>
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4" />
+                    <span className="font-bold">Saldo: R$ {balance.toFixed(2)}</span>
+                  </div>
+                  <span className="font-black uppercase tracking-tighter text-[9px] px-2 py-0.5 rounded-full bg-background/50 border border-current">
+                    {balance < 0 ? 'Débito' : 'Crédito'}
+                  </span>
+                </div>
+              )}
             </div>
 
-            <div className={`grid grid-cols-1 gap-4 items-end pt-2 ${activeSubTab === "complement" ? "md:grid-cols-2" : "md:grid-cols-5"}`}>
-              <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{activeSubTab === "complement" ? "Data do Complemento" : "Data Início"}</Label>
-                <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="h-11 bg-background" />
+            <div className="space-y-3">
+              <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Regimes de Refeição</Label>
+              <div className="flex gap-6 p-3 border rounded-xl bg-background/60 backdrop-blur-sm">
+                {(["cafe", "almoco", "janta"] as MealType[]).map(m => (
+                  <div key={m} className="flex items-center gap-3">
+                    <Checkbox
+                      id={`meal-${m}`}
+                      checked={meals.includes(m)}
+                      onCheckedChange={(checked) => {
+                        if (checked) setMeals([...meals, m]);
+                        else setMeals(meals.filter(x => x !== m));
+                      }}
+                    />
+                    <Label htmlFor={`meal-${m}`} className="text-xs font-bold cursor-pointer select-none">{MEAL_LABELS[m]}</Label>
+                  </div>
+                ))}
               </div>
-              {activeSubTab !== "complement" && (
+            </div>
+          </div>
+
+          <div className={`grid grid-cols-1 gap-4 items-end pt-2 ${activeSubTab === "complement" ? "md:grid-cols-2" : "md:grid-cols-5"}`}>
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{activeSubTab === "complement" ? "Data do Complemento" : "Data Início"}</Label>
+              <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="h-11 bg-background" />
+            </div>
+            {activeSubTab !== "complement" && (
+              <div className="space-y-2">
+                <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Data Término</Label>
+                <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="h-11 bg-background" />
+              </div>
+            )}
+            {activeSubTab !== "complement" && (
+              <>
                 <div className="space-y-2">
-                  <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Data Término</Label>
-                  <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="h-11 bg-background" />
+                  <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Transporte</Label>
+                  <Select value={transportType} onValueChange={(v) => setTransportType(v as "onibus" | "aviao")}>
+                    <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="onibus">🚌 Ônibus</SelectItem>
+                      <SelectItem value="aviao">✈️ Avião</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-              )}
-              {activeSubTab !== "complement" && (
-                <>
-                  <div className="space-y-2">
-                    <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Transporte</Label>
-                    <Select value={transportType} onValueChange={(v) => setTransportType(v as "onibus" | "aviao")}>
-                      <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="onibus">🚌 Ônibus</SelectItem>
-                        <SelectItem value="aviao">✈️ Avião</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Hora Viagem</Label>
-                    <Input type="time" value={travelTime} onChange={e => setTravelTime(e.target.value)} className="h-11 bg-background" />
-                  </div>
-                </>
-              )}
-              <Button
-                onClick={handleAdd}
-                disabled={!selectedJob || !personId || !startDate || !endDate || !location}
-                className={`h-11 w-full font-black uppercase tracking-widest transition-all shadow-md active:scale-[0.98] ${
-                  (!selectedJob || !personId || !startDate || !endDate || !location)
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Hora Viagem</Label>
+                  <Input type="time" value={travelTime} onChange={e => setTravelTime(e.target.value)} className="h-11 bg-background" />
+                </div>
+              </>
+            )}
+            <Button
+              onClick={handleAdd}
+              disabled={!selectedJob || !personId || !startDate || !endDate || !location}
+              className={`h-11 w-full font-black uppercase tracking-widest transition-all shadow-md active:scale-[0.98] ${(!selectedJob || !personId || !startDate || !endDate || !location)
                   ? "bg-muted text-muted-foreground opacity-50 cursor-not-allowed"
                   : "bg-foreground text-background hover:bg-foreground/90"
                 }`}
-              >
-                <Plus className="h-4 w-4 mr-2" /> Adicionar
-              </Button>
-            </div>
-            
-            {(location === "Dentro SP" && meals.includes("cafe")) && (
-              <div className="mx-6 mb-4 p-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-bold flex items-center gap-2">
-                <AlertCircle className="h-3 w-3" />
-                Aviso: Dentro de SP o Café da Manhã não é permitido por regra e será removido automaticamente ao salvar.
-              </div>
-            )}
+            >
+              <Plus className="h-4 w-4 mr-2" /> Adicionar
+            </Button>
           </div>
+
+          {(location === "Dentro SP" && meals.includes("cafe")) && (
+            <div className="mx-6 mb-4 p-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-bold flex items-center gap-2">
+              <AlertCircle className="h-3 w-3" />
+              Aviso: Dentro de SP o Café da Manhã não é permitido por regra e será removido automaticamente ao salvar.
+            </div>
+          )}
+        </div>
 
         <div className={`rounded-2xl border border-border overflow-hidden bg-card shadow-card transition-opacity`}>
           <div className="px-6 py-4 bg-muted/40 border-b border-border flex justify-between items-center">
-              <h3 className="font-black uppercase text-[10px] tracking-widest text-muted-foreground">Refeições Programadas</h3>
-              <div className="flex gap-4 items-center">
-                <span className="text-[9px] bg-primary/10 text-primary px-3 py-1 rounded-full font-black uppercase">{filtered.length} Ativos</span>
-                 <Button
-                  onClick={handleSendAll}
-                  disabled={filtered.length === 0}
-                  size="sm"
-                  className="bg-primary text-primary-foreground font-black uppercase text-[10px] tracking-widest h-8 px-4"
-                >
-                  <Send className="h-3 w-3 mr-1.5" /> Enviar para Registro
-                </Button>
-                <Button
-                  onClick={() => {
-                    const job = jobs.find(j => j.id === selectedJob);
-                    const jobName = job?.name || "";
-                    const msg = `🏗️ *RESUMO DO JOB*\n\n📌 *"Job" - "${jobName}"*\n\n👥 Profissionais Ativos: ${financeSummary.count}\n💰 Valor Estimado: R$ ${financeSummary.total.toFixed(2)}\n\n_Enviado via Sistema ACT_`;
-                    
-                    if (navigator.share) {
-                        // Tenta usar a API de compartilhamento do sistema (Funciona em mobile e navegadores modernos)
-                        navigator.share({
-                            title: `Resumo - ${jobName}`,
-                            text: msg
-                        }).catch(() => {
-                           // Se cancelar ou der erro, cai no clipboard
-                           navigator.clipboard.writeText(msg);
-                           toast.success("Texto copiado! Selecione o grupo no Zap.");
-                           window.open(`https://web.whatsapp.com/`, '_blank');
-                        });
-                    } else {
-                        // Backup para desktops/navegadores antigos (Clipboard)
-                        navigator.clipboard.writeText(msg).then(() => {
-                            toast.success("Relatório copiado! Agora é só colar no grupo.");
-                            window.open(`https://web.whatsapp.com/`, '_blank');
-                        });
-                    }
-                  }}
-                  disabled={filtered.length === 0}
-                  size="sm"
-                  variant="outline"
-                  className="border-green-600 text-green-700 font-black uppercase text-[10px] tracking-widest h-8 px-4 hover:bg-green-50"
-                >
-                  <Send className="h-3 w-3 mr-1.5 text-green-600" /> Mandar p/ Zap
-                </Button>
-              </div>
-            </div>
+            <h3 className="font-black uppercase text-[10px] tracking-widest text-muted-foreground">Refeições Programadas</h3>
+            <div className="flex gap-4 items-center">
+              <span className="text-[9px] bg-primary/10 text-primary px-3 py-1 rounded-full font-black uppercase">{filtered.length} Ativos</span>
+              <Button
+                onClick={handleSendAll}
+                disabled={filtered.length === 0}
+                size="sm"
+                className="bg-primary text-primary-foreground font-black uppercase text-[10px] tracking-widest h-8 px-4"
+              >
+                <Send className="h-3 w-3 mr-1.5" /> Enviar para Registro
+              </Button>
+              <Button
+                onClick={() => {
+                  const job = jobs.find(j => j.id === selectedJob);
+                  const jobName = job?.name || "";
+                  const msg = `🏗️ *RESUMO DO JOB*\n\n📌 *"Job" - "${jobName}"*\n\n👥 Profissionais Ativos: ${financeSummary.count}\n💰 Valor Estimado: R$ ${financeSummary.total.toFixed(2)}\n\n_Enviado via Sistema ACT_`;
 
-            <div className="divide-y divide-border">
-              {filtered.length === 0 ? (
-                <div className="px-6 py-16 text-center text-muted-foreground italic tracking-widest text-xs opacity-60">
-                  Nenhuma solicitação ativa para este job.
-                </div>
-              ) : (
-                filtered.map(req => {
-                  const days = getDatesInRange(req.startDate, req.endDate);
-                  const person = people.find(p => p.id === req.personId);
-                  const totalCost = (days || []).reduce((acc, d) => {
-                    const activeMeals = getActiveMeals(req, d, person);
-                    return acc + (Array.isArray(activeMeals) ? activeMeals.reduce((sum, m) => sum + getMealValue(m, d, person, req.location), 0) : 0);
-                  }, 0);
-                  const isExpanded = expandedRequests.has(req.id);
-
-                  return (
-                    <div key={req.id}>
-                      <div
-                        className="flex items-center gap-4 px-6 py-4 hover:bg-muted/30 transition-all cursor-pointer group"
-                        onClick={() => toggleExpanded(req.id)}
-                      >
-                        <div className="text-muted-foreground">
-                          {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-black text-foreground text-sm uppercase tracking-tight">
-                            {person?.isRegistered && <span className="text-muted-foreground mr-1 opacity-70">(CLT)</span>}
-                            {pName(req.personId)}
-                          </p>
-                          <div className="flex items-center gap-2">
-                            <p className="text-[9px] text-muted-foreground uppercase font-medium">
-                              {person?.department || "Geral"} • {req.location || 'Local Não Definido'}
-                            </p>
-                            {jName(req).includes("Removido (") && (
-                               <Select onValueChange={(newId) => onUpdateRequest({ ...req, jobId: newId })}>
-                                 <SelectTrigger className="h-5 text-[9px] w-[120px] bg-red-50 border-red-200 py-0">
-                                   <SelectValue placeholder="Vincular Job..." />
-                                 </SelectTrigger>
-                                 <SelectContent>
-                                   {jobs.map(j => <SelectItem key={j.id} value={j.id} className="text-[10px]">{j.name}</SelectItem>)}
-                                 </SelectContent>
-                               </Select>
-                            )}
-                          </div>
-                        </div>
-                        <div className="text-xs tabular-nums font-bold text-muted-foreground hidden sm:block">
-                          {fDate(req.startDate)} <span className="mx-1 text-muted-foreground/30">→</span> {fDate(req.endDate)}
-                        </div>
-                        <div className="flex gap-1.5 flex-wrap hidden md:flex">
-                          {(req.meals || []).map(m => (
-                            <span key={m} className="px-2 py-0.5 rounded-md border border-border text-[9px] uppercase font-black bg-muted text-foreground tracking-tighter">
-                              {MEAL_LABELS[m] || m}
-                            </span>
-                          ))}
-                        </div>
-                        <div className="font-black tabular-nums text-foreground tracking-tight text-base min-w-[100px] text-right">
-                          R$ {totalCost.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => { e.stopPropagation(); onRemoveRequest(req.id); }}
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg shrink-0"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-
-                      {isExpanded && (
-                        <div className="bg-muted/20 border-t border-border">
-                          <div className="px-6 py-3">
-                            <div className="grid grid-cols-[1fr_repeat(3,80px)_80px] gap-2 text-[9px] uppercase tracking-widest font-black text-muted-foreground pb-2 border-b border-border">
-                              <span>Dia</span>
-                              <span className="text-center">Café</span>
-                              <span className="text-center">Almoço</span>
-                              <span className="text-center">Janta</span>
-                              <span className="text-right">Total</span>
-                            </div>
-                            <div className="divide-y divide-border/50 max-h-[400px] overflow-y-auto">
-                              {(days || []).map(date => {
-                                const activeMeals = getActiveMeals(req, date, person);
-                                const weekend = isWeekend(date);
-                                const holiday = isHoliday(date);
-                                const holidayName = holiday ? getHolidayName(date) : "";
-                                const isWeekendOrHol = weekend || holiday;
-                                const dayTotal = activeMeals.reduce((s, m) => s + getMealValue(m, date, person, req.location), 0);
-
-                                return (
-                                  <div
-                                    key={date}
-                                    className={`grid grid-cols-[1fr_repeat(3,80px)_80px] gap-2 items-center py-2 text-xs ${isWeekendOrHol ? 'bg-accent/30' : ''}`}
-                                  >
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                      <span className="font-bold tabular-nums text-foreground">{fDate(date)}</span>
-                                      <span className={`text-[9px] uppercase font-medium flex gap-1 items-center ${isWeekendOrHol ? 'text-accent-foreground font-black' : 'text-muted-foreground'}`}>
-                                        {dayOfWeek(date)}
-                                        {holiday && <span className="text-primary text-[8px] italic tracking-tight">({holidayName})</span>}
-                                      </span>
-                                    </div>
-                                    {(["cafe", "almoco", "janta"] as MealType[]).map(meal => {
-                                      const val = getMealValue(meal, date, person, req.location);
-                                      const isCLTFree = meal === "almoco" && person?.isRegistered && !isWeekendOrHoliday(date);
-                                      const isActive = activeMeals.includes(meal);
-                                      
-                                      return (
-                                        <div key={meal} className="flex flex-col items-center gap-0.5">
-                                          <Checkbox
-                                            checked={isActive}
-                                            onCheckedChange={() => toggleDayMeal(req, date, meal)}
-                                            className="h-5 w-5"
-                                          />
-                                          <span className={`text-[9px] tabular-nums ${isCLTFree ? 'text-primary font-bold' : 'text-muted-foreground'}`}>
-                                            {isCLTFree && isActive ? 'ISENTO' : (isActive ? `R$${val.toFixed(0)}` : '—')}
-                                          </span>
-                                        </div>
-                                      );
-                                    })}
-                                    <div className="text-right font-bold tabular-nums text-foreground">
-                                      R$ {dayTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })
-              )}
+                  if (navigator.share) {
+                    // Tenta usar a API de compartilhamento do sistema (Funciona em mobile e navegadores modernos)
+                    navigator.share({
+                      title: `Resumo - ${jobName}`,
+                      text: msg
+                    }).catch(() => {
+                      // Se cancelar ou der erro, cai no clipboard
+                      navigator.clipboard.writeText(msg);
+                      toast.success("Texto copiado! Selecione o grupo no Zap.");
+                      window.open(`https://web.whatsapp.com/`, '_blank');
+                    });
+                  } else {
+                    // Backup para desktops/navegadores antigos (Clipboard)
+                    navigator.clipboard.writeText(msg).then(() => {
+                      toast.success("Relatório copiado! Agora é só colar no grupo.");
+                      window.open(`https://web.whatsapp.com/`, '_blank');
+                    });
+                  }
+                }}
+                disabled={filtered.length === 0}
+                size="sm"
+                variant="outline"
+                className="border-green-600 text-green-700 font-black uppercase text-[10px] tracking-widest h-8 px-4 hover:bg-green-50"
+              >
+                <Send className="h-3 w-3 mr-1.5 text-green-600" /> Mandar p/ Zap
+              </Button>
             </div>
           </div>
+
+          <div className="divide-y divide-border">
+            {filtered.length === 0 ? (
+              <div className="px-6 py-16 text-center text-muted-foreground italic tracking-widest text-xs opacity-60">
+                Nenhuma solicitação ativa para este job.
+              </div>
+            ) : (
+              filtered.map(req => {
+                const days = getDatesInRange(req.startDate, req.endDate);
+                const person = people.find(p => p.id === req.personId);
+                const totalCost = (days || []).reduce((acc, d) => {
+                  const activeMeals = getActiveMeals(req, d, person);
+                  return acc + (Array.isArray(activeMeals) ? activeMeals.reduce((sum, m) => sum + getMealValue(m, d, person, req.location), 0) : 0);
+                }, 0);
+                const isExpanded = expandedRequests.has(req.id);
+
+                return (
+                  <div key={req.id}>
+                    <div
+                      className="flex items-center gap-4 px-6 py-4 hover:bg-muted/30 transition-all cursor-pointer group"
+                      onClick={() => toggleExpanded(req.id)}
+                    >
+                      <div className="text-muted-foreground">
+                        {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-black text-foreground text-sm uppercase tracking-tight">
+                          {person?.isRegistered && <span className="text-muted-foreground mr-1 opacity-70">(CLT)</span>}
+                          {pName(req.personId)}
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-[9px] text-muted-foreground uppercase font-medium">
+                            {person?.department || "Geral"} • {req.location || 'Local Não Definido'}
+                          </p>
+                          {jName(req).includes("Removido (") && (
+                            <Select onValueChange={(newId) => onUpdateRequest({ ...req, jobId: newId })}>
+                              <SelectTrigger className="h-5 text-[9px] w-[120px] bg-red-50 border-red-200 py-0">
+                                <SelectValue placeholder="Vincular Job..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {jobs.map(j => <SelectItem key={j.id} value={j.id} className="text-[10px]">{j.name}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-xs tabular-nums font-bold text-muted-foreground hidden sm:block">
+                        {fDate(req.startDate)} <span className="mx-1 text-muted-foreground/30">→</span> {fDate(req.endDate)}
+                      </div>
+                      <div className="flex gap-1.5 flex-wrap hidden md:flex">
+                        {(req.meals || []).map(m => (
+                          <span key={m} className="px-2 py-0.5 rounded-md border border-border text-[9px] uppercase font-black bg-muted text-foreground tracking-tighter">
+                            {MEAL_LABELS[m] || m}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="font-black tabular-nums text-foreground tracking-tight text-base min-w-[100px] text-right">
+                        R$ {totalCost.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => { e.stopPropagation(); onRemoveRequest(req.id); }}
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg shrink-0"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+
+                    {isExpanded && (
+                      <div className="bg-muted/20 border-t border-border">
+                        <div className="px-6 py-3">
+                          <div className="grid grid-cols-[1fr_repeat(3,80px)_80px] gap-2 text-[9px] uppercase tracking-widest font-black text-muted-foreground pb-2 border-b border-border">
+                            <span>Dia</span>
+                            <span className="text-center">Café</span>
+                            <span className="text-center">Almoço</span>
+                            <span className="text-center">Janta</span>
+                            <span className="text-right">Total</span>
+                          </div>
+                          <div className="divide-y divide-border/50 max-h-[400px] overflow-y-auto">
+                            {(days || []).map(date => {
+                              const activeMeals = getActiveMeals(req, date, person);
+                              const weekend = isWeekend(date);
+                              const holiday = isHoliday(date);
+                              const holidayName = holiday ? getHolidayName(date) : "";
+                              const isWeekendOrHol = weekend || holiday;
+                              const dayTotal = activeMeals.reduce((s, m) => s + getMealValue(m, date, person, req.location), 0);
+
+                              return (
+                                <div
+                                  key={date}
+                                  className={`grid grid-cols-[1fr_repeat(3,80px)_80px] gap-2 items-center py-2 text-xs ${isWeekendOrHol ? 'bg-accent/30' : ''}`}
+                                >
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="font-bold tabular-nums text-foreground">{fDate(date)}</span>
+                                    <span className={`text-[9px] uppercase font-medium flex gap-1 items-center ${isWeekendOrHol ? 'text-accent-foreground font-black' : 'text-muted-foreground'}`}>
+                                      {dayOfWeek(date)}
+                                      {holiday && <span className="text-primary text-[8px] italic tracking-tight">({holidayName})</span>}
+                                    </span>
+                                  </div>
+                                  {(["cafe", "almoco", "janta"] as MealType[]).map(meal => {
+                                    const val = getMealValue(meal, date, person, req.location);
+                                    const isCLTFree = meal === "almoco" && person?.isRegistered && !isWeekendOrHoliday(date);
+                                    const isActive = activeMeals.includes(meal);
+
+                                    return (
+                                      <div key={meal} className="flex flex-col items-center gap-0.5">
+                                        <Checkbox
+                                          checked={isActive}
+                                          onCheckedChange={() => toggleDayMeal(req, date, meal)}
+                                          className="h-5 w-5"
+                                        />
+                                        <span className={`text-[9px] tabular-nums ${isCLTFree ? 'text-primary font-bold' : 'text-muted-foreground'}`}>
+                                          {isCLTFree && isActive ? 'ISENTO' : (isActive ? `R$${val.toFixed(0)}` : '—')}
+                                        </span>
+                                      </div>
+                                    );
+                                  })}
+                                  <div className="text-right font-bold tabular-nums text-foreground">
+                                    R$ {dayTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
       </div>
 
       <Dialog open={showFinanceDialog} onOpenChange={setShowFinanceDialog}>
@@ -800,11 +799,11 @@ const MealRequestSystem = ({
               <Send className="h-5 w-5 text-primary" /> Confirmar Envio ao Financeiro
             </DialogTitle>
             <DialogDescription>
-              O registro de horas foi gerado com sucesso para o projeto <strong>{jName(selectedJob)}</strong>. 
+              O registro de horas foi gerado com sucesso para o projeto <strong>{jName(selectedJob)}</strong>.
               Deseja notificar o financeiro e prosseguir para a tela de pagamentos?
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="bg-muted/30 p-4 rounded-xl border border-border space-y-3">
             <div className="flex justify-between items-center text-sm">
               <span className="text-muted-foreground">Profissionais no Projeto:</span>

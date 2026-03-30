@@ -311,7 +311,7 @@ export const useDatabase = () => {
       const payload: any = {
         person_id: conf.personId,
         confirmed: conf.confirmed,
-        payment_date: conf.paymentDate
+        payment_date: conf.paymentDate || null
       };
       
       // Se já temos um ID, passamos ele para garantir o update

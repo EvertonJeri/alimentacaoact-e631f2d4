@@ -109,6 +109,7 @@ export interface FoodControlEntry {
 }
 
 export interface DiscountConfirmation {
+  id?: string;
   personId: string;
   confirmed: boolean;
   paymentDate?: string;
@@ -221,27 +222,29 @@ export function getMealValue(meal: MealType, dateStr: string, person?: Person, l
 }
 
 export function getActiveMeals(req: MealRequest, dateStr: string, person?: Person): MealType[] {
-  // PRIORIDADE 1: Se o usuário já fez um override manual, respeitamos a decisão dele!
-  if (req.dailyOverrides && req.dailyOverrides[dateStr]) {
-    return [...req.dailyOverrides[dateStr]] as MealType[];
-  }
+  // 1. Determinar as refeições base (ou override manual)
+  let meals = (req.dailyOverrides && req.dailyOverrides[dateStr]) 
+    ? [...req.dailyOverrides[dateStr]] as MealType[]
+    : [...(req.meals || [])] as MealType[];
 
-  // PRIORIDADE 2: Regra base
-  let meals = [...(req.meals || [])] as MealType[];
+  const isLocal = req.location === "Dentro SP";
+  const isCLT = person?.isRegistered || (person as any)?.is_registered;
 
-  // Regra SP: Dentro de SP não tem Café da Manhã
-  if (req.location === "Dentro SP") {
-    meals = meals.filter(m => m !== "cafe");
-  }
-  
-  if (person?.isRegistered || (person as any)?.is_registered) {
-    const isWkndOrHol = isWeekendOrHoliday(dateStr);
+  // 2. Se for Local (Dentro SP), Café e Janta são TERMINANTEMENTE proibidos
+  if (isLocal) {
+    meals = meals.filter(m => m === "almoco");
     
-    // Regra financeira CLT: Ganha almoço se for FDS/Feriado e não houver override
+    // Se for CLT local em dia útil/fds, garantir o almoço (respeitando a regra de dias liquidados)
+    if (isCLT && !isWeekendOrHoliday(dateStr) && !meals.includes("almoco")) {
+        // Opção por não adicionar automaticamente se não houver no request base, 
+        // mas aqui mantemos coerência com a regra CLT de almoço garantido.
+    }
+  } else if (isCLT) {
+    // 3. Regra CLT para Fora SP (mantém o almoço automático)
+    const isWkndOrHol = isWeekendOrHoliday(dateStr);
     if (isWkndOrHol && !meals.includes("almoco")) {
       meals.push("almoco");
     } else if (!isWkndOrHol && meals.includes("almoco")) {
-      // Perde almoço pago se for dia útil e não houver override
       meals = meals.filter(m => m !== "almoco");
     }
   }
@@ -287,9 +290,9 @@ export function calculateDayDiscount(
   
   if (!entry) {
     if (isPast) {
-      const dCafe = dayMeals.includes("cafe") ? refCafe : 0;
-      const dAlmoco = dayMeals.includes("almoco") ? refAlmoco : 0;
-      const dJanta = dayMeals.includes("janta") ? refJanta : 0;
+      const dCafe = dayMeals.includes("cafe") ? -refCafe : 0;
+      const dAlmoco = dayMeals.includes("almoco") ? -refAlmoco : 0;
+      const dJanta = dayMeals.includes("janta") ? -refJanta : 0;
       return { 
         discountCafe: dCafe, 
         discountAlmoco: dAlmoco, 
@@ -325,15 +328,15 @@ export function calculateDayDiscount(
        usedJanta = u.janta;
     }
 
-    if (dayMeals.includes("cafe") && !usedCafe) discountCafe = refCafe;
-    if (dayMeals.includes("almoco") && !usedAlmoco) discountAlmoco = refAlmoco;
-    if (dayMeals.includes("janta") && !usedJanta) discountJanta = refJanta;
+    if (dayMeals.includes("cafe") && !usedCafe) discountCafe = -refCafe;
+    if (dayMeals.includes("almoco") && !usedAlmoco) discountAlmoco = -refAlmoco;
+    if (dayMeals.includes("janta") && !usedJanta) discountJanta = -refJanta;
 
     if (!hasHours && !isTravelDay && isPast) {
       reason = "Falta - sem registro de horas";
-      if (dayMeals.includes("cafe")) discountCafe = refCafe;
-      if (dayMeals.includes("almoco")) discountAlmoco = refAlmoco;
-      if (dayMeals.includes("janta")) discountJanta = refJanta;
+      if (dayMeals.includes("cafe")) discountCafe = -refCafe;
+      if (dayMeals.includes("almoco")) discountAlmoco = -refAlmoco;
+      if (dayMeals.includes("janta")) discountJanta = -refJanta;
     } else if (isTravelDay && !hasHours) {
       reason = `Dia de viagem (${req.transportType === "aviao" ? "Avião" : "Ônibus"}) às ${req.travelTime}`;
     } else {
@@ -349,16 +352,16 @@ export function calculateDayDiscount(
 
   // Se tem controle manual (Food Control), ele se sobrepõe
   if (fc) {
-    if (dayMeals.includes("cafe") && !fc.usedCafe) discountCafe = refCafe;
-    else if (!dayMeals.includes("cafe") && fc.usedCafe) discountCafe = -refCafe;
+    if (dayMeals.includes("cafe") && !fc.usedCafe) discountCafe = -refCafe;
+    else if (!dayMeals.includes("cafe") && fc.usedCafe) discountCafe = refCafe; // Extra = Positivo
     else discountCafe = 0;
     
-    if (dayMeals.includes("almoco") && !fc.usedAlmoco) discountAlmoco = refAlmoco;
-    else if (!dayMeals.includes("almoco") && fc.usedAlmoco) discountAlmoco = -refAlmoco;
+    if (dayMeals.includes("almoco") && !fc.usedAlmoco) discountAlmoco = -refAlmoco;
+    else if (!dayMeals.includes("almoco") && fc.usedAlmoco) discountAlmoco = refAlmoco; // Extra = Positivo
     else discountAlmoco = 0;
     
-    if (dayMeals.includes("janta") && !fc.usedJanta) discountJanta = refJanta;
-    else if (!dayMeals.includes("janta") && fc.usedJanta) discountJanta = -refJanta;
+    if (dayMeals.includes("janta") && !fc.usedJanta) discountJanta = -refJanta;
+    else if (!dayMeals.includes("janta") && fc.usedJanta) discountJanta = refJanta; // Extra = Positivo
     else discountJanta = 0;
 
     const usedAny = fc.usedCafe || fc.usedAlmoco || fc.usedJanta;
@@ -409,7 +412,7 @@ export function calculatePersonBalance(
     });
   });
 
-  // 2. Débitos (Faltas e refeições não consumidas)
+  // 2. Débitos e Créditos Diários (Faltas e Extras)
   const processedDaysDisc = new Set<string>();
   personRequests.forEach(req => {
     const dates = getDatesInRange(req.startDate, req.endDate);
@@ -417,6 +420,11 @@ export function calculatePersonBalance(
       const dayKey = `${req.jobId}-${date}`;
       if (processedDaysDisc.has(dayKey)) return;
       processedDaysDisc.add(dayKey);
+
+      // Verificação vital: se o desconto desse dia foi "retirado" (OK manual no item)
+      const discountId = `discount-${req.id}-${date}`;
+      const isItemConfirmed = personConfs.some(c => 'id' in c && c.id === discountId && c.confirmed);
+      if (isItemConfirmed) return;
 
       const entries = timeEntries.filter(e => e.personId === personId && e.jobId === req.jobId && e.date === date);
       const entry = entries.find(e => e.isTravelOut || e.isTravelReturn) || entries[0];
@@ -487,7 +495,7 @@ export function determineMealsUsed(
         return { cafe: true, almoco: true, janta: true };
     }
 
-    if (String(firstEntry || "").includes(":")) {
+    if (req?.location !== "Dentro SP" && String(firstEntry || "").includes(":")) {
       const [h, m] = String(firstEntry).split(":").map(Number);
       if (h < 8 || (h === 8 && m <= 0)) cafe = true;
     }
