@@ -784,15 +784,13 @@ const MealRequestSystem = ({
                                     const val = getMealValue(meal, date, person, req.location);
                                     const isCLTFree = meal === "almoco" && person?.isRegistered && !isWeekendOrHoliday(date);
                                     const isActive = activeMeals.includes(meal);
-                                    const isBlockedCafeToggle = meal === "cafe" && person?.isRegistered && req.isLocal && req.location === "Dentro SP";
 
                                     return (
-                                      <div key={meal} className={`flex flex-col items-center gap-0.5 ${isBlockedCafeToggle ? 'opacity-50' : ''}`}>
+                                      <div key={meal} className="flex flex-col items-center gap-0.5">
                                         <Checkbox
                                           checked={isActive}
-                                          disabled={isBlockedCafeToggle}
                                           onCheckedChange={() => toggleDayMeal(req, date, meal)}
-                                          className={`h-5 w-5 ${isBlockedCafeToggle ? 'cursor-not-allowed' : ''}`}
+                                          className="h-5 w-5"
                                         />
                                         <span className={`text-[9px] tabular-nums ${isCLTFree ? 'text-primary font-bold' : 'text-muted-foreground'}`}>
                                           {isCLTFree && isActive ? 'ISENTO' : (isActive ? `R$${val.toFixed(0)}` : '—')}
