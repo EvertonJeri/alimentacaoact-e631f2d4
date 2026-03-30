@@ -317,29 +317,7 @@ export const SettingsTab = () => {
              <div className="flex flex-wrap gap-3">
                <JobImportDialog />
                <PersonImportDialog />
-               <Button 
-                 variant="outline" 
-                 onClick={() => {
-                     if(window.confirm("ATENÇÃO: Isso apagará TODOS os Jobs do sistema (projetos antigos e novos). Suas horas não serão apagadas, mas perderão os nomes até que você importe a planilha novamente e use o botão 'Recuperar Vínculos'. Deseja continuar?")) {
-                         clearAllJobs.mutate();
-                     }
-                 }} 
-                 disabled={clearAllJobs.isPending}
-                 className="font-black uppercase tracking-widest text-[10px] h-10 border-red-200 bg-red-50 text-red-600 hover:bg-red-100 gap-2 shadow-sm"
-               >
-                 <Trash2 className="h-4 w-4" /> 
-                 {clearAllJobs.isPending ? "Apagando..." : "Zerar Jobs"}
-               </Button>
-               <Button 
-                 variant="outline" 
-                 onClick={() => repairHistoricalData.mutate()} 
-                 disabled={repairHistoricalData.isPending}
-                 className="font-black uppercase tracking-widest text-[10px] h-10 border-amber-200 bg-amber-50/50 text-amber-700 hover:bg-amber-100 gap-2 shadow-sm"
-               >
-                 <ShieldCheck className="h-4 w-4" /> 
-                 {repairHistoricalData.isPending ? "Recuperando..." : "Recuperar Vínculos"}
-               </Button>
-             </div>
+              </div>
              <Button onClick={handleSave} className="font-black uppercase tracking-widest text-[10px] px-8 h-10 shadow-lg gap-2">
                <Save className="h-4 w-4" /> Salvar Configurações
              </Button>

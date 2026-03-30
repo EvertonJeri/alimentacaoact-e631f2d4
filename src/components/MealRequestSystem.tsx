@@ -84,6 +84,15 @@ const MealRequestSystem = ({
   const [expandedRequests, setExpandedRequests] = useState<Set<string>>(new Set());
   const [showFinanceDialog, setShowFinanceDialog] = useState(false);
 
+  React.useEffect(() => {
+    if (personId && location === "Dentro SP" && isLocal === true) {
+      const isCLT = people.find(p => p.id === personId)?.isRegistered;
+      if (isCLT) {
+        setMeals(prev => prev.filter(m => m !== "cafe"));
+      }
+    }
+  }, [location, personId, isLocal, people]);
+
   const balance = useMemo(() => {
     if (!personId || !people || !requests) return 0;
     return calculatePersonBalance(personId, requests, foodControl, confirmations, people, timeEntries);
@@ -230,8 +239,8 @@ const MealRequestSystem = ({
       isLocal
     };
 
-    // Regra SP: Dentro de SP não tem Café da Manhã
-    if (newRequest.location === "Dentro SP") {
+    // Regra SP: CLT, Local e Dentro de SP não tem Café da Manhã
+    if (newRequest.location === "Dentro SP" && isPersonCLT && newRequest.isLocal) {
       newRequest.meals = newRequest.meals.filter(m => m !== "cafe");
       if (newRequest.dailyOverrides) {
         Object.keys(newRequest.dailyOverrides).forEach(d => {
@@ -505,8 +514,12 @@ const MealRequestSystem = ({
                     onClick={() => {
                       const isCLT = people.find(p => p.id === personId)?.isRegistered;
                       setIsLocal(true);
-                      // CLT local: só cafe (almoço coberto pelo cartão em dias úteis)
-                      setMeals(isCLT ? ["cafe"] : ["almoco"]);
+                      // Regra SP: CLT, Local, Dentro SP não pode ter Café da manhã marcado
+                      if (isCLT) {
+                         setMeals(location === "Dentro SP" ? [] : ["cafe"]);
+                      } else {
+                         setMeals(["almoco"]);
+                      }
                     }}
                   >
                     ✅ Sim (só almoço)
@@ -543,19 +556,27 @@ const MealRequestSystem = ({
             <div className="space-y-3">
               <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Regimes de Refeição</Label>
               <div className="flex gap-6 p-3 border rounded-xl bg-background/60 backdrop-blur-sm">
-                {(["cafe", "almoco", "janta"] as MealType[]).map(m => (
-                  <div key={m} className="flex items-center gap-3">
-                    <Checkbox
-                      id={`meal-${m}`}
-                      checked={meals.includes(m)}
-                      onCheckedChange={(checked) => {
-                        if (checked) setMeals([...meals, m]);
-                        else setMeals(meals.filter(x => x !== m));
-                      }}
-                    />
-                    <Label htmlFor={`meal-${m}`} className="text-xs font-bold cursor-pointer select-none">{MEAL_LABELS[m]}</Label>
-                  </div>
-                ))}
+                {(["cafe", "almoco", "janta"] as MealType[]).map(m => {
+                  const isCLT = people.find(p => p.id === personId)?.isRegistered;
+                  const isBlockedCafe = isCLT && isLocal === true && location === "Dentro SP" && m === "cafe";
+                  
+                  return (
+                    <div key={m} className={`flex items-center gap-3 ${isBlockedCafe ? 'opacity-50' : ''}`}>
+                      <Checkbox
+                        id={`meal-${m}`}
+                        checked={meals.includes(m)}
+                        disabled={isBlockedCafe}
+                        onCheckedChange={(checked) => {
+                          if (checked) setMeals([...meals, m]);
+                          else setMeals(meals.filter(x => x !== m));
+                        }}
+                      />
+                      <Label htmlFor={`meal-${m}`} className={`text-xs font-bold select-none ${isBlockedCafe ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+                        {MEAL_LABELS[m]}
+                      </Label>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -601,10 +622,13 @@ const MealRequestSystem = ({
             </Button>
           </div>
 
-          {(location === "Dentro SP" && meals.includes("cafe")) && (
+          {(() => {
+             const isCLT = people.find(p => p.id === personId)?.isRegistered;
+             return (location === "Dentro SP" && isCLT && isLocal && meals.includes("cafe"));
+          })() && (
             <div className="mx-6 mb-4 p-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-bold flex items-center gap-2">
               <AlertCircle className="h-3 w-3" />
-              Aviso: Dentro de SP o Café da Manhã não é permitido por regra e será removido automaticamente ao salvar.
+              Aviso: Para profissionais CLT locais Dentro de SP o Café da Manhã não é permitido por regra e será removido automaticamente ao salvar.
             </div>
           )}
         </div>
@@ -760,13 +784,15 @@ const MealRequestSystem = ({
                                     const val = getMealValue(meal, date, person, req.location);
                                     const isCLTFree = meal === "almoco" && person?.isRegistered && !isWeekendOrHoliday(date);
                                     const isActive = activeMeals.includes(meal);
+                                    const isBlockedCafeToggle = meal === "cafe" && person?.isRegistered && req.isLocal && req.location === "Dentro SP";
 
                                     return (
-                                      <div key={meal} className="flex flex-col items-center gap-0.5">
+                                      <div key={meal} className={`flex flex-col items-center gap-0.5 ${isBlockedCafeToggle ? 'opacity-50' : ''}`}>
                                         <Checkbox
                                           checked={isActive}
+                                          disabled={isBlockedCafeToggle}
                                           onCheckedChange={() => toggleDayMeal(req, date, meal)}
-                                          className="h-5 w-5"
+                                          className={`h-5 w-5 ${isBlockedCafeToggle ? 'cursor-not-allowed' : ''}`}
                                         />
                                         <span className={`text-[9px] tabular-nums ${isCLTFree ? 'text-primary font-bold' : 'text-muted-foreground'}`}>
                                           {isCLTFree && isActive ? 'ISENTO' : (isActive ? `R$${val.toFixed(0)}` : '—')}
