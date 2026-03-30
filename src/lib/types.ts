@@ -287,9 +287,9 @@ export function calculateDayDiscount(
   
   if (!entry) {
     if (isPast) {
-      const dCafe = dayMeals.includes("cafe") ? refCafe : 0;
-      const dAlmoco = dayMeals.includes("almoco") ? refAlmoco : 0;
-      const dJanta = dayMeals.includes("janta") ? refJanta : 0;
+      const dCafe = dayMeals.includes("cafe") ? -refCafe : 0;
+      const dAlmoco = dayMeals.includes("almoco") ? -refAlmoco : 0;
+      const dJanta = dayMeals.includes("janta") ? -refJanta : 0;
       return { 
         discountCafe: dCafe, 
         discountAlmoco: dAlmoco, 
@@ -325,11 +325,11 @@ export function calculateDayDiscount(
        usedJanta = u.janta;
     }
 
-    if (dayMeals.includes("cafe") && !usedCafe) discountCafe = refCafe;
-    if (dayMeals.includes("almoco") && !usedAlmoco) discountAlmoco = refAlmoco;
-    if (dayMeals.includes("janta") && !usedJanta) discountJanta = refJanta;
+    if (dayMeals.includes("cafe") && !usedCafe) discountCafe = -refCafe;
+    if (dayMeals.includes("almoco") && !usedAlmoco) discountAlmoco = -refAlmoco;
+    if (dayMeals.includes("janta") && !usedJanta) discountJanta = -refJanta;
 
-    if (!hasHours && !isTravelDay) {
+    if (!hasHours && !isTravelDay && isPast) {
       reason = "Falta - sem registro de horas";
       if (dayMeals.includes("cafe")) discountCafe = -refCafe;
       if (dayMeals.includes("almoco")) discountAlmoco = -refAlmoco;
