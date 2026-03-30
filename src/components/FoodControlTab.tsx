@@ -1,23 +1,15 @@
 import { useMemo, useState, useEffect } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { SearchableSelect } from "@/components/ui/searchable-select";
-import { Input } from "@/components/ui/input";
-import { toast } from "sonner";
-import { Filter } from "lucide-react";
 import {
   type Person,
   type Job,
   type MealRequest,
   type TimeEntry,
   type FoodControlEntry,
-  MEAL_LABELS,
-  MEAL_VALUES,
   getDatesInRange,
   determineMealsUsed,
-  getMealValue,
   isWeekendOrHoliday,
   getActiveMeals,
 } from "@/lib/types";
@@ -51,25 +43,17 @@ const FoodControlTab = ({
   }, [initialJobFilter]);
 
   const getPersonName = (id: string) => people.find((p) => p.id === id)?.name || "—";
+  
   const getJobName = (entryOrId: string | { jobId: string, personId: string, date: string }) => {
     const id = typeof entryOrId === 'string' ? entryOrId : entryOrId.jobId;
-    if (!id) return "—";
+    if (!id || id === "no-job") return "—";
 
     const job = jobs.find((j) => j.id === id);
     if (job) return job.name;
     const matchByName = jobs.find(j => j.name.startsWith(id + " - ") || j.name === id);
     if (matchByName) return matchByName.name;
 
-    if (typeof entryOrId !== 'string') {
-      const req = requests.find(r => r.personId === (entryOrId as any).personId && (entryOrId as any).date >= r.startDate && (entryOrId as any).date <= r.endDate);
-      if (req) {
-        const reqJob = jobs.find(j => j.id === req.jobId);
-        if (reqJob) return reqJob.name;
-      }
-    }
-
-    if (!id.includes("-") || id.length < 30) return id;
-    return `Removido (${id.substring(0, 5)})`;
+    return id;
   };
 
   const updateJobId = (entryId: string, newJobId: string) => {
@@ -79,10 +63,6 @@ const FoodControlTab = ({
     onUpdateEntry(updated as any);
   };
 
-  const registeredRequests = useMemo(() => {
-    return requests;
-  }, [requests]);
-
   const isPersonRegistered = (id: string) => {
     const p = people.find((p) => p.id === id);
     if (!p) return false;
@@ -90,81 +70,77 @@ const FoodControlTab = ({
   };
 
   const rows = useMemo(() => {
-    // 1. Mapas de Busca Rápidos (O(1))
-    const foodControlByKey = new Map<string, FoodControlEntry>();
+    // 1. Mapas de Busca Rápidos
+    const foodControlByPersonDate = new Map<string, FoodControlEntry>();
     foodControl.forEach(fc => {
-      foodControlByKey.set(`${fc.personId}-${fc.jobId}-${fc.date}`, fc);
+      const key = `${fc.personId}|${fc.date}`;
+      foodControlByPersonDate.set(key, fc);
     });
 
-    const requestsByPersonJob = new Map<string, MealRequest[]>();
-    requests.forEach(r => {
-      const key = `${r.personId}-${r.jobId}`;
-      if (!requestsByPersonJob.has(key)) requestsByPersonJob.set(key, []);
-      requestsByPersonJob.get(key)!.push(r);
+    const timeEntriesByPersonDate = new Map<string, TimeEntry>();
+    timeEntries.forEach(e => {
+      const key = `${e.personId}|${e.date}`;
+      const existing = timeEntriesByPersonDate.get(key);
+      if (!existing || e.isTravelOut || e.isTravelReturn) {
+        timeEntriesByPersonDate.set(key, e);
+      }
     });
 
     const peopleMap = new Map<string, Person>();
     people.forEach(p => peopleMap.set(p.id, p));
 
-    const jobsMap = new Map<string, Job>();
-    jobs.forEach(j => jobsMap.set(j.id, j));
-
-    // 2. Deduplicação em Massa O(N)
-    // Para o controle alimentar, nos interessa (Pessoa + Job + Data)
-    const entryBestVersion = new Map<string, TimeEntry>();
-    timeEntries.forEach(e => {
-      const key = `${e.personId}-${e.jobId}-${e.date}`;
-      const existing = entryBestVersion.get(key);
-      // Regra de prioridade: Viagens (Ida/Volta) têm preferência visual na tabela
-      if (!existing || e.isTravelOut || e.isTravelReturn) {
-        entryBestVersion.set(key, e);
-      }
+    // 2. Pré-indexar Requests por Pessoa|Data para lookup O(1)
+    const requestsByPersonDate = new Map<string, MealRequest>();
+    requests.forEach(req => {
+        getDatesInRange(req.startDate, req.endDate).forEach(d => {
+            const key = `${req.personId}|${d}`;
+            if (!requestsByPersonDate.has(key)) {
+                requestsByPersonDate.set(key, req);
+            }
+        });
     });
+
+    // 3. Unificação por Pessoa e Data
+    const masterKeys = new Set<string>();
+    timeEntriesByPersonDate.forEach((_, key) => masterKeys.add(key));
+    foodControlByPersonDate.forEach((_, key) => masterKeys.add(key));
+    requestsByPersonDate.forEach((_, key) => masterKeys.add(key));
 
     const result: (FoodControlEntry & { key: string })[] = [];
 
-    try {
-      Array.from(entryBestVersion.values()).forEach((entry) => {
-        if (!entry || !entry.personId) return;
+    masterKeys.forEach(combinedKey => {
+        const [personId, date] = combinedKey.split("|");
+        if (!personId || !date) return;
+        
+        const existingFC = foodControlByPersonDate.get(combinedKey);
+        const timeEntry = timeEntriesByPersonDate.get(combinedKey);
+        const req = requestsByPersonDate.get(combinedKey);
+        
+        const displayJobId = existingFC?.jobId || timeEntry?.jobId || req?.jobId || "no-job";
 
-        const personJobKey = `${entry.personId}-${entry.jobId}`;
-        const possibleReqs = requestsByPersonJob.get(personJobKey) || [];
-        const req = possibleReqs.find(r => entry.date >= r.startDate && entry.date <= r.endDate);
+        const person = peopleMap.get(personId);
+        const dayMeals = req ? getActiveMeals(req, date, person) : [];
+        const requestedCafe = dayMeals.includes("cafe");
+        const requestedAlmoco = dayMeals.includes("almoco");
+        const requestedJanta = dayMeals.includes("janta");
 
-        const compositeKey = `${entry.personId}-${entry.jobId}-${entry.date}`;
-        const existing = foodControlByKey.get(compositeKey);
+        const rowKey = `fc-${personId}-${date}`;
 
-        const personAtTime = peopleMap.get(entry.personId);
-        const dayMeals = req ? getActiveMeals(req, entry.date, personAtTime) : [];
-        const requestedCafe = Array.isArray(dayMeals) && dayMeals.includes("cafe");
-        const requestedAlmoco = Array.isArray(dayMeals) && dayMeals.includes("almoco");
-        const requestedJanta = Array.isArray(dayMeals) && dayMeals.includes("janta");
-
-        const rowKey = `fc-${entry.id || Math.random()}`;
-
-        if (existing) {
+        if (existingFC) {
           result.push({
-            ...existing,
+            ...existingFC,
+            jobId: displayJobId,
             key: rowKey,
             requestedCafe,
             requestedAlmoco,
             requestedJanta
           });
         } else {
-          let used = { cafe: false, almoco: false, janta: false };
-          try {
-            if (req) {
-              used = determineMealsUsed(entry, req, entry.date);
-            }
-          } catch (e) {
-            console.error("Erro ao determinar uso de refeição:", e);
-          }
-
+          const used = determineMealsUsed(timeEntry, req || { id: "dummy", personId, jobId: displayJobId, startDate: date, endDate: date, meals: [] as any[] }, date);
           result.push({
-            id: entry.id,
-            personId: entry.personId,
-            jobId: entry.jobId,
-            date: entry.date,
+            personId,
+            jobId: displayJobId,
+            date,
             key: rowKey,
             requestedCafe,
             requestedAlmoco,
@@ -174,124 +150,106 @@ const FoodControlTab = ({
             usedJanta: used.janta,
           });
         }
-      });
-    } catch (err) {
-      console.error("Critical error calculating FoodControl rows:", err);
-    }
+    });
 
     return result.sort((a, b) => (b.date || "").localeCompare(a.date || "") || (a.personId || "").localeCompare(b.personId || ""));
   }, [timeEntries, requests, foodControl, people, jobs]);
 
   const updateUsed = (personId: string, jobId: string, date: string, field: "usedCafe" | "usedAlmoco" | "usedJanta", value: boolean) => {
-    // Importante: Garantir que o jobId seja o original (UUID), não o texto formatado da tabela
-    const row = rows.find((r) => r.personId === personId && r.jobId === jobId && r.date === date);
-    if (!row) return;
+    let stableJobId = jobId;
+    const realJob = jobs.find(j => j.id === jobId || j.name.startsWith(jobId + " - ") || j.name === jobId);
+    if (realJob) stableJobId = realJob.id;
 
-    // Se o jobId for o texto formatado "Removido...", precisamos do real do entryId
-    let realJobId = jobId;
-    if (jobId.startsWith("Removido (")) {
-       const entry = timeEntries.find(e => e.personId === personId && e.date === date);
-       if (entry) realJobId = entry.jobId;
-    }
-
+    const currentRow = rows.find(r => r.personId === personId && r.date === date);
+    
     const updated: FoodControlEntry = {
-      id: row.id,
+      id: currentRow?.id,
       personId, 
-      jobId: realJobId, 
+      jobId: stableJobId, 
       date,
-      requestedCafe: row.requestedCafe,
-      requestedAlmoco: row.requestedAlmoco,
-      requestedJanta: row.requestedJanta,
-      usedCafe: field === "usedCafe" ? value : row.usedCafe,
-      usedAlmoco: field === "usedAlmoco" ? value : row.usedAlmoco,
-      usedJanta: field === "usedJanta" ? value : row.usedJanta,
+      requestedCafe: currentRow?.requestedCafe || false,
+      requestedAlmoco: currentRow?.requestedAlmoco || false,
+      requestedJanta: currentRow?.requestedJanta || false,
+      usedCafe: field === "usedCafe" ? value : (currentRow?.usedCafe || false),
+      usedAlmoco: field === "usedAlmoco" ? value : (currentRow?.usedAlmoco || false),
+      usedJanta: field === "usedJanta" ? value : (currentRow?.usedJanta || false),
     };
 
     onUpdateEntry(updated);
   };
 
-  const filteredRows = rows.filter((r) => {
-    if (filterJob !== "all" && r.jobId !== filterJob) return false;
-    if (filterDate && r.date !== filterDate) return false;
-    if (filterPerson && filterPerson !== "all" && r.personId !== filterPerson) return false;
+  const filteredRows = rows.filter((row) => {
+    if (filterJob !== "all" && row.jobId !== filterJob) {
+      const job = jobs.find(j => j.id === filterJob);
+      if (job && !row.jobId.includes(job.id)) return false;
+    }
+    if (filterDate && row.date !== filterDate) return false;
+    if (filterPerson && row.personId !== filterPerson) return false;
     return true;
   });
 
   return (
     <div className="space-y-4">
-      <p className="text-xs text-muted-foreground">
-        Controle de alimentação: compare o que foi solicitado com o que foi efetivamente utilizado. Marque os círculos verdes para uso real.
-      </p>
-
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3 items-end p-3 rounded-lg border border-border bg-muted/30">
-        <Filter className="h-4 w-4 text-muted-foreground mt-1" />
-        <div className="min-w-[200px]">
-          <label className="text-2xs uppercase tracking-wider font-medium text-muted-foreground block mb-1.5">
-            Filtrar Job
-          </label>
-          <SearchableSelect
-            options={[
-              { value: "all", label: "Todos os Jobs" },
-              ...Array.from(new Map(jobs.map(j => [j.name.toLowerCase().trim(), j])).values()).map(j => {
-                const parts = j.name.split(" - ");
-                return {
-                  value: j.id,
-                  label: j.name,
-                  description: parts[1] ? `Projeto: ${parts[1]}` : undefined
-                };
-              })
-            ]}
-            value={filterJob}
-            onValueChange={setFilterJob}
-            placeholder="Filtrar Job"
-            className="h-8 text-xs"
-          />
+      <div className="flex flex-wrap gap-4 items-end bg-muted/20 p-4 rounded-lg border border-border/50">
+        <div className="space-y-1.5 min-w-[200px]">
+          <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Filtrar por Job</label>
+          <Select value={filterJob} onValueChange={setFilterJob}>
+            <SelectTrigger className="bg-background/50 border-border/50">
+              <SelectValue placeholder="Todos os Jobs" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os Jobs</SelectItem>
+              {jobs.map((j) => (
+                <SelectItem key={j.id} value={j.id}>{j.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
-        <div className="min-w-[200px]">
-          <label className="text-2xs uppercase tracking-wider font-medium text-muted-foreground block mb-1.5">
-            Filtrar Pessoa
-          </label>
-          <SearchableSelect
-            options={[{ value: "all", label: "Todas as Pessoas" }, ...people.map(p => ({ value: p.id, label: p.name }))]}
-            value={filterPerson}
-            onValueChange={setFilterPerson}
-            placeholder="Filtrar Pessoa"
-            className="h-8 text-xs"
-          />
-        </div>
-        <div className="min-w-[160px]">
-          <label className="text-2xs uppercase tracking-wider font-medium text-muted-foreground block mb-1.5">
-            Filtrar Data
-          </label>
-          <Input
+        <div className="space-y-1.5">
+          <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Data</label>
+          <input
             type="date"
+            className="flex h-10 w-full rounded-md border border-border/50 bg-background/50 px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus:ring-2 focus:ring-primary/20"
             value={filterDate}
             onChange={(e) => setFilterDate(e.target.value)}
-            className="h-8 text-xs tabular-nums"
           />
+        </div>
+
+        <div className="space-y-1.5 min-w-[240px]">
+          <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Pessoa</label>
+          <Select value={filterPerson} onValueChange={setFilterPerson}>
+            <SelectTrigger className="bg-background/50 border-border/50">
+              <SelectValue placeholder="Todas as Pessoas" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as Pessoas</SelectItem>
+              {people.sort((a, b) => a.name.localeCompare(b.name)).map((p) => (
+                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
-      <div className="rounded-xl border border-border overflow-x-auto shadow-card">
-        <table className="w-full text-sm">
+      <div className="rounded-xl border border-border/50 bg-card overflow-hidden shadow-sm">
+        <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-muted/50">
-              <th className="text-left px-3 py-2.5 text-2xs uppercase tracking-wider font-medium text-muted-foreground">Pessoa</th>
-              <th className="text-left px-3 py-2.5 text-2xs uppercase tracking-wider font-medium text-muted-foreground">Job</th>
-              <th className="text-left px-3 py-2.5 text-2xs uppercase tracking-wider font-medium text-muted-foreground">Data</th>
-              <th className="text-center px-2 py-2.5 text-2xs uppercase tracking-wider font-medium text-muted-foreground" colSpan={3}>Solicitado</th>
-              <th className="text-center px-2 py-2.5 text-2xs uppercase tracking-wider font-medium text-primary" colSpan={3}>Utilizado</th>
+            <tr className="bg-muted/50 border-b border-border/50">
+              <th className="px-3 py-3 text-2xs font-black uppercase text-muted-foreground tracking-widest min-w-[180px]">Profissional</th>
+              <th className="px-3 py-3 text-2xs font-black uppercase text-muted-foreground tracking-widest w-[160px]">Job Atual</th>
+              <th className="px-3 py-3 text-2xs font-black uppercase text-muted-foreground tracking-widest w-[100px]">Data</th>
+              <th className="text-center px-1 py-1 text-2xs font-black uppercase text-muted-foreground tracking-widest bg-primary/5" colSpan={3}>Solicitado</th>
+              <th className="text-center px-1 py-1 text-2xs font-black uppercase text-muted-foreground tracking-widest bg-green-500/5" colSpan={3}>Utilizado</th>
             </tr>
-            <tr className="bg-muted/30">
+            <tr className="bg-muted/20 border-b border-border/10">
               <th colSpan={3}></th>
-              <th className="text-center px-1 py-1 text-2xs text-muted-foreground">Café</th>
-              <th className="text-center px-1 py-1 text-2xs text-muted-foreground">Almoço</th>
-              <th className="text-center px-1 py-1 text-2xs text-muted-foreground">Janta</th>
               <th className="text-center px-1 py-1 text-2xs text-primary">Café</th>
               <th className="text-center px-1 py-1 text-2xs text-primary">Almoço</th>
               <th className="text-center px-1 py-1 text-2xs text-primary">Janta</th>
+              <th className="text-center px-1 py-1 text-2xs text-green-600">Café</th>
+              <th className="text-center px-1 py-1 text-2xs text-green-600">Almoço</th>
+              <th className="text-center px-1 py-1 text-2xs text-green-600">Janta</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -309,18 +267,6 @@ const FoodControlTab = ({
                     {(() => {
                       const jStr = getJobName(row);
                       const parts = jStr.split(" - ");
-                      if (jStr.includes("Removido (")) {
-                        return (
-                          <Select onValueChange={(val) => updateJobId(row.id, val)}>
-                            <SelectTrigger className="h-6 text-[10px] bg-red-50 border-red-200 text-red-600 px-2 py-0">
-                              <SelectValue placeholder="Corrigir Vínculo..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {jobs.map(j => <SelectItem key={j.id} value={j.id} className="text-[10px]">{j.name}</SelectItem>)}
-                            </SelectContent>
-                          </Select>
-                        );
-                      }
                       return (
                         <div className="flex flex-col min-w-0 max-w-[140px] leading-tight">
                           <span className="font-black text-[10px] text-primary tabular-nums tracking-tighter">{parts[0]}</span>
@@ -337,7 +283,7 @@ const FoodControlTab = ({
                   <td className="text-center px-1 py-2">
                     {isPersonRegistered(row.personId) && !isWeekendOrHoliday(row.date) ? (
                       <Badge className="text-[10px] bg-primary/10 text-primary hover:bg-primary/20 border-primary/20" title="Garantido por Regra CLT">✓*</Badge>
-                    ) : row.requestedAlmoco ? (
+                    ) : (row.requestedAlmoco || (isPersonRegistered(row.personId) && isWeekendOrHoliday(row.date))) ? (
                       <Badge className="text-2xs opacity-60">✓</Badge>
                     ) : (
                       <span className="text-muted-foreground/30">—</span>

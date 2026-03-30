@@ -43,7 +43,7 @@ export const useDatabase = () => {
   const requests = useQuery({
     queryKey: ["meal_requests"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("meal_requests").select("*").order("start_date", { ascending: false }).limit(5000);
+      const { data, error } = await supabase.from("meal_requests").select("*").order("start_date", { ascending: false }).limit(50000);
       if (error) throw error;
       return (data || []).map((r: any) => ({
         id: r.id,
@@ -65,7 +65,7 @@ export const useDatabase = () => {
         .from("time_entries")
         .select("*")
         .order("date", { ascending: false })
-        .limit(5000);
+        .limit(50000);
       if (error) throw error;
       return (data || []).map((e: any) => ({
         id: e.id,
@@ -86,25 +86,37 @@ export const useDatabase = () => {
   });
 
   const foodControl = useQuery({
-    queryKey: ["food_control"],
+    queryKey: ["food_control", jobs.data],
+    enabled: !!jobs.data,
     queryFn: async () => {
-      const { data, error } = await supabase.from("food_control").select("*").order("date", { ascending: false }).limit(5000);
+      const { data, error } = await supabase.from("food_control").select("*").order("date", { ascending: false }).limit(50000);
       if (error) throw error;
       
+      const allJobs = jobs.data || [];
       const grouped = (data || []).reduce((acc: any, f: any) => {
-        const key = `${f.person_id}-${f.job_id}-${f.date}`;
+        // Resolve o Job ID para UUID real para garantir consistência cache <-> UI
+        let resolvedJobId = f.job_id;
+        const jobMatch = allJobs.find(j => j.id === f.job_id || j.name.startsWith(f.job_id + " - ") || j.name === f.job_id);
+        if (jobMatch) resolvedJobId = jobMatch.id;
+
+        const fDate = String(f.date).split('T')[0];
+        const key = `${f.person_id}|${resolvedJobId}|${fDate}`;
+        
         if (!acc[key]) {
           acc[key] = {
-            id: f.id, personId: f.person_id, jobId: f.job_id, date: f.date,
+            id: f.id, 
+            personId: f.person_id, 
+            jobId: resolvedJobId, 
+            date: fDate,
             usedCafe: false, usedAlmoco: false, usedJanta: false,
             requestedCafe: false, requestedAlmoco: false, requestedJanta: false
           };
         }
         
         const isUsed = f.status === 'consumed';
-        if (f.meal_type === 'cafe') acc[key].usedCafe = isUsed;
-        if (f.meal_type === 'almoco') acc[key].usedAlmoco = isUsed;
-        if (f.meal_type === 'janta') acc[key].usedJanta = isUsed;
+        if (f.meal_type === 'cafe') acc[key].usedCafe = acc[key].usedCafe || isUsed;
+        if (f.meal_type === 'almoco') acc[key].usedAlmoco = acc[key].usedAlmoco || isUsed;
+        if (f.meal_type === 'janta') acc[key].usedJanta = acc[key].usedJanta || isUsed;
         
         return acc;
       }, {});
@@ -432,7 +444,19 @@ export const useDatabase = () => {
   const updateFoodControl = useMutation({
     mutationFn: async (entry: FoodControlEntry) => {
       const mealTypes: ('cafe' | 'almoco' | 'janta')[] = ['cafe', 'almoco', 'janta'];
-      
+      let dbDate = entry.date;
+      if (dbDate && dbDate.includes("/")) {
+        const parts = dbDate.split("/");
+        dbDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+      }
+
+      // Se o jobId não for um UUID válido, enviamos null para não quebrar o banco
+      let dbJobId: string | null = entry.jobId;
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (dbJobId && !uuidRegex.test(dbJobId)) {
+        dbJobId = null;
+      }
+
       for (const mealType of mealTypes) {
         let isUsed = false;
         if (mealType === 'cafe') isUsed = entry.usedCafe;
@@ -440,73 +464,62 @@ export const useDatabase = () => {
         if (mealType === 'janta') isUsed = entry.usedJanta;
 
         const newStatus = isUsed ? 'consumed' : 'not_consumed';
+        if (!entry.personId || !dbDate) continue;
 
-        // 1. Buscamos se já existe um registro para este item específico
-        const { data: existing } = await supabase
+        // Buscamos pelo ID exato do registro (data simples, sem horas)
+        const { data: existing, error: fetchErr } = await supabase
           .from("food_control")
-          .select("id, status")
-          .match({ 
-            person_id: entry.personId, 
-            job_id: entry.jobId, 
-            date: entry.date, 
-            meal_type: mealType 
-          })
-          .maybeSingle();
+          .select("id")
+          .eq("person_id", entry.personId)
+          .eq("meal_type", mealType)
+          .eq("date", dbDate);
 
-        if (existing?.id) {
-          // 2. Se já existe e o status mudou, atualiza
-          if (existing.status !== newStatus) {
-            const { error: updErr } = await supabase
-              .from("food_control")
-              .update({ status: newStatus })
-              .eq("id", existing.id);
-            if (updErr) throw updErr;
-          }
+        if (fetchErr) throw new Error(`Erro Busca ID: ${fetchErr.message}`);
+
+        if (existing && existing.length > 0) {
+          // 2. ATUALIZAMOS PELO ID (O jeito mais seguro contra erros de duplicidade)
+          const { error: updErr } = await supabase
+            .from("food_control")
+            .update({ status: newStatus, job_id: dbJobId })
+            .in("id", existing.map(item => item.id));
+
+          if (updErr) throw new Error(`Erro ao atualizar por ID: ${updErr.message}`);
         } else {
-          // 3. Se não existe, insere um novo
+          // 3. SE NÃO EXISTIR NADA, CRIAMOS UM NOVO
           const { error: insErr } = await supabase
             .from("food_control")
             .insert({
               person_id: entry.personId,
-              job_id: entry.jobId,
-              date: entry.date,
+              job_id: dbJobId,
+              date: dbDate,
               meal_type: mealType,
               status: newStatus
             });
-          if (insErr) throw insErr;
+
+          if (insErr) throw new Error(`Erro ao criar novo registro: ${insErr.message}`);
         }
       }
     },
     onMutate: async (newEntry) => {
-      // Cancela as buscas para não sobrescrever o estado otimista
       await queryClient.cancelQueries({ queryKey: ["food_control"] });
-
-      // Salva o estado anterior para recuperar em caso de erro
-      const previousFoodControl = queryClient.getQueryData(["food_control"]);
-
-      // Atualiza o cache de forma otimista (instantânea na tela)
+      const previous = queryClient.getQueryData(["food_control"]);
+      
       queryClient.setQueryData(["food_control"], (old: FoodControlEntry[] | undefined) => {
         if (!old) return [newEntry];
-        const exists = old.findIndex(fc => fc.personId === newEntry.personId && fc.jobId === newEntry.jobId && fc.date === newEntry.date);
+        const exists = old.findIndex(fc => fc.personId === newEntry.personId && fc.date === newEntry.date);
         if (exists >= 0) {
-          const copy = [...old];
-          copy[exists] = { ...copy[exists], ...newEntry };
-          return copy;
+          const uState = [...old];
+          uState[exists] = { ...uState[exists], ...newEntry };
+          return uState;
         }
-        return [...old, newEntry];
+        return [newEntry, ...old];
       });
-
-      return { previousFoodControl };
+      return { previous };
     },
-    onError: (err, newEntry, context: any) => {
-      // Se der erro no banco, volta para o estado anterior
-      if (context?.previousFoodControl) {
-        queryClient.setQueryData(["food_control"], context.previousFoodControl);
-      }
-      toast.error("Erro ao sincronizar com o banco. Tente novamente.");
-    },
-    onSettled: () => {
-      // No final, sincroniza com o banco para garantir consistência
+    onError: (err: any, __, context) => {
+      toast.error(err.message || "Erro ao salvar no banco de dados.");
+      if (context?.previous) queryClient.setQueryData(["food_control"], context.previous);
+      // Só re-busca do banco se deu erro, para corrigir o estado
       queryClient.invalidateQueries({ queryKey: ["food_control"] });
     },
   });

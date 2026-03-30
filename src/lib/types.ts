@@ -471,6 +471,9 @@ export function determineMealsUsed(
   let almoco = false;
   let janta = false;
 
+  const getFirstEntryTime = (e: TimeEntry) => e.entry1 || e.entry2 || e.entry3 || "";
+  const getLastExitTime = (e: TimeEntry) => e.exit3 || e.exit2 || e.exit1 || "";
+
   if (req && date && date === req.startDate && req.travelTime) {
     const offset = req.transportType === "aviao" ? 4 : 2;
     const [h, m] = req.travelTime.split(":").map(Number);
@@ -480,6 +483,12 @@ export function determineMealsUsed(
     if (adjustedMinutes <= 12 * 60) almoco = true;
     if (adjustedMinutes <= 20 * 60) janta = true;
     
+    // Se for Dentro SP, Café e Janta são ignorados na regra automática (como pedido)
+    if (req.location === "Dentro SP") {
+        cafe = false;
+        janta = false;
+    }
+    
     if (!entry) return { cafe, almoco, janta };
   }
 
@@ -487,17 +496,22 @@ export function determineMealsUsed(
     const firstEntry = getFirstEntryTime(entry);
     const lastExit = getLastExitTime(entry);
     
-    if (entry?.isAutoFilled) {
-        return { cafe: false, almoco: false, janta: false };
-    }
-
-    if (req?.location === "Fora SP" && calcTotalMinutes(entry) > 0) {
+    if (req?.location === "Fora SP" && (calcTotalMinutes(entry) > 0 || entry.isTravelOut || entry.isTravelReturn)) {
         return { cafe: true, almoco: true, janta: true };
     }
 
-    if (req?.location !== "Dentro SP" && String(firstEntry || "").includes(":")) {
-      const [h, m] = String(firstEntry).split(":").map(Number);
-      if (h < 8 || (h === 8 && m <= 0)) cafe = true;
+    // Regra Para Fora SP: Café se entrar cedo, Janta se sair tarde
+    if (req?.location !== "Dentro SP") {
+        if (String(firstEntry || "").includes(":")) {
+          const [h] = String(firstEntry).split(":").map(Number);
+          if (h < 8) cafe = true;
+        }
+        
+        if (String(lastExit || "").includes(":")) {
+          const [h] = String(lastExit).split(":").map(Number);
+          if (h >= 19) janta = true;
+        }
+        if (entry.entry3 || entry.exit3) janta = true;
     }
     
     if (entry.entry1 && entry.exit1 && entry.entry2 && entry.exit2) {
@@ -505,12 +519,6 @@ export function determineMealsUsed(
     } else if (calcTotalMinutes(entry) >= 360) {
       almoco = true;
     }
-    
-    if (String(lastExit || "").includes(":")) {
-      const [h] = String(lastExit).split(":").map(Number);
-      if (h >= 19) janta = true;
-    }
-    if (entry.entry3 || entry.exit3) janta = true;
   }
 
   return { cafe, almoco, janta };
