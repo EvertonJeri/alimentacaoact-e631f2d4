@@ -433,31 +433,27 @@ export const useDatabase = () => {
     mutationFn: async (entry: FoodControlEntry) => {
       const mealTypes: ('cafe' | 'almoco' | 'janta')[] = ['cafe', 'almoco', 'janta'];
       
-      const promises = mealTypes.map(async (mealType) => {
+      const updates = mealTypes.map(mealType => {
         let isUsed = false;
         if (mealType === 'cafe') isUsed = entry.usedCafe;
         if (mealType === 'almoco') isUsed = entry.usedAlmoco;
         if (mealType === 'janta') isUsed = entry.usedJanta;
 
-        const { data: existing } = await supabase
-          .from("food_control")
-          .select("id, status")
-          .match({ person_id: entry.personId, job_id: entry.jobId, date: entry.date, meal_type: mealType })
-          .maybeSingle();
-
-        const newStatus = isUsed ? 'consumed' : 'not_consumed';
-        if (existing?.id) {
-          if (existing.status !== newStatus) {
-            await supabase.from("food_control").update({ status: newStatus }).eq("id", existing.id);
-          }
-        } else {
-          await supabase.from("food_control").insert({
-            person_id: entry.personId, job_id: entry.jobId, date: entry.date, meal_type: mealType, status: newStatus
-          });
-        }
+        return {
+          person_id: entry.personId,
+          job_id: entry.jobId,
+          date: entry.date,
+          meal_type: mealType,
+          status: isUsed ? 'consumed' : 'not_consumed'
+        };
       });
 
-      await Promise.all(promises);
+      // Usamos upsert para garantir que o banco insira ou atualize o registro correto sem erro de duplicidade
+      const { error } = await supabase
+        .from("food_control")
+        .upsert(updates, { onConflict: 'person_id, job_id, date, meal_type' });
+
+      if (error) throw error;
     },
     onMutate: async (newEntry) => {
       // Cancela as buscas para não sobrescrever o estado otimista
