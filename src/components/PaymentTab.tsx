@@ -238,8 +238,7 @@ const PaymentTab = ({
              }
            }, 150);
         } else {
-           // Fluxo normal para Financeiro
-           notifyFinancePayment(waMsg);
+           // Fluxo normal: Notificar agora apenas o Administrador (que cuida do e-mail)
            notifyAdminPayment(waMsg);
 
            // Alerta opcional direcionado para o Administrador (via WhatsApp)
@@ -274,12 +273,12 @@ const PaymentTab = ({
           });
         }
 
-        // 3. Notificação automática via E-mail e WhatsApp para o Financeiro (Total do Job)
+        // 3. Notificação automática via E-mail e WhatsApp para o Administrador (Total do Job)
         const jobName = getJobName(jobId, jobReqs[0].personId);
         const totalJobPayment = jobReqs.reduce((acc, r) => acc + (calcRequestBruto(r) || 0), 0);
         const jobWaMsg = `🏦 *FECHAMENTO INTEGRAL DE PROJETO*\n\n🏗️ Projeto: ${jobName}\n📅 Data: ${paymentDate}\n💰 Total Liquidado: R$ ${totalJobPayment.toFixed(2)}\n👥 Funcionários: ${jobReqs.length}`;
         
-        notifyFinancePayment(jobWaMsg);
+        notifyAdminPayment(jobWaMsg);
         toast.success(`Pagamento integral do projeto confirmado! Relatórios enviados.`);
       }
     } catch (error) {

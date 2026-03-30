@@ -157,7 +157,9 @@ export function calcTimeDiffMinutes(start: string, end: string): number {
   if (!String(start || "").includes(":") || !String(end || "").includes(":")) return 0;
   const [sh, sm] = String(start).split(":").map(Number);
   const [eh, em] = String(end).split(":").map(Number);
-  return (eh * 60 + em) - (sh * 60 + sm);
+  let diff = (eh * 60 + em) - (sh * 60 + sm);
+  if (diff < 0) diff += 1440; // Adiciona 24h se a saída for no dia seguinte
+  return diff;
 }
 
 export function calcTotalMinutes(entry: TimeEntry): number {
@@ -226,6 +228,11 @@ export function getActiveMeals(req: MealRequest, dateStr: string, person?: Perso
 
   // PRIORIDADE 2: Regra base
   let meals = [...(req.meals || [])] as MealType[];
+
+  // Regra SP: Dentro de SP não tem Café da Manhã
+  if (req.location === "Dentro SP") {
+    meals = meals.filter(m => m !== "cafe");
+  }
   
   if (person?.isRegistered || (person as any)?.is_registered) {
     const isWkndOrHol = isWeekendOrHoliday(dateStr);
@@ -324,16 +331,16 @@ export function calculateDayDiscount(
 
     if (!hasHours && !isTravelDay) {
       reason = "Falta - sem registro de horas";
-      if (dayMeals.includes("cafe")) discountCafe = refCafe;
-      if (dayMeals.includes("almoco")) discountAlmoco = refAlmoco;
-      if (dayMeals.includes("janta")) discountJanta = refJanta;
+      if (dayMeals.includes("cafe")) discountCafe = -refCafe;
+      if (dayMeals.includes("almoco")) discountAlmoco = -refAlmoco;
+      if (dayMeals.includes("janta")) discountJanta = -refJanta;
     } else if (isTravelDay && !hasHours) {
       reason = `Dia de viagem (${req.transportType === "aviao" ? "Avião" : "Ônibus"}) às ${req.travelTime}`;
     } else {
       const misses = [];
-      if (discountCafe > 0) misses.push("café");
-      if (discountAlmoco > 0) misses.push("almoço");
-      if (discountJanta > 0) misses.push("janta");
+      if (discountCafe < 0) misses.push("café");
+      if (discountAlmoco < 0) misses.push("almoço");
+      if (discountJanta < 0) misses.push("janta");
 
       if (misses.length > 0) {
         reason = `Horários divergentes para: ${misses.join(", ")}`;
@@ -342,15 +349,15 @@ export function calculateDayDiscount(
 
   // Se tem controle manual (Food Control), ele se sobrepõe
   if (fc) {
-    if (dayMeals.includes("cafe") && !fc.usedCafe) discountCafe = refCafe;
+    if (dayMeals.includes("cafe") && !fc.usedCafe) discountCafe = -refCafe;
     else if (!dayMeals.includes("cafe") && fc.usedCafe) discountCafe = -refCafe;
     else discountCafe = 0;
 
-    if (dayMeals.includes("almoco") && !fc.usedAlmoco) discountAlmoco = refAlmoco;
+    if (dayMeals.includes("almoco") && !fc.usedAlmoco) discountAlmoco = -refAlmoco;
     else if (!dayMeals.includes("almoco") && fc.usedAlmoco) discountAlmoco = -refAlmoco;
     else discountAlmoco = 0;
 
-    if (dayMeals.includes("janta") && !fc.usedJanta) discountJanta = refJanta;
+    if (dayMeals.includes("janta") && !fc.usedJanta) discountJanta = -refJanta;
     else if (!dayMeals.includes("janta") && fc.usedJanta) discountJanta = -refJanta;
     else discountJanta = 0;
 
@@ -417,7 +424,7 @@ export function calculatePersonBalance(
       
       if (entry || fc) {
         const dayCalc = calculateDayDiscount(req, date, entry, fc, people);
-        walletBalance -= dayCalc.total;
+        walletBalance += dayCalc.total;
       }
     });
   });

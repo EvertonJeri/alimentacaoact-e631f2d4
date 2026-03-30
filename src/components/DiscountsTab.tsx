@@ -150,12 +150,12 @@ const DiscountsTab = ({
     return rows;
   }, [registeredRequests, timeEntries, foodControl, people, filterJob, confirmations]);
 
-  // Descontos (total > 0 = empresa desconta do funcionário) — excluindo os já marcados como retirados
-  const discounts = useMemo(() => allAdjustments.filter(d => d.total > 0), [allAdjustments]);
+  // Descontos: Quando o funcionário deve pagar (Total < 0, ex: refeição extra)
+  const discounts = useMemo(() => allAdjustments.filter(d => d.total < 0), [allAdjustments]);
   const activeDiscounts = useMemo(() => discounts.filter(d => !d._done), [discounts]);
   
-  // Saldo positivo (total < 0 = empresa deve ao funcionário - consumiu menos que solicitado)
-  const positiveBalances = useMemo(() => allAdjustments.filter(d => d.total < 0), [allAdjustments]);
+  // Saldo positivo: Quando o funcionário tem crédito (Total > 0, ex: não consumiu o solicitado)
+  const positiveBalances = useMemo(() => allAdjustments.filter(d => d.total > 0), [allAdjustments]);
 
   // Group discounts by person
   const groupedByPerson = useMemo(() => {
@@ -179,7 +179,19 @@ const DiscountsTab = ({
     return map;
   }, [positiveBalances]);
 
-  const totalDiscount = activeDiscounts.reduce((s, d) => s + d.total, 0);
+  // Cálculo do saldo líquido (saldo positivo - descontos) por pessoa
+  const personNetBalanceMap = useMemo(() => {
+    const map = new Map<string, number>();
+    const allPids = new Set([...Array.from(groupedByPerson.keys()), ...Array.from(groupedBalanceByPerson.keys())]);
+    allPids.forEach(pid => {
+      const descTotal = (groupedByPerson.get(pid) || []).reduce((s, d) => s + Math.abs(d.total), 0);
+      const saldTotal = (groupedBalanceByPerson.get(pid) || []).reduce((s, d) => s + Math.abs(d.total), 0);
+      map.set(pid, saldTotal - descTotal); // (+) é crédito, (-) é débito
+    });
+    return map;
+  }, [groupedByPerson, groupedBalanceByPerson]);
+
+  const totalDiscount = activeDiscounts.reduce((s, d) => s + Math.abs(d.total), 0);
   const totalPositiveBalance = positiveBalances.reduce((s, d) => s + Math.abs(d.total), 0);
 
   const togglePerson = (personId: string) => {
@@ -214,8 +226,8 @@ const DiscountsTab = ({
 
     const personName = getPersonName(personId);
     const personRows = discounts.filter(d => d.personId === personId);
-    const totalDesc = personRows.reduce((s, d) => s + d.total, 0);
-    const reasons = personRows.map(d => `${d.date?.includes("-") ? d.date.split("-").reverse().join("/") : d.date}: ${d.reason} (R$ ${d.total.toFixed(2)})`).join("\n");
+    const totalDesc = personRows.reduce((s, d) => s + Math.abs(d.total), 0);
+    const reasons = personRows.map(d => `${d.date?.includes("-") ? d.date.split("-").reverse().join("/") : d.date}: ${d.reason} (R$ ${Math.abs(d.total).toFixed(2)})`).join("\n");
 
     const updated: DiscountConfirmation = { personId, paymentDate: date, confirmed: true };
     onUpdateConfirmation?.(updated);
@@ -321,6 +333,15 @@ const DiscountsTab = ({
                   <span className={`tabular-nums font-bold mr-2 ${isPositiveBalance ? 'text-green-600' : 'text-destructive'}`}>
                     {isPositiveBalance ? '+' : '-'}{personTotal.toFixed(2)}
                   </span>
+                  {(() => {
+                    const net = personNetBalanceMap.get(personId) || 0;
+                    if (Math.abs(net) < 0.01 || (isPositiveBalance && net > 0) || (!isPositiveBalance && net < 0)) return null;
+                    return (
+                      <span className={`text-[10px] mr-2 italic font-bold ${net >= 0 ? 'text-green-600' : 'text-destructive'}`}>
+                        (Saldo Líquido: {net >= 0 ? '+' : ''}{net.toFixed(2)})
+                      </span>
+                    );
+                  })()}
                   {!isPositiveBalance && (
                     <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                       <label className="text-2xs text-muted-foreground whitespace-nowrap">Data Desconto:</label>
@@ -488,7 +509,7 @@ const DiscountsTab = ({
 
         <TabsContent value="saldo" className="mt-4">
           <p className="text-xs text-muted-foreground mb-3">
-            Saldo positivo: quando o funcionário consumiu <strong>menos</strong> do que foi solicitado. A empresa deve pagar a diferença.
+            Saldo positivo: quando o funcionário consumiu <strong>menos</strong> do que foi solicitado. A empresa deve pagar a diferença (crédito).
           </p>
           <div className="rounded-xl border border-green-200 overflow-hidden shadow-card">
             {renderPersonList(groupedBalanceByPerson, true)}

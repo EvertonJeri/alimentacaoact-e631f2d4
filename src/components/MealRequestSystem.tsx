@@ -119,10 +119,7 @@ const MealRequestSystem = ({
     if (hasFlashUsers) {
       // Se houver gente do Flash, avisa os dois e-mails
       await notifyFinanceAndHRPayment(details);
-    } else {
-      // Caso contrário, fluxo normal apenas Financeiro
-      await notifyFinancePayment(details);
-    }
+    } 
 
     notifyAdminPayment(details);
     
@@ -232,6 +229,16 @@ const MealRequestSystem = ({
       travelTime: travelTime || undefined,
       isLocal
     };
+
+    // Regra SP: Dentro de SP não tem Café da Manhã
+    if (newRequest.location === "Dentro SP") {
+      newRequest.meals = newRequest.meals.filter(m => m !== "cafe");
+      if (newRequest.dailyOverrides) {
+        Object.keys(newRequest.dailyOverrides).forEach(d => {
+          newRequest.dailyOverrides![d] = newRequest.dailyOverrides![d].filter(m => m !== "cafe");
+        });
+      }
+    }
 
     // Pós-processo: para CLT, garantir que nenhum dia útil tenha almoço
     if (isPersonCLT) {
@@ -594,6 +601,13 @@ const MealRequestSystem = ({
                 <Plus className="h-4 w-4 mr-2" /> Adicionar
               </Button>
             </div>
+            
+            {(location === "Dentro SP" && meals.includes("cafe")) && (
+              <div className="mx-6 mb-4 p-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-bold flex items-center gap-2">
+                <AlertCircle className="h-3 w-3" />
+                Aviso: Dentro de SP o Café da Manhã não é permitido por regra e será removido automaticamente ao salvar.
+              </div>
+            )}
           </div>
 
         <div className={`rounded-2xl border border-border overflow-hidden bg-card shadow-card transition-opacity`}>
