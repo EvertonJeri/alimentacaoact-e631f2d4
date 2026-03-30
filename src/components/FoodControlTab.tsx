@@ -183,13 +183,22 @@ const FoodControlTab = ({
   }, [timeEntries, requests, foodControl, people, jobs]);
 
   const updateUsed = (personId: string, jobId: string, date: string, field: "usedCafe" | "usedAlmoco" | "usedJanta", value: boolean) => {
+    // Importante: Garantir que o jobId seja o original (UUID), não o texto formatado da tabela
     const row = rows.find((r) => r.personId === personId && r.jobId === jobId && r.date === date);
     if (!row) return;
 
-    // Atualização local imediata para o usuário ver o "check" na hora
+    // Se o jobId for o texto formatado "Removido...", precisamos do real do entryId
+    let realJobId = jobId;
+    if (jobId.startsWith("Removido (")) {
+       const entry = timeEntries.find(e => e.personId === personId && e.date === date);
+       if (entry) realJobId = entry.jobId;
+    }
+
     const updated: FoodControlEntry = {
       id: row.id,
-      personId, jobId, date,
+      personId, 
+      jobId: realJobId, 
+      date,
       requestedCafe: row.requestedCafe,
       requestedAlmoco: row.requestedAlmoco,
       requestedJanta: row.requestedJanta,
