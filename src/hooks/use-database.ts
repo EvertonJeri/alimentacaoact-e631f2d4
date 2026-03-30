@@ -433,27 +433,49 @@ export const useDatabase = () => {
     mutationFn: async (entry: FoodControlEntry) => {
       const mealTypes: ('cafe' | 'almoco' | 'janta')[] = ['cafe', 'almoco', 'janta'];
       
-      const updates = mealTypes.map(mealType => {
+      for (const mealType of mealTypes) {
         let isUsed = false;
         if (mealType === 'cafe') isUsed = entry.usedCafe;
         if (mealType === 'almoco') isUsed = entry.usedAlmoco;
         if (mealType === 'janta') isUsed = entry.usedJanta;
 
-        return {
-          person_id: entry.personId,
-          job_id: entry.jobId,
-          date: entry.date,
-          meal_type: mealType,
-          status: isUsed ? 'consumed' : 'not_consumed'
-        };
-      });
+        const newStatus = isUsed ? 'consumed' : 'not_consumed';
 
-      // Usamos upsert para garantir que o banco insira ou atualize o registro correto sem erro de duplicidade
-      const { error } = await supabase
-        .from("food_control")
-        .upsert(updates, { onConflict: 'person_id, job_id, date, meal_type' });
+        // 1. Buscamos se já existe um registro para este item específico
+        const { data: existing } = await supabase
+          .from("food_control")
+          .select("id, status")
+          .match({ 
+            person_id: entry.personId, 
+            job_id: entry.jobId, 
+            date: entry.date, 
+            meal_type: mealType 
+          })
+          .maybeSingle();
 
-      if (error) throw error;
+        if (existing?.id) {
+          // 2. Se já existe e o status mudou, atualiza
+          if (existing.status !== newStatus) {
+            const { error: updErr } = await supabase
+              .from("food_control")
+              .update({ status: newStatus })
+              .eq("id", existing.id);
+            if (updErr) throw updErr;
+          }
+        } else {
+          // 3. Se não existe, insere um novo
+          const { error: insErr } = await supabase
+            .from("food_control")
+            .insert({
+              person_id: entry.personId,
+              job_id: entry.jobId,
+              date: entry.date,
+              meal_type: mealType,
+              status: newStatus
+            });
+          if (insErr) throw insErr;
+        }
+      }
     },
     onMutate: async (newEntry) => {
       // Cancela as buscas para não sobrescrever o estado otimista
