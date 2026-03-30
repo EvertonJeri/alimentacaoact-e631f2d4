@@ -433,39 +433,31 @@ export const useDatabase = () => {
     mutationFn: async (entry: FoodControlEntry) => {
       const mealTypes: ('cafe' | 'almoco' | 'janta')[] = ['cafe', 'almoco', 'janta'];
       
-      for (const mealType of mealTypes) {
+      const promises = mealTypes.map(async (mealType) => {
         let isUsed = false;
-        let isRequested = false;
+        if (mealType === 'cafe') isUsed = entry.usedCafe;
+        if (mealType === 'almoco') isUsed = entry.usedAlmoco;
+        if (mealType === 'janta') isUsed = entry.usedJanta;
 
-        if (mealType === 'cafe') { isUsed = entry.usedCafe; isRequested = entry.requestedCafe; }
-        if (mealType === 'almoco') { isUsed = entry.usedAlmoco; isRequested = entry.requestedAlmoco; }
-        if (mealType === 'janta') { isUsed = entry.usedJanta; isRequested = entry.requestedJanta; }
-
-        const { data: existing, error: matchError } = await supabase
+        const { data: existing } = await supabase
           .from("food_control")
-          .select("id")
-          .match({
-            person_id: entry.personId,
-            job_id: entry.jobId,
-            date: entry.date,
-            meal_type: mealType
-          })
+          .select("id, status")
+          .match({ person_id: entry.personId, job_id: entry.jobId, date: entry.date, meal_type: mealType })
           .maybeSingle();
 
+        const newStatus = isUsed ? 'consumed' : 'not_consumed';
         if (existing?.id) {
-          const { error: updErr } = await supabase.from("food_control").update({ status: isUsed ? 'consumed' : 'not_consumed' }).eq("id", existing.id);
-          if (updErr) throw updErr;
+          if (existing.status !== newStatus) {
+            await supabase.from("food_control").update({ status: newStatus }).eq("id", existing.id);
+          }
         } else {
-          const { error: insErr } = await supabase.from("food_control").insert({
-            person_id: entry.personId,
-            job_id: entry.jobId,
-            date: entry.date,
-            meal_type: mealType,
-            status: isUsed ? 'consumed' : 'not_consumed'
+          await supabase.from("food_control").insert({
+            person_id: entry.personId, job_id: entry.jobId, date: entry.date, meal_type: mealType, status: newStatus
           });
-          if (insErr) throw insErr;
         }
-      }
+      });
+
+      await Promise.all(promises);
     },
     onMutate: async (newEntry) => {
       // Cancela as buscas para não sobrescrever o estado otimista
