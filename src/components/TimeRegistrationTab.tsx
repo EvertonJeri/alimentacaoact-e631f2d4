@@ -111,9 +111,15 @@ const TimeRegistrationTab = ({
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().split("T")[0]
   );
+  
+  // Lista local de IDs deletados para visualização instantânea antes da resposta do DB
+  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
 
   // Local state for persistence without DB
   const [localOverrides, setLocalOverrides] = useState<Record<string, any>>(GET_OVERRIDES());
+
+  // Estado para lidar com a tela de confirmação inline (Bypass no Chrome popup blocker)
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
     SAVE_OVERRIDES(localOverrides);
@@ -201,15 +207,19 @@ const TimeRegistrationTab = ({
   };
 
   const removeEntry = (id: string) => {
-    if (confirm("Deseja realmente apagar este registro de horas?")) {
-      onRemoveEntry?.(id);
-      setEntries?.((prev) => prev.filter((e) => e.id !== id));
-      setLocalOverrides(prev => {
-          const next = { ...prev };
-          delete next[id];
-          return next;
-      });
+    // Oculta instantaneamente na interface sem depender de banco ou setEntries global
+    setDeletedIds(prev => new Set(prev).add(id));
+    
+    onRemoveEntry?.(id);
+    if (setEntries) {
+      setEntries((prev) => prev.filter((e) => e.id !== id));
     }
+    setLocalOverrides(prev => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+    });
+    setConfirmingDeleteId(null); // Reseta a confirmação
   };
 
 
@@ -284,11 +294,11 @@ const TimeRegistrationTab = ({
             });
         }
     } else {
-        // Zap (automático padrão)
-        if (loc === "Dentro SP") {
-            if (!entry1) entry1 = "08:00";
-            if (!exit1) exit1 = "10:00";
-        }
+        // Zap (automático padrão 08-18h)
+        if (!entry1) entry1 = "08:00";
+        if (!exit1) exit1 = "12:00";
+        if (!entry2) entry2 = "13:00";
+        if (!exit2) exit2 = "18:00";
     }
 
     const updated: TimeEntry = {
@@ -350,6 +360,7 @@ const TimeRegistrationTab = ({
   const filteredEntries = useMemo(() => {
     return entries
       .filter((e) => {
+        if (deletedIds.has(e.id)) return false;
         if (filterPerson !== "all" && e.personId !== filterPerson) return false;
         if (filterJob !== "all" && e.jobId !== filterJob) return false;
         if (filterDate && e.date !== filterDate) return false;
@@ -368,7 +379,7 @@ const TimeRegistrationTab = ({
         const nameB = getPersonName(b.personId);
         return nameA.localeCompare(nameB);
       });
-  }, [entries, filterPerson, filterJob, filterDate, sortOrder]);
+  }, [entries, filterPerson, filterJob, filterDate, sortOrder, deletedIds]);
 
   const exportToExcel = () => {
     const wb = XLSX.utils.book_new();
@@ -736,15 +747,39 @@ const TimeRegistrationTab = ({
                       </Button>
                     </td>
                     <td className="px-2 py-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeEntry(entry.id)}
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors"
-                        title="Apagar este registro"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      {confirmingDeleteId === entry.id ? (
+                        <div className="flex flex-col gap-1 items-center animate-in fade-in zoom-in duration-200">
+                          <span className="text-[9px] font-bold text-red-600 leading-none">Apagar?</span>
+                          <div className="flex gap-1">
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => removeEntry(entry.id)}
+                              className="h-5 px-2 text-[9px] font-bold"
+                            >
+                              Sim
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setConfirmingDeleteId(null)}
+                              className="h-5 px-2 text-[9px] font-bold"
+                            >
+                              Não
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setConfirmingDeleteId(entry.id)}
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors relative"
+                          title="Apagar este registro"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </td>
                   </tr>
                 );

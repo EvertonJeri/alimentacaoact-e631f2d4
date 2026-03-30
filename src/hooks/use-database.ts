@@ -388,6 +388,24 @@ export const useDatabase = () => {
       const { error } = await supabase.from("time_entries").delete().eq("id", id);
       if (error) throw error;
     },
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ["time_entries"] });
+      const previous = queryClient.getQueryData(["time_entries"]);
+      queryClient.setQueryData(["time_entries"], (old: any) => {
+        if (!Array.isArray(old)) return old;
+        return old.filter((e: any) => e.id !== id);
+      });
+      return { previous };
+    },
+    onError: (err, id, context) => {
+      toast.error("Erro ao apagar o registro.");
+      if (context?.previous) {
+        queryClient.setQueryData(["time_entries"], context.previous);
+      }
+    },
+    onSuccess: () => {
+      toast.success("Registro apagado com sucesso!");
+    },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["time_entries"] });
     },
