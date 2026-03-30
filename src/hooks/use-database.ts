@@ -450,12 +450,10 @@ export const useDatabase = () => {
         dbDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
       }
 
-      // Se o jobId não for um UUID válido, enviamos null para não quebrar o banco
-      let dbJobId: string | null = entry.jobId;
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      if (dbJobId && !uuidRegex.test(dbJobId)) {
-        dbJobId = null;
-      }
+      // Calcula o dia seguinte para range de busca
+      const nextDay = new Date(dbDate + 'T00:00:00');
+      nextDay.setDate(nextDay.getDate() + 1);
+      const nextDayStr = nextDay.toISOString().split('T')[0];
 
       for (const mealType of mealTypes) {
         let isUsed = false;
@@ -466,37 +464,61 @@ export const useDatabase = () => {
         const newStatus = isUsed ? 'consumed' : 'not_consumed';
         if (!entry.personId || !dbDate) continue;
 
-        // Buscamos pelo ID exato do registro (data simples, sem horas)
-        const { data: existing, error: fetchErr } = await supabase
+        // 1. TENTA ATUALIZAR registros existentes (range de data para capturar qualquer formato)
+        const { data: updated, error: updErr } = await supabase
           .from("food_control")
-          .select("id")
+          .update({ status: newStatus })
           .eq("person_id", entry.personId)
           .eq("meal_type", mealType)
-          .eq("date", dbDate);
+          .gte("date", dbDate)
+          .lt("date", nextDayStr)
+          .select("id");
 
-        if (fetchErr) throw new Error(`Erro Busca ID: ${fetchErr.message}`);
+        if (updErr) throw new Error(`Erro ao atualizar: ${updErr.message}`);
 
-        if (existing && existing.length > 0) {
-          // 2. ATUALIZAMOS PELO ID (O jeito mais seguro contra erros de duplicidade)
-          const { error: updErr } = await supabase
-            .from("food_control")
-            .update({ status: newStatus, job_id: dbJobId })
-            .in("id", existing.map(item => item.id));
+        // 2. SE NÃO ATUALIZOU NADA, precisamos inserir com um job_id UUID válido
+        if (!updated || updated.length === 0) {
+          // Resolve o job_id: precisa ser um UUID que exista na tabela jobs
+          let validJobId = entry.jobId;
+          const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+          
+          if (!validJobId || !uuidRegex.test(validJobId)) {
+            // Busca um job_id válido: primeiro tenta do time_entries da pessoa nesse dia
+            const { data: te } = await supabase
+              .from("time_entries")
+              .select("job_id")
+              .eq("person_id", entry.personId)
+              .gte("date", dbDate)
+              .lt("date", nextDayStr)
+              .limit(1);
+            
+            if (te && te.length > 0) {
+              validJobId = te[0].job_id;
+            } else {
+              // Último recurso: pega o primeiro job do sistema
+              const { data: anyJob } = await supabase
+                .from("jobs")
+                .select("id")
+                .limit(1);
+              if (anyJob && anyJob.length > 0) {
+                validJobId = anyJob[0].id;
+              } else {
+                throw new Error("Nenhum Job cadastrado no sistema.");
+              }
+            }
+          }
 
-          if (updErr) throw new Error(`Erro ao atualizar por ID: ${updErr.message}`);
-        } else {
-          // 3. SE NÃO EXISTIR NADA, CRIAMOS UM NOVO
           const { error: insErr } = await supabase
             .from("food_control")
             .insert({
               person_id: entry.personId,
-              job_id: dbJobId,
+              job_id: validJobId,
               date: dbDate,
               meal_type: mealType,
               status: newStatus
             });
 
-          if (insErr) throw new Error(`Erro ao criar novo registro: ${insErr.message}`);
+          if (insErr) throw new Error(`Erro ao criar registro: ${insErr.message}`);
         }
       }
     },
