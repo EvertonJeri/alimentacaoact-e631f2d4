@@ -74,7 +74,14 @@ const FoodControlTab = ({
     const foodControlByPersonDate = new Map<string, FoodControlEntry>();
     foodControl.forEach(fc => {
       const key = `${fc.personId}|${fc.date}`;
-      foodControlByPersonDate.set(key, fc);
+      const existing = foodControlByPersonDate.get(key);
+      if (existing) {
+        existing.usedCafe = existing.usedCafe || fc.usedCafe;
+        existing.usedAlmoco = existing.usedAlmoco || fc.usedAlmoco;
+        existing.usedJanta = existing.usedJanta || fc.usedJanta;
+      } else {
+        foodControlByPersonDate.set(key, { ...fc });
+      }
     });
 
     const timeEntriesByPersonDate = new Map<string, TimeEntry>();
@@ -162,17 +169,17 @@ const FoodControlTab = ({
 
     const currentRow = rows.find(r => r.personId === personId && r.date === date);
     
+    const mapField = field === "usedCafe" ? "cafe" : field === "usedAlmoco" ? "almoco" : "janta";
+
     const updated: FoodControlEntry = {
       id: currentRow?.id,
       personId, 
       jobId: stableJobId, 
       date,
-      requestedCafe: currentRow?.requestedCafe || false,
-      requestedAlmoco: currentRow?.requestedAlmoco || false,
-      requestedJanta: currentRow?.requestedJanta || false,
       usedCafe: field === "usedCafe" ? value : (currentRow?.usedCafe || false),
       usedAlmoco: field === "usedAlmoco" ? value : (currentRow?.usedAlmoco || false),
       usedJanta: field === "usedJanta" ? value : (currentRow?.usedJanta || false),
+      updatedFields: [mapField as any],
     };
 
     onUpdateEntry(updated);

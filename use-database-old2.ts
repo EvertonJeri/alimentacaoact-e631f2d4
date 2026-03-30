@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+﻿import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { 
@@ -94,7 +94,7 @@ export const useDatabase = () => {
       
       const allJobs = jobs.data || [];
       const grouped = (data || []).reduce((acc: any, f: any) => {
-        // Resolve o Job ID para UUID real para garantir consistência cache <-> UI
+        // Resolve o Job ID para UUID real para garantir consist├¬ncia cache <-> UI
         let resolvedJobId = f.job_id;
         const jobMatch = allJobs.find(j => j.id === f.job_id || j.name.startsWith(f.job_id + " - ") || j.name === f.job_id);
         if (jobMatch) resolvedJobId = jobMatch.id;
@@ -249,7 +249,7 @@ export const useDatabase = () => {
       } catch (error: any) {
         console.error("Error saving system settings, trying fallback...", error);
         
-        // Se der erro de coluna não encontrada, tentamos enviar um payload mínimo com as colunas essenciais que sabemos que existem
+        // Se der erro de coluna n├úo encontrada, tentamos enviar um payload m├¡nimo com as colunas essenciais que sabemos que existem
         const minPayload = {
           id: "default",
           teams_webhook_url: settings.teamsWebhookUrl,
@@ -291,7 +291,7 @@ export const useDatabase = () => {
       const { error } = await supabase.from("payment_confirmations").upsert(payload, { onConflict: "id" });
       
       if (error) {
-        // Se o erro for de coluna inexistente (missing columns), tentamos salvar apenas o básico
+        // Se o erro for de coluna inexistente (missing columns), tentamos salvar apenas o b├ísico
         console.warn("Retrying basic payment confirmation upsert...", error);
         const { error: error2 } = await supabase.from("payment_confirmations").upsert({
           id: conf.id,
@@ -326,7 +326,7 @@ export const useDatabase = () => {
         payment_date: conf.paymentDate || null
       };
       
-      // Se já temos um ID, passamos ele para garantir o update
+      // Se j├í temos um ID, passamos ele para garantir o update
       if (conf.id) payload.id = conf.id;
 
       const { error } = await supabase.from("discount_confirmations").upsert(payload, { onConflict: 'person_id' });
@@ -450,71 +450,62 @@ export const useDatabase = () => {
         dbDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
       }
 
+      // Se o jobId n├úo for um UUID v├ílido, enviamos null para n├úo quebrar o banco
+      let dbJobId: string | null = entry.jobId;
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (dbJobId && !uuidRegex.test(dbJobId)) {
+        dbJobId = null;
+      }
+
       for (const mealType of mealTypes) {
         let isUsed = false;
         if (mealType === 'cafe') isUsed = entry.usedCafe;
         if (mealType === 'almoco') isUsed = entry.usedAlmoco;
         if (mealType === 'janta') isUsed = entry.usedJanta;
+
         const newStatus = isUsed ? 'consumed' : 'not_consumed';
         if (!entry.personId || !dbDate) continue;
 
-        // CAMINHO SIMPLES: Busca o registro exato desta pessoa+data+refeição
-        console.log(`Buscando ${mealType} na data ${dbDate} para person ${entry.personId}...`);
-        const { data: existing, error: errC } = await supabase
+        // Buscamos pelo ID exato do registro (data simples, sem horas)
+        const { data: existing, error: fetchErr } = await supabase
           .from("food_control")
           .select("id")
           .eq("person_id", entry.personId)
           .eq("meal_type", mealType)
           .eq("date", dbDate);
-          
-        if (errC) {
-           console.error("Erro no select:", errC);
-        }
+
+        if (fetchErr) throw new Error(`Erro Busca ID: ${fetchErr.message}`);
 
         if (existing && existing.length > 0) {
-          // TEM REGISTRO -> ATUALIZA P/ TODOS OS IDs (evita bug com dois jobs no mesmo dia)
-          const ids = existing.map(e => e.id);
-          console.log(`Registro(s) existente(s) encontrado(s): ${ids.join(',')}. Atualizando para ${newStatus}...`);
-          const { data: updatedData, error } = await supabase
+          // 2. ATUALIZAMOS PELO ID (O jeito mais seguro contra erros de duplicidade)
+          const { error: updErr } = await supabase
             .from("food_control")
-            .update({ status: newStatus })
-            .in("id", ids)
-            .select();
-          console.log("Resultado do update:", updatedData);
-          if (error) throw new Error(`Erro update: ${error.message}`);
-          if (!updatedData || updatedData.length === 0) {
-            console.error("ALERTA: O Supabase retornou 0 linhas atualizadas! RLS ou permissão bloqueando Update invisivelmente.");
-          }
-        } else {
-          console.log(`Nenhum registro encontrado. Inserindo novo...`);
-          // NÃO TEM REGISTRO -> CRIA NOVO (precisa de job_id UUID válido)
+            .update({ status: newStatus, job_id: dbJobId })
+            .in("id", existing.map(item => item.id));
 
-          let validJobId = entry.jobId;
-          const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-          if (!validJobId || !isUUID.test(validJobId)) {
-            const { data: te } = await supabase.from("time_entries").select("job_id").eq("person_id", entry.personId).eq("date", dbDate).limit(1);
-            if (te && te.length > 0) { validJobId = te[0].job_id; }
-            else {
-              const { data: j } = await supabase.from("jobs").select("id").limit(1);
-              if (j && j.length > 0) validJobId = j[0].id;
-              else throw new Error("Sem jobs cadastrados");
-            }
-          }
-          const { error } = await supabase.from("food_control").insert({
-            person_id: entry.personId, job_id: validJobId, date: dbDate, meal_type: mealType, status: newStatus
-          });
-          if (error) throw new Error(`Erro insert: ${error.message}`);
+          if (updErr) throw new Error(`Erro ao atualizar por ID: ${updErr.message}`);
+        } else {
+          // 3. SE N├âO EXISTIR NADA, CRIAMOS UM NOVO
+          const { error: insErr } = await supabase
+            .from("food_control")
+            .insert({
+              person_id: entry.personId,
+              job_id: dbJobId,
+              date: dbDate,
+              meal_type: mealType,
+              status: newStatus
+            });
+
+          if (insErr) throw new Error(`Erro ao criar novo registro: ${insErr.message}`);
         }
       }
     },
     onMutate: async (newEntry) => {
       await queryClient.cancelQueries({ queryKey: ["food_control"] });
-      // Capturamos os dados do cache de forma mais global, ignorando a chave exata
-      const previous = queryClient.getQueriesData({ queryKey: ["food_control"] });
+      const previous = queryClient.getQueryData(["food_control"]);
       
-      // Aplicar optimistic update genérico (onde as chaves baterem)
-      queryClient.setQueriesData({ queryKey: ["food_control"] }, (old: any) => {
-        if (!old || !Array.isArray(old)) return [newEntry];
+      queryClient.setQueryData(["food_control"], (old: FoodControlEntry[] | undefined) => {
+        if (!old) return [newEntry];
         const exists = old.findIndex(fc => fc.personId === newEntry.personId && fc.date === newEntry.date);
         if (exists >= 0) {
           const uState = [...old];
@@ -527,14 +518,8 @@ export const useDatabase = () => {
     },
     onError: (err: any, __, context) => {
       toast.error(err.message || "Erro ao salvar no banco de dados.");
-      if (context?.previous) {
-        context.previous.forEach(([queryKey, oldData]) => {
-            queryClient.setQueryData(queryKey, oldData);
-        });
-      }
-    },
-    onSettled: () => {
-      // INVEZ de só invalidar no erro, DÁ REFRESH para refletir correto
+      if (context?.previous) queryClient.setQueryData(["food_control"], context.previous);
+      // S├│ re-busca do banco se deu erro, para corrigir o estado
       queryClient.invalidateQueries({ queryKey: ["food_control"] });
     },
   });
@@ -554,7 +539,7 @@ export const useDatabase = () => {
 
   const bulkUpsertPeople = useMutation({
     mutationFn: async (list: Omit<Person, 'id'>[]) => {
-      // 1. Remove duplicatas do próprio Excel (mantém a última ocorrência)
+      // 1. Remove duplicatas do pr├│prio Excel (mant├®m a ├║ltima ocorr├¬ncia)
       const uniqueList = Array.from(
         new Map(list.map(p => [p.name.toLowerCase().trim(), p])).values()
       );
@@ -567,8 +552,8 @@ export const useDatabase = () => {
       }));
 
       // 2. Faz o upsert direto pelo nome. Como o banco tem a constraint unique 'people_name_key', 
-      // isso atualizará corretamente os existentes e inserirá os novos, sem sofrer com o limite 
-      // de 1000 linhas de um SELECT prévio.
+      // isso atualizar├í corretamente os existentes e inserir├í os novos, sem sofrer com o limite 
+      // de 1000 linhas de um SELECT pr├®vio.
       if (toUpsert.length > 0) {
         const { error } = await supabase.from('people').upsert(toUpsert, { onConflict: 'name' });
         if (error) throw new Error(`Erro ao salvar: ${error.message}`);
@@ -594,7 +579,7 @@ export const useDatabase = () => {
 
   const bulkInsertJobs = useMutation({
     mutationFn: async (newJobs: { id: string; name: string }[]) => {
-      // 1. Higienização e Deduplicação inicial
+      // 1. Higieniza├º├úo e Deduplica├º├úo inicial
       const sanitizeName = (name: string) => name.trim().replace(/\s+/g, ' ');
       const newJobsSanitized = newJobs.map(j => ({ ...j, name: sanitizeName(j.name) }));
       
@@ -626,7 +611,7 @@ export const useDatabase = () => {
         }
       }
 
-      // 2. Execução Atômica em Lotes (Batching de 500)
+      // 2. Execu├º├úo At├┤mica em Lotes (Batching de 500)
       const BATCH_SIZE = 500;
 
       // Upsert (Update) em lotes
@@ -673,7 +658,7 @@ export const useDatabase = () => {
 
       const sanitizeName = (name: string) => name.trim().replace(/\s+/g, ' ');
       
-      // Identifica "Winner IDs" por Número de Job
+      // Identifica "Winner IDs" por N├║mero de Job
       const jobByNumber = new Map<string, string>(); // Number -> WinnerID
       const jobByName = new Map<string, string>();   // Name -> WinnerID
       const allJobIds = new Set<string>();
@@ -688,7 +673,7 @@ export const useDatabase = () => {
           allJobIds.add(j.id);
       });
 
-      // 2. Busca dados históricos
+      // 2. Busca dados hist├│ricos
       const { data: entries } = await supabase.from("time_entries").select("*");
       const { data: requests } = await supabase.from("meal_requests").select("*");
 
@@ -700,10 +685,10 @@ export const useDatabase = () => {
           const currentId = String(e.job_id || "").trim();
           if (!currentId) return;
 
-          // Se o ID atual existe e está OK, não fazemos nada
+          // Se o ID atual existe e est├í OK, n├úo fazemos nada
           if (allJobIds.has(currentId)) return;
 
-          // Se não existe, tentamos encontrar o "Winner" por sorte (talvez o ID era o Número do Job como String?)
+          // Se n├úo existe, tentamos encontrar o "Winner" por sorte (talvez o ID era o N├║mero do Job como String?)
           const winnerId = jobByNumber.get(currentId) || jobByNumber.get(currentId.toLowerCase());
           
           if (winnerId) {
@@ -737,7 +722,7 @@ export const useDatabase = () => {
           }
       }
       
-      // 5. Unificação de Jobs Duplicados (Se houver IDs diferentes com o mesmo nome exato)
+      // 5. Unifica├º├úo de Jobs Duplicados (Se houver IDs diferentes com o mesmo nome exato)
       const jobsToMergeMap = new Map<string, string[]>(); // WinnerName -> [LoserIDs]
       allJobs.forEach(j => {
           const sName = sanitizeName(j.name).toLowerCase();
@@ -775,7 +760,7 @@ export const useDatabase = () => {
       queryClient.invalidateQueries({ queryKey: ["time_entries"] });
       queryClient.invalidateQueries({ queryKey: ["meal_requests"] });
       queryClient.invalidateQueries({ queryKey: ["jobs"] });
-      toast.success("Fusão de Jobs e Reparo de vínculos concluídos!");
+      toast.success("Fus├úo de Jobs e Reparo de v├¡nculos conclu├¡dos!");
     },
   });
 

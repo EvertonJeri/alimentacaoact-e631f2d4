@@ -100,12 +100,13 @@ export interface FoodControlEntry {
   personId: string;
   jobId: string;
   date: string;
-  requestedCafe: boolean;
-  requestedAlmoco: boolean;
-  requestedJanta: boolean;
   usedCafe: boolean;
   usedAlmoco: boolean;
   usedJanta: boolean;
+  requestedCafe?: boolean;
+  requestedAlmoco?: boolean;
+  requestedJanta?: boolean;
+  updatedFields?: ('cafe' | 'almoco' | 'janta')[];
 }
 
 export interface DiscountConfirmation {
