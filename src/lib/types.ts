@@ -287,9 +287,9 @@ export function calculateDayDiscount(
   
   if (!entry) {
     if (isPast) {
-      const dCafe = dayMeals.includes("cafe") ? -refCafe : 0;
-      const dAlmoco = dayMeals.includes("almoco") ? -refAlmoco : 0;
-      const dJanta = dayMeals.includes("janta") ? -refJanta : 0;
+      const dCafe = dayMeals.includes("cafe") ? refCafe : 0;
+      const dAlmoco = dayMeals.includes("almoco") ? refAlmoco : 0;
+      const dJanta = dayMeals.includes("janta") ? refJanta : 0;
       return { 
         discountCafe: dCafe, 
         discountAlmoco: dAlmoco, 
@@ -325,15 +325,15 @@ export function calculateDayDiscount(
        usedJanta = u.janta;
     }
 
-    if (dayMeals.includes("cafe") && !usedCafe) discountCafe = -refCafe;
-    if (dayMeals.includes("almoco") && !usedAlmoco) discountAlmoco = -refAlmoco;
-    if (dayMeals.includes("janta") && !usedJanta) discountJanta = -refJanta;
+    if (dayMeals.includes("cafe") && !usedCafe) discountCafe = refCafe;
+    if (dayMeals.includes("almoco") && !usedAlmoco) discountAlmoco = refAlmoco;
+    if (dayMeals.includes("janta") && !usedJanta) discountJanta = refJanta;
 
     if (!hasHours && !isTravelDay && isPast) {
       reason = "Falta - sem registro de horas";
-      if (dayMeals.includes("cafe")) discountCafe = -refCafe;
-      if (dayMeals.includes("almoco")) discountAlmoco = -refAlmoco;
-      if (dayMeals.includes("janta")) discountJanta = -refJanta;
+      if (dayMeals.includes("cafe")) discountCafe = refCafe;
+      if (dayMeals.includes("almoco")) discountAlmoco = refAlmoco;
+      if (dayMeals.includes("janta")) discountJanta = refJanta;
     } else if (isTravelDay && !hasHours) {
       reason = `Dia de viagem (${req.transportType === "aviao" ? "Avião" : "Ônibus"}) às ${req.travelTime}`;
     } else {
@@ -349,15 +349,15 @@ export function calculateDayDiscount(
 
   // Se tem controle manual (Food Control), ele se sobrepõe
   if (fc) {
-    if (dayMeals.includes("cafe") && !fc.usedCafe) discountCafe = -refCafe;
+    if (dayMeals.includes("cafe") && !fc.usedCafe) discountCafe = refCafe;
     else if (!dayMeals.includes("cafe") && fc.usedCafe) discountCafe = -refCafe;
     else discountCafe = 0;
-
-    if (dayMeals.includes("almoco") && !fc.usedAlmoco) discountAlmoco = -refAlmoco;
+    
+    if (dayMeals.includes("almoco") && !fc.usedAlmoco) discountAlmoco = refAlmoco;
     else if (!dayMeals.includes("almoco") && fc.usedAlmoco) discountAlmoco = -refAlmoco;
     else discountAlmoco = 0;
-
-    if (dayMeals.includes("janta") && !fc.usedJanta) discountJanta = -refJanta;
+    
+    if (dayMeals.includes("janta") && !fc.usedJanta) discountJanta = refJanta;
     else if (!dayMeals.includes("janta") && fc.usedJanta) discountJanta = -refJanta;
     else discountJanta = 0;
 

@@ -308,12 +308,16 @@ export const useDatabase = () => {
 
   const updateDiscountConfirmation = useMutation({
     mutationFn: async (conf: any) => {
-      const { error } = await supabase.from("discount_confirmations").upsert({
-        id: conf.id || crypto.randomUUID(),
+      const payload: any = {
         person_id: conf.personId,
         confirmed: conf.confirmed,
         payment_date: conf.paymentDate
-      });
+      };
+      
+      // Se já temos um ID, passamos ele para garantir o update
+      if (conf.id) payload.id = conf.id;
+
+      const { error } = await supabase.from("discount_confirmations").upsert(payload, { onConflict: 'person_id' });
       if (error) throw error;
     },
     onSuccess: () => {
