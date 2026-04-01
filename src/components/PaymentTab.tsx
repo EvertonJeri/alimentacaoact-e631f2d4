@@ -233,10 +233,12 @@ const PaymentTab = ({
 
         const personName = getPersonName(req.personId);
         const jobName = getJobName(req.jobId);
+        
+        const existingId = conf?.id || id;
 
         // SALVA o finalValue congelado - esse valor NUNCA mais será recalculado
         await onUpdateConfirmation({ 
-            id, 
+            id: existingId, 
             type, 
             personId: req.personId, // ADICIONADO: Essencial para o vínculo no banco
             paymentDate: paymentDate || new Date().toISOString().split('T')[0], 
@@ -303,7 +305,7 @@ const PaymentTab = ({
           const reqFinalValue = shouldApply ? Math.max(0, neto + retro) : bruto;
 
           await onUpdateConfirmation({ 
-              id: req.id, 
+              id: conf?.id || req.id, 
               type: 'request', 
               personId: req.personId,
               paymentDate, 
@@ -344,13 +346,17 @@ const PaymentTab = ({
 
   const updatePaymentDate = (id: string, type: "request" | "job", paymentDate: string) => {
     const existing = getConfirmation(id);
+    const req = type === 'request' ? requests.find(r => r.id === id) : null;
+    
     onUpdateConfirmation({ 
-      id, 
+      ...existing,
+      id: existing?.id || id, 
       type, 
+      personId: existing?.personId || req?.personId,
       paymentDate, 
       confirmed: existing?.confirmed || false,
-      applyBalance: existing?.applyBalance,
-      appliedBalance: existing?.appliedBalance
+      applyBalance: existing?.applyBalance !== undefined ? existing.applyBalance : true,
+      appliedBalance: existing?.appliedBalance || 0
     });
   };
 
@@ -405,211 +411,194 @@ const PaymentTab = ({
 
               {expandedJobs.has(jobId) && (
                 <div className="divide-y divide-border">
-                  {jobReqs.map((req) => {
-                  const conf = getConfirmation(req.id);
-                  // O req individual é o único fator de estar pago agora. Se for complemento, ele terá conf nulo.
-                  const isPaid = conf?.confirmed;
-                  const paymentDate = conf?.paymentDate || jobPaymentDate;
+                    {jobReqs.map((req) => {
+                      const conf = getConfirmation(req.id);
+                      const isPaid = conf?.confirmed;
+                      const paymentDate = conf?.paymentDate || jobPaymentDate;
 
-                  const dbApply = conf?.applyBalance;
-                  const dbApplyValue = dbApply !== undefined && dbApply !== null ? dbApply !== false : true;
-                  
-                  const frozenApply = isPaid 
-                    ? dbApplyValue
-                    : dbApplyValue;
-                  
-                  const currentReqBruto = calcRequestBruto(req) || 0;
-                  const currentReqDiscounts = getRequestDiscounts(req) || 0; 
-                  const currentReqNet = currentReqBruto + currentReqDiscounts;
-                  
-                  // NOVO: IMPORTANTE! Passamos o req.id para que o cálculo do saldo NÃO diminua 
-                  // o pagamento que já está lá (se já confirmado no banco), 
-                  // evitando que o valor PIX vire 0 logo após confirmar.
-                  const balanceObj = calculatePersonBalance(req.personId, requests, foodControl, confirmations, people, timeEntries, req.id);
-                  const totalWallet = balanceObj.totalWallet || 0;
-                  const retroBalance = totalWallet - currentReqNet;
-                  const adjustmentsFromBalance = balanceObj.adjustments || [];
+                      const dbApply = conf?.applyBalance;
+                      const dbApplyValue = dbApply !== undefined && dbApply !== null ? dbApply !== false : true;
+                      
+                      const frozenApply = dbApplyValue;
+                      
+                      const currentReqBruto = calcRequestBruto(req) || 0;
+                      const currentReqDiscounts = getRequestDiscounts(req) || 0; 
+                      const currentReqNet = currentReqBruto + currentReqDiscounts;
+                      
+                      const balanceObj = calculatePersonBalance(req.personId, requests, foodControl, confirmations, people, timeEntries, req.id);
+                      const totalWallet = balanceObj.totalWallet || 0;
+                      const retroBalance = totalWallet - currentReqNet;
+                      const adjustmentsFromBalance = balanceObj.adjustments || [];
 
-                  // SE JÁ ESTÁ PAGO: usa o valor congelado salvo no banco, sem recalcular NADA
-                  // SE NÃO ESTÁ PAGO: calcula normalmente
-                  let finalTotal: number;
-                  let displayAdjustment: number;
-                  
-                  if (isPaid && conf?.finalValue !== undefined && conf?.finalValue !== null) {
-                    // VALOR CONGELADO - exibe exatamente o que foi salvo
-                    finalTotal = conf.finalValue;
-                    displayAdjustment = conf.appliedBalance || 0;
-                  } else if (isPaid) {
-                    // Fallback para pagamentos antigos sem finalValue
-                    const dbAppliedBalance = conf?.appliedBalance ?? retroBalance;
-                    finalTotal = frozenApply ? Math.max(0, currentReqNet + dbAppliedBalance) : currentReqBruto;
-                    displayAdjustment = dbAppliedBalance;
-                  } else {
-                    // NÃO PAGO - calcula em tempo real
-                    finalTotal = frozenApply ? Math.max(0, currentReqNet + retroBalance) : currentReqBruto;
-                    displayAdjustment = frozenApply ? (currentReqDiscounts + retroBalance) : 0;
-                  }
-                  
-                  const currentDiscounts = Math.abs(currentReqDiscounts);
+                      let finalTotal: number;
+                      let displayAdjustment: number;
+                      
+                      if (isPaid && conf?.finalValue !== undefined && conf?.finalValue !== null) {
+                        finalTotal = conf.finalValue;
+                        displayAdjustment = conf.appliedBalance || 0;
+                      } else if (isPaid) {
+                        const dbAppliedBalance = conf?.appliedBalance ?? retroBalance;
+                        finalTotal = frozenApply ? Math.max(0, currentReqNet + dbAppliedBalance) : currentReqBruto;
+                        displayAdjustment = dbAppliedBalance;
+                      } else {
+                        finalTotal = frozenApply ? Math.max(0, currentReqNet + retroBalance) : currentReqBruto;
+                        displayAdjustment = frozenApply ? (currentReqDiscounts + retroBalance) : 0;
+                      }
+                      
+                      const currentDiscounts = Math.abs(currentReqDiscounts);
+                      const isFlashUser = systemSettings?.flashCardUsers?.includes(req.personId);
 
-                  const isFlashUser = systemSettings?.flashCardUsers?.includes(req.personId);
-
-                  return (
-                    <div key={req.id} className={`p-4 transition-colors ${isFlashUser ? 'bg-amber-50/50' : 'bg-background'}`}>
-                      <div className="flex items-center justify-between flex-wrap gap-4">
-                        <div className="flex items-center gap-3">
-                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => toggleRequest(req.id)}>
-                            {expandedRequests.has(req.id) ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                          </Button>
-                          <div className="flex-1">
-                            <p className="font-bold text-sm text-foreground flex flex-wrap items-center gap-2">
-                              {people.find(p => p.id === req.personId)?.isRegistered && <span className="text-muted-foreground opacity-70">(CLT)</span>}
-                              <span>{getPersonName(req.personId)}</span>
-                              {isFlashUser && (
-                                <Badge variant="destructive" className="text-[11px] font-black tracking-widest bg-amber-500 hover:bg-amber-600 border-none px-2 py-0.5 h-5 items-center uppercase text-white shadow-sm">
-                                  💳 Cartão Flash (RH)
-                                </Badge>
-                              )}
-                              {people.find(p => p.id === req.personId)?.pix && !isFlashUser && (
-                                <Badge variant="secondary" className="text-[11px] font-bold tracking-tight text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 h-5 items-center">
-                                  PIX: {people.find(p => p.id === req.personId)?.pix}
-                                </Badge>
-                              )}
-                            </p>
-                            <div className="flex items-center gap-2 mt-1">
-                              <p className="text-[10px] text-muted-foreground uppercase font-medium">
-                                {req.location || 'Local Não Definido'} • {fDate(req.startDate)} a {fDate(req.endDate)}
-                              </p>
-                              {/* Botão de Detalhes de Saldo */}
-                              <Badge 
-                                variant="outline" 
-                                className="text-[9px] h-4 cursor-pointer hover:bg-muted/50 border-muted-foreground/20 text-muted-foreground font-bold"
-                                onClick={(e) => { e.stopPropagation(); toggleRequest(req.id); }}
-                              >
-                                {expandedRequests.has(req.id) ? "VER RESUMO" : "VER AJUSTES DETALHADOS"}
-                              </Badge>
-                              {getJobName(req.jobId).includes("Removido (") && (
-                                <div className="flex items-center gap-1.5 ring-1 ring-red-200 rounded px-1.5 bg-red-50">
-                                  <span className="text-[8px] text-red-500 font-bold uppercase">Corrigir Job:</span>
-                                  <Select onValueChange={(newId) => {
-                                      if (onUpdateManualMealRequest) {
-                                          onUpdateManualMealRequest({ ...req, jobId: newId });
-                                          toast.success("Vínculo do Job corrigido!");
-                                      }
-                                  }}>
-                                    <SelectTrigger className="h-4 text-[9px] w-[90px] bg-transparent border-none py-0 px-0 focus:ring-0">
-                                      <SelectValue placeholder="Fix" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {jobs.map(j => <SelectItem key={j.id} value={j.id} className="text-[10px]">{j.name}</SelectItem>)}
-                                    </SelectContent>
-                                  </Select>
+                      return (
+                        <div key={req.id} className={`p-4 transition-colors relative z-0 ${isFlashUser ? 'bg-amber-50/50' : 'bg-background'}`}>
+                          <div className="flex items-center justify-between flex-wrap gap-4">
+                            <div className="flex items-center gap-3">
+                              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => toggleRequest(req.id)}>
+                                {expandedRequests.has(req.id) ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                              </Button>
+                              <div className="flex-1">
+                                <p className="font-bold text-sm text-foreground flex flex-wrap items-center gap-2">
+                                  {people.find(p => p.id === req.personId)?.isRegistered && <span className="text-muted-foreground opacity-70">(CLT)</span>}
+                                  <span>{getPersonName(req.personId)}</span>
+                                  {isFlashUser && (
+                                    <Badge variant="destructive" className="text-[11px] font-black tracking-widest bg-amber-500 hover:bg-amber-600 border-none px-2 py-0.5 h-5 items-center uppercase text-white shadow-sm">
+                                      💳 Cartão Flash (RH)
+                                    </Badge>
+                                  )}
+                                  {people.find(p => p.id === req.personId)?.pix && !isFlashUser && (
+                                    <Badge variant="secondary" className="text-[11px] font-bold tracking-tight text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 h-5 items-center">
+                                      PIX: {people.find(p => p.id === req.personId)?.pix}
+                                    </Badge>
+                                  )}
+                                </p>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <p className="text-[10px] text-muted-foreground uppercase font-medium">
+                                    {req.location || 'Local Não Definido'} • {fDate(req.startDate)} a {fDate(req.endDate)}
+                                  </p>
+                                  <Badge 
+                                    variant="outline" 
+                                    className="text-[9px] h-4 cursor-pointer hover:bg-muted/50 border-muted-foreground/20 text-muted-foreground font-bold"
+                                    onClick={(e) => { e.stopPropagation(); toggleRequest(req.id); }}
+                                  >
+                                    {expandedRequests.has(req.id) ? "VER RESUMO" : "VER AJUSTES DETALHADOS"}
+                                  </Badge>
+                                  {getJobName(req.jobId).includes("Removido (") && (
+                                    <div className="flex items-center gap-1.5 ring-1 ring-red-200 rounded px-1.5 bg-red-50">
+                                      <span className="text-[8px] text-red-500 font-bold uppercase">Corrigir Job:</span>
+                                      <Select onValueChange={(newId) => {
+                                          if (onUpdateManualMealRequest) {
+                                              onUpdateManualMealRequest({ ...req, jobId: newId });
+                                              toast.success("Vínculo do Job corrigido!");
+                                          }
+                                      }}>
+                                        <SelectTrigger className="h-4 text-[9px] w-[90px] bg-transparent border-none py-0 px-0 focus:ring-0">
+                                          <SelectValue placeholder="Fix" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {jobs.map(j => <SelectItem key={j.id} value={j.id} className="text-[10px]">{j.name}</SelectItem>)}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                  )}
                                 </div>
-                              )}
+                              </div>
                             </div>
-                          </div>
-                        </div>
 
-                        <div className="flex items-center gap-6">
-                          <div className="text-right flex flex-col items-end gap-0.5">
-                            <p className={`text-[10px] uppercase tracking-widest font-black leading-none ${isFlashUser ? 'text-amber-600' : 'text-muted-foreground/60'}`}>
-                              {isFlashUser ? 'TOTAL FLASH' : 'TOTAL PIX'}
-                            </p>
-                            <p className={`text-base font-black tabular-nums tracking-tighter leading-none ${isFlashUser ? 'text-amber-600' : 'text-foreground'}`}>
-                              R$ {finalTotal.toFixed(2)}
-                            </p>
-                            
-                            <div className="flex flex-col items-end pt-1 gap-0.5">
-                              {/* Sempre mostra o bruto como referência */}
-                              <span className="text-[9px] text-muted-foreground/50 font-medium">
-                                Bruto: R$ {currentReqBruto.toFixed(2)}
-                              </span>
+                            <div className="flex items-center gap-6">
+                              <div className="text-right flex flex-col items-end gap-0.5">
+                                <p className={`text-[10px] uppercase tracking-widest font-black leading-none ${isFlashUser ? 'text-amber-600' : 'text-muted-foreground/60'}`}>
+                                  {isFlashUser ? 'TOTAL FLASH' : 'TOTAL PIX'}
+                                </p>
+                                <p className={`text-base font-black tabular-nums tracking-tighter leading-none ${isFlashUser ? 'text-amber-600' : 'text-foreground'}`}>
+                                  R$ {finalTotal.toFixed(2)}
+                                </p>
+                                
+                                <div className="flex flex-col items-end pt-1 gap-0.5">
+                                  <span className="text-[9px] text-muted-foreground/50 font-medium">
+                                    Bruto: R$ {currentReqBruto.toFixed(2)}
+                                  </span>
 
-                              {/* Descontos DESTE projeto */}
-                              {currentDiscounts > 0 && (
-                                <span className={`text-[10px] font-bold ${frozenApply ? 'text-destructive' : 'text-muted-foreground/40 line-through'}`}>
-                                  {currentReqDiscounts > 0 ? '+' : ''}{currentReqDiscounts.toFixed(2)} [DESCONTOS PROJETO]
-                                </span>
-                              )}
+                                  {currentDiscounts > 0 && (
+                                    <span className={`text-[10px] font-bold ${frozenApply ? 'text-destructive' : 'text-muted-foreground/40 line-through'}`}>
+                                      {currentReqDiscounts > 0 ? '+' : ''}{currentReqDiscounts.toFixed(2)} [DESCONTOS PROJETO]
+                                    </span>
+                                  )}
+                                  
+                                  {Math.abs(retroBalance) > 0.01 && (
+                                    <span className={`text-[10px] font-bold ${frozenApply ? (retroBalance < 0 ? 'text-destructive' : 'text-blue-600') : 'text-muted-foreground/40 line-through'}`}>
+                                      {retroBalance > 0 ? '+' : ''}R$ {retroBalance.toFixed(2)} [SALDO OUTROS PROJETOS]
+                                    </span>
+                                  )}
+
+                                  {!frozenApply && (currentDiscounts > 0 || Math.abs(retroBalance) > 0.01) && (
+                                    <span className="text-[10px] text-destructive font-black italic">
+                                      SALDO/DESC. NÃO APLICADO
+                                    </span>
+                                  )}
+
+                                  {currentDiscounts === 0 && Math.abs(retroBalance) < 0.01 && (
+                                    <span className="text-[9px] text-muted-foreground/40 italic">
+                                      Sem ajustes pendentes
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
                               
-                              {/* Saldo de OUTROS projetos */}
-                              {Math.abs(retroBalance) > 0.01 && (
-                                <span className={`text-[10px] font-bold ${frozenApply ? (retroBalance < 0 ? 'text-destructive' : 'text-blue-600') : 'text-muted-foreground/40 line-through'}`}>
-                                  {retroBalance > 0 ? '+' : ''}R$ {retroBalance.toFixed(2)} [SALDO OUTROS PROJETOS]
-                                </span>
-                              )}
-
-                              {/* Indicador quando NÃO aplicado */}
-                              {!frozenApply && (currentDiscounts > 0 || Math.abs(retroBalance) > 0.01) && (
-                                <span className="text-[10px] text-destructive font-black italic">
-                                  SALDO/DESC. NÃO APLICADO
-                                </span>
-                              )}
-
-                              {/* Indicador quando não há nenhum desconto/saldo */}
-                              {currentDiscounts === 0 && Math.abs(retroBalance) < 0.01 && (
-                                <span className="text-[9px] text-muted-foreground/40 italic">
-                                  Sem ajustes pendentes
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center gap-3">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                              onClick={() => {
-                                if (confirm("Deseja realmente apagar esta solicitação?")) {
-                                  onRemoveRequest?.(req.id);
-                                }
-                              }}
-                              title="Apagar solicitação"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-
-                            {/* Botão de Abater Saldo (Toggle) */}
-                            {/* Quando pago: exibe o estado congelado mas desabilitado */}
-                            {isPaid ? (
+                              <div className="flex items-center gap-3">
                                 <Button
-                                    size="sm"
-                                    disabled
-                                    className={`h-8 text-[9px] px-2 font-black uppercase tracking-tight cursor-not-allowed opacity-70 ${
-                                        frozenApply
-                                        ? "bg-blue-600 text-white"
-                                        : "border border-muted-foreground/30 text-muted-foreground bg-muted/20"
-                                    }`}
-                                    title="Pagamento confirmado. Estorne para alterar."
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                  onClick={() => {
+                                    if (confirm("Deseja realmente apagar esta solicitação?")) {
+                                      onRemoveRequest?.(req.id);
+                                    }
+                                  }}
+                                  title="Apagar solicitação"
                                 >
-                                    🔒 {frozenApply ? "APLICADO" : "NÃO APLICADO"}
+                                  <Trash2 className="h-4 w-4" />
                                 </Button>
-                            ) : (
-                                <Button
-                                    size="sm"
-                                    variant={getConfirmation(req.id)?.applyBalance === false ? "outline" : "default"}
-                                    onClick={() => {
-                                        const existing = getConfirmation(req.id);
-                                        onUpdateConfirmation({
-                                            ...existing,
-                                            id: req.id,
-                                            type: 'request',
-                                            confirmed: false,
-                                            applyBalance: !(existing?.applyBalance !== false),
-                                            appliedBalance: 0,
-                                            paymentDate: existing?.paymentDate || ""
-                                        });
-                                    }}
-                                    className={`h-8 text-[9px] px-2 font-black uppercase tracking-tight transition-all duration-300 ${
-                                        getConfirmation(req.id)?.applyBalance === false 
-                                        ? "border-muted-foreground/30 text-muted-foreground bg-muted/20" 
-                                        : "bg-blue-600 hover:bg-blue-700 text-white shadow-sm ring-1 ring-blue-400/50"
-                                    }`}
-                                >
-                                    {getConfirmation(req.id)?.applyBalance === false ? "NÃO APLICADO" : "APLICADO"}
-                                </Button>
-                            )}
+
+                                {isPaid ? (
+                                    <Button
+                                        size="sm"
+                                        disabled
+                                        className={`h-8 text-[9px] px-2 font-black uppercase tracking-tight cursor-not-allowed opacity-70 ${
+                                            frozenApply
+                                            ? "bg-blue-600 text-white"
+                                            : "border border-muted-foreground/30 text-muted-foreground bg-muted/20"
+                                        }`}
+                                        title="Pagamento confirmado no banco. Estorne para alterar."
+                                    >
+                                        🔒 {frozenApply ? "APLICADO" : "NÃO APLICADO"}
+                                    </Button>
+                                ) : (
+                                    <Button
+                                        size="sm"
+                                        variant={conf?.applyBalance === false ? "outline" : "default"}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            const updatedValue = !(conf?.applyBalance !== false);
+                                            onUpdateConfirmation({
+                                                ...conf,
+                                                id: conf?.id || req.id,
+                                                personId: req.personId,
+                                                type: 'request',
+                                                confirmed: false,
+                                                applyBalance: updatedValue,
+                                                appliedBalance: 0,
+                                                paymentDate: conf?.paymentDate || ""
+                                            });
+                                            toast.info(updatedValue ? "Saldo será aplicado no pagamento." : "Saldo NÃO será aplicado.");
+                                        }}
+                                        className={`h-8 text-[9px] px-2 font-black uppercase tracking-tight transition-all duration-300 pointer-events-auto ${
+                                            conf?.applyBalance === false 
+                                            ? "border-muted-foreground/30 text-muted-foreground bg-muted/20" 
+                                            : "bg-blue-600 hover:bg-blue-700 text-white shadow-sm ring-1 ring-blue-400/50"
+                                        }`}
+                                    >
+                                        {conf?.applyBalance === false ? "NÃO APLICADO" : "APLICADO"}
+                                    </Button>
+                                )}
                             
                             {!isPaid ? (
                               <>

@@ -271,7 +271,15 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
     // 1. Liquidar Requests
     const pendingReqs = requests.filter(r => String(r.personId) === String(personId) && String(r.jobId) === String(jobId) && !getConfirmation(`stmt-${r.id}`)?.confirmed);
     pendingReqs.forEach(req => {
-      onUpdatePaymentConfirmation({ id: `stmt-${req.id}`, type: 'request', confirmed: true, paymentDate: today });
+      const existing = getConfirmation(`stmt-${req.id}`);
+      onUpdatePaymentConfirmation({ 
+          ...existing, 
+          id: existing?.id || `stmt-${req.id}`, 
+          personId: req.personId,
+          type: 'request', 
+          confirmed: true, 
+          paymentDate: today 
+      });
     });
 
     // 2. Liquidar Orphans (Descontos avulsos sem request)

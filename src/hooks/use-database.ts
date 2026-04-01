@@ -334,22 +334,66 @@ export const useDatabase = () => {
         final_value: conf.finalValue
       };
 
+      console.log("[DATABASE] Updating payment confirmation:", payload);
+
       const { error } = await supabase.from("payment_confirmations").upsert(payload, { onConflict: "id" });
       
       if (error) {
+        console.error("Error updating payment confirmation:", error);
         // Se o erro for de coluna inexistente (missing columns), tentamos salvar apenas o básico
         console.warn("Retrying basic payment confirmation upsert...", error);
         const { error: error2 } = await supabase.from("payment_confirmations").upsert({
           id: conf.id,
           type: conf.type,
           payment_date: conf.paymentDate,
-          confirmed: conf.confirmed
+          confirmed: conf.confirmed,
+          person_id: conf.personId,
+          apply_balance: conf.applyBalance
         }, { onConflict: "id" });
         
         if (error2) throw error2;
       }
     },
-    onSuccess: () => {
+    onMutate: async (newConf) => {
+      // Cancela qualquer refetch em andamento para não sobrescrever o otimismo
+      await queryClient.cancelQueries({ queryKey: ["payment_confirmations"] });
+
+      // Snapshot do estado anterior
+      const previousConfs = queryClient.getQueryData(["payment_confirmations"]);
+
+      // Atualiza otimisticamente o cache
+      queryClient.setQueryData(["payment_confirmations"], (old: any) => {
+        const existing = old || [];
+        
+        // Lógica de busca robusta: combina IDs brutos com IDs prefixados (stmt-)
+        const isMatch = (cId: string, nId: string) => {
+          if (cId === nId) return true;
+          if (cId === `stmt-${nId}`) return true;
+          if (nId === `stmt-${cId}`) return true;
+          return false;
+        };
+
+        const index = existing.findIndex((c: any) => isMatch(c.id, newConf.id));
+
+        if (index >= 0) {
+          const next = [...existing];
+          // Preserva campos que o newConf possa não ter enviado (merge)
+          next[index] = { ...next[index], ...newConf };
+          return next;
+        }
+        return [...existing, newConf];
+      });
+
+      return { previousConfs };
+    },
+    onError: (err, newConf, context) => {
+      // Reverte para o estado anterior em caso de erro
+      if (context?.previousConfs) {
+        queryClient.setQueryData(["payment_confirmations"], context.previousConfs);
+      }
+    },
+    onSettled: () => {
+      // Sempre recarrega do servidor após terminar
       queryClient.invalidateQueries({ queryKey: ["payment_confirmations"] });
     },
   });
