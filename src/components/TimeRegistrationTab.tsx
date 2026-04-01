@@ -531,9 +531,9 @@ const TimeRegistrationTab = ({
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3 items-end p-3 rounded-lg border border-border bg-muted/30">
-        <Filter className="h-4 w-4 text-muted-foreground mt-1" />
-        <div className="min-w-[160px]">
+      <div className="flex flex-col sm:flex-row flex-wrap gap-3 items-stretch sm:items-end p-3 rounded-lg border border-border bg-muted/30">
+        <Filter className="h-4 w-4 text-muted-foreground hidden sm:block mt-1" />
+        <div className="min-w-0 sm:min-w-[160px]">
           <label className="text-2xs uppercase tracking-wider font-medium text-muted-foreground block mb-1.5">
             Filtrar Pessoa
           </label>
@@ -551,7 +551,7 @@ const TimeRegistrationTab = ({
             className="h-8 text-xs"
           />
         </div>
-        <div className="min-w-[200px]">
+        <div className="min-w-0 sm:min-w-[200px]">
           <label className="text-2xs uppercase tracking-wider font-medium text-muted-foreground block mb-1.5">
             Filtrar Job
           </label>
@@ -572,7 +572,7 @@ const TimeRegistrationTab = ({
             className="h-8 text-xs"
           />
         </div>
-        <div className="min-w-[160px]">
+        <div className="min-w-0 sm:min-w-[160px]">
           <label className="text-2xs uppercase tracking-wider font-medium text-muted-foreground block mb-1.5">
             Filtrar Data
           </label>
@@ -584,9 +584,6 @@ const TimeRegistrationTab = ({
           />
         </div>
         <div className="flex gap-2">
-            <label className="text-2xs uppercase tracking-wider font-medium text-muted-foreground block mb-1.5 invisible">
-              Ordem
-            </label>
             <Button 
                 variant="outline" 
                 size="sm" 
@@ -599,11 +596,13 @@ const TimeRegistrationTab = ({
             </Button>
         </div>
         <div className="flex-1"></div>
-        <TimeRegistrationImportDialog />
-        <Button onClick={exportToExcel} variant="outline" className="h-8 text-xs gap-1.5 shadow-sm">
-          <Download className="h-3.5 w-3.5" />
-          Exportar .xlsx
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <TimeRegistrationImportDialog />
+          <Button onClick={exportToExcel} variant="outline" className="h-8 text-xs gap-1.5 shadow-sm w-full sm:w-auto">
+            <Download className="h-3.5 w-3.5" />
+            Exportar .xlsx
+          </Button>
+        </div>
       </div>
 
       {/* Table */}
