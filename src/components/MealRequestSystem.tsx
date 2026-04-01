@@ -105,9 +105,15 @@ const MealRequestSystem = ({
   }, [requests, selectedJob]);
 
   const financeSummary = useMemo(() => {
-    if (filtered.length === 0) return { total: 0, count: 0 };
+    // Só consideramos pro resumo o que AINDA não foi confirmado como pago
+    const pendingOnly = (filtered || []).filter(req => {
+      const conf = confirmations.find(c => 'id' in c && c.id === req.id);
+      return !conf?.confirmed;
+    });
+
+    if (pendingOnly.length === 0) return { total: 0, count: 0 };
     let total = 0;
-    filtered.forEach(req => {
+    pendingOnly.forEach(req => {
       const days = getDatesInRange(req.startDate, req.endDate);
       const person = people.find(p => p.id === req.personId);
       total += (days || []).reduce((acc, d) => {
@@ -115,20 +121,49 @@ const MealRequestSystem = ({
         return acc + (Array.isArray(activeMeals) ? activeMeals.reduce((sum, m) => sum + getMealValue(m, d, person), 0) : 0);
       }, 0);
     });
-    return { total, count: filtered.length };
-  }, [filtered, people]);
+    return { total, count: pendingOnly.length };
+  }, [filtered, people, confirmations]);
 
   const handleConfirmFinance = async () => {
     const jobName = jobs.find(j => j.id === selectedJob)?.name || "—";
 
-    // Identificar se há usuários Flash no lote que está sendo enviado
-    const hasFlashUsers = filtered.some(req => systemSettings?.flashCardUsers?.includes(req.personId));
+    // Filtra para mandar APENAS os profissionais que ainda não foram pagos (Em Aberto)
+    const pendingOnly = filtered.filter(req => {
+        const conf = confirmations.find(c => 'id' in c && c.id === req.id);
+        return !conf?.confirmed;
+    });
 
-    const details = `⚠️ *NOVOS LANÇAMENTOS PARA PAGAMENTO*\n\n🏗️ Projeto: ${jobName}\n👥 Profissionais Envolvidos: ${financeSummary.count}\n💰 Valor Estimado das Novas Refeições: R$ ${financeSummary.total.toFixed(2)}\n\n*Os valores acima acabaram de ser lançados no sistema e já estão disponíveis para conferência e pagamento na aba 'Pagamentos'.*`;
+    if (pendingOnly.length === 0) {
+      toast.info("Não há novos pagamentos em aberto para este job.");
+      setShowFinanceDialog(false);
+      return;
+    }
+
+    // Identificar se há usuários Flash no lote que está sendo enviado
+    const hasFlashUsers = pendingOnly.some(req => systemSettings?.flashCardUsers?.includes(req.personId));
+
+    // Criar lista nominal com valores individuais APENAS DOS PENDENTES
+    let personLines = "";
+    pendingOnly.forEach(req => {
+      const days = getDatesInRange(req.startDate, req.endDate);
+      const person = people.find(p => p.id === req.personId);
+      const personTotal = (days || []).reduce((acc, d) => {
+        const activeMeals = getActiveMeals(req, d, person);
+        return acc + (Array.isArray(activeMeals) ? activeMeals.reduce((sum, m) => sum + getMealValue(m, d, person, req.location), 0) : 0);
+      }, 0);
+
+      const pName = person?.name || "—";
+      personLines += `\n• ${pName}: R$ ${personTotal.toFixed(2)}`;
+    });
+
+    const details = `⚠️ *NOVOS LANÇAMENTOS PARA PAGAMENTO (EM ABERTO)*\n\n🏗️ Projeto: ${jobName}\n\n👥 *Profissionais a Confirmar:*${personLines}\n\n💰 *Valor Estimado Total:* R$ ${financeSummary.total.toFixed(2)}\n\n*Os valores acima acabaram de ser lançados no sistema e já estão disponíveis para conferência e pagamento na aba 'Pagamentos'.*`;
 
     if (hasFlashUsers) {
       // Se houver gente do Flash, avisa os dois e-mails
       await notifyFinanceAndHRPayment(details);
+    } else {
+      // Fluxo normal financeiro
+      await notifyFinancePayment(details);
     }
 
     notifyAdminPayment(details);

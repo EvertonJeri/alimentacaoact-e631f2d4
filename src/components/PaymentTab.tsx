@@ -65,16 +65,6 @@ const PaymentTab = ({
     if (initialJobFilter) setFilterJob(initialJobFilter);
   }, [initialJobFilter]);
   
-  // Persistência local para evitar que recarregue e volte para 'Aplicado'
-  const [applyBalanceMap, setApplyBalanceMap] = useState<Record<string, boolean>>(() => {
-    const saved = localStorage.getItem("applyBalanceMap");
-    return saved ? JSON.parse(saved) : {};
-  });
-
-  useEffect(() => {
-    localStorage.setItem("applyBalanceMap", JSON.stringify(applyBalanceMap));
-  }, [applyBalanceMap]);
-
   const fDate = (d: string) => (d && d.includes("-") ? d.split("-").reverse().join("/") : d || "—");
   const getPersonName = (id: string) => people.find((p) => p.id === id)?.name || "—";
   const getJobName = (id: string, personId?: string) => {
@@ -219,7 +209,8 @@ const PaymentTab = ({
         const req = requests.find(r => r.id === id);
         if (!req) return;
 
-        const shouldApply = (applyBalanceMap[id] !== false);
+        const conf = getConfirmation(id);
+        const shouldApply = (conf?.applyBalance !== false);
         const currentReqBruto = calcRequestBruto(req) || 0;
         const currentReqDiscounts = getRequestDiscounts(req) || 0;
         const currentReqNet = currentReqBruto + currentReqDiscounts;
@@ -260,8 +251,9 @@ const PaymentTab = ({
         const waMsg = `✅ *Pagamento Confirmado - Sistema ACT*\n\n👤 Funcionário: ${personName}\n🏗️ Projeto: ${jobName}\n📅 Data: ${paymentDate}\n💰 Valor: R$ ${finalValue.toFixed(2)}${isFlashUser ? '\n💳 Modalidade: Cartão Flash' : ''}`;
         
         if (isFlashUser) {
-           // Usuário Flash Card vai para o RH (apenas admin e prompt local)
+           // Notifica Admin e Financeiro/RH (Cartão Flash)
            notifyAdminPayment(waMsg); 
+           notifyFinanceAndHRPayment(waMsg);
            
            setTimeout(() => {
              if (confirm(`Aviso RH! Este usuário recebe via Cartão Flash. Deseja abrir o WhatsApp do RH para enviar o comprovante?`)) {
@@ -269,8 +261,9 @@ const PaymentTab = ({
              }
            }, 150);
         } else {
-           // Fluxo normal: Notificar agora apenas o Administrador (que cuida do e-mail)
+           // Fluxo normal: Notificar Administrador e Financeiro
            notifyAdminPayment(waMsg);
+           notifyFinancePayment(waMsg);
 
            // Alerta opcional direcionado para o Administrador (via WhatsApp)
            setTimeout(() => {
@@ -283,13 +276,24 @@ const PaymentTab = ({
 
       if (type === "job") {
         const jobId = id.replace("job-", "");
-        const jobReqs = registeredRequests.filter(r => r.jobId === jobId);
+        // Pega apenas quem AINDA não estava pago
+        const allJobReqs = registeredRequests.filter(r => r.jobId === jobId);
+        const pendingJobReqs = allJobReqs.filter(req => !getConfirmation(req.id)?.confirmed);
         
+        if (pendingJobReqs.length === 0) {
+           toast.info("Todos os profissionais deste projeto já foram liquidados.");
+           return;
+        }
+
         await onUpdateConfirmation({ id: `job-${jobId}`, type: 'job', paymentDate, confirmed: true });
 
-        // Atualiza todos os profissionais do job
-        for (const req of jobReqs) {
-          const shouldApply = (applyBalanceMap[req.id] !== false);
+        let personLines = "";
+        let totalLiquidated = 0;
+
+        // Atualiza todos os profissionais do job que estavam pendentes
+        for (const req of pendingJobReqs) {
+          const conf = getConfirmation(req.id);
+          const shouldApply = (conf?.applyBalance !== false);
           const bruto = calcRequestBruto(req) || 0;
           const disc = getRequestDiscounts(req) || 0;
           const neto = bruto + disc;
@@ -301,22 +305,29 @@ const PaymentTab = ({
           await onUpdateConfirmation({ 
               id: req.id, 
               type: 'request', 
-              personId: req.personId, // ADICIONADO: Essencial para o vínculo no banco
+              personId: req.personId,
               paymentDate, 
               confirmed: true,
               applyBalance: shouldApply,
               appliedBalance: shouldApply ? retro : 0,
               finalValue: reqFinalValue
           });
+
+          const pName = getPersonName(req.personId);
+          personLines += `\n- ${pName}: R$ ${reqFinalValue.toFixed(2)}`;
+          totalLiquidated += reqFinalValue;
         }
 
-        // 3. Notificação automática via E-mail e WhatsApp para o Administrador (Total do Job)
-        const jobName = getJobName(jobId, jobReqs[0].personId);
-        const totalJobPayment = jobReqs.reduce((acc, r) => acc + (calcRequestBruto(r) || 0), 0);
-        const jobWaMsg = `🏦 *FECHAMENTO INTEGRAL DE PROJETO*\n\n🏗️ Projeto: ${jobName}\n📅 Data: ${paymentDate}\n💰 Total Liquidado: R$ ${totalJobPayment.toFixed(2)}\n👥 Funcionários: ${jobReqs.length}`;
+        // Notificação automática via E-mail e WhatsApp (conforme configurado em Settings)
+        const jobName = getJobName(jobId, pendingJobReqs[0].personId);
+        const jobWaMsg = `🏦 *FECHAMENTO DE PROJETO (PENDENTES)*\n\n🏗️ Projeto: ${jobName}\n📅 Data: ${paymentDate}\n\n👥 *Profissionais Liquidados:*${personLines}\n\n💰 *Total Lote:* R$ ${totalLiquidated.toFixed(2)}`;
         
+        // Dispara para o Administrador
         notifyAdminPayment(jobWaMsg);
-        toast.success(`Pagamento integral do projeto confirmado! Relatórios enviados.`);
+        // Dispara para o Financeiro
+        notifyFinancePayment(jobWaMsg);
+
+        toast.success(`Pagamento de ${pendingJobReqs.length} profissional(is) confirmado! Relatórios enviados.`);
       }
     } catch (error) {
       console.error("Erro ao confirmar pagamento:", error);
@@ -401,10 +412,11 @@ const PaymentTab = ({
                   const paymentDate = conf?.paymentDate || jobPaymentDate;
 
                   const dbApply = conf?.applyBalance;
-                  const localApply = applyBalanceMap[req.id] !== false;
+                  const dbApplyValue = dbApply !== undefined && dbApply !== null ? dbApply !== false : true;
+                  
                   const frozenApply = isPaid 
-                    ? (dbApply !== undefined && dbApply !== null ? dbApply !== false : localApply)
-                    : localApply;
+                    ? dbApplyValue
+                    : dbApplyValue;
                   
                   const currentReqBruto = calcRequestBruto(req) || 0;
                   const currentReqDiscounts = getRequestDiscounts(req) || 0; 
@@ -576,15 +588,26 @@ const PaymentTab = ({
                             ) : (
                                 <Button
                                     size="sm"
-                                    variant={applyBalanceMap[req.id] === false ? "outline" : "default"}
-                                    onClick={() => setApplyBalanceMap(prev => ({ ...prev, [req.id]: !(prev[req.id] !== false) }))}
+                                    variant={getConfirmation(req.id)?.applyBalance === false ? "outline" : "default"}
+                                    onClick={() => {
+                                        const existing = getConfirmation(req.id);
+                                        onUpdateConfirmation({
+                                            ...existing,
+                                            id: req.id,
+                                            type: 'request',
+                                            confirmed: false,
+                                            applyBalance: !(existing?.applyBalance !== false),
+                                            appliedBalance: 0,
+                                            paymentDate: existing?.paymentDate || ""
+                                        });
+                                    }}
                                     className={`h-8 text-[9px] px-2 font-black uppercase tracking-tight transition-all duration-300 ${
-                                        applyBalanceMap[req.id] === false 
+                                        getConfirmation(req.id)?.applyBalance === false 
                                         ? "border-muted-foreground/30 text-muted-foreground bg-muted/20" 
                                         : "bg-blue-600 hover:bg-blue-700 text-white shadow-sm ring-1 ring-blue-400/50"
                                     }`}
                                 >
-                                    {applyBalanceMap[req.id] === false ? "NÃO APLICADO" : "APLICADO"}
+                                    {getConfirmation(req.id)?.applyBalance === false ? "NÃO APLICADO" : "APLICADO"}
                                 </Button>
                             )}
                             
