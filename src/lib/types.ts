@@ -331,9 +331,14 @@ export function calculateDayDiscount(
        usedJanta = u.janta;
     }
 
-    if (dayMeals.includes("cafe") && !usedCafe) discountCafe = -refCafe;
+    if (dayMeals.includes("cafe") && !usedCafe) discountCafe = -refCafe; // Consumiu menos -> Débito (Não consumido)
     if (dayMeals.includes("almoco") && !usedAlmoco) discountAlmoco = -refAlmoco;
     if (dayMeals.includes("janta") && !usedJanta) discountJanta = -refJanta;
+
+    if (!hasHours && !isPast && !isTravelDay) {
+       // Se é HOJE e não tem horas nem viagem, ainda não decidimos se é falta
+       // A menos que haja controle manual (FC), que será tratado abaixo.
+    }
 
     if (!hasHours && !isTravelDay && isPast) {
       reason = "Falta - sem registro de horas";
@@ -355,21 +360,37 @@ export function calculateDayDiscount(
 
   // Se tem controle manual (Food Control), ele se sobrepõe
   if (fc) {
-    if (dayMeals.includes("cafe") && !fc.usedCafe) discountCafe = -refCafe;
-    else if (!dayMeals.includes("cafe") && fc.usedCafe) discountCafe = refCafe; // Extra = Positivo
-    else discountCafe = 0;
+    // 1. CAFÉ DA MANHÃ
+    if (dayMeals.includes("cafe") && !fc.usedCafe) {
+       discountCafe = -refCafe; // FALTA: Tinha direito mas não usou -> DÉBITO
+    } else if (!dayMeals.includes("cafe") && fc.usedCafe) {
+       discountCafe = refCafe;  // EXTRA: Não tinha direito mas usou -> CRÉDITO (Reembolso Extra)
+    } else {
+       discountCafe = 0; // Tudo como planejado
+    }
     
-    if (dayMeals.includes("almoco") && !fc.usedAlmoco) discountAlmoco = -refAlmoco;
-    else if (!dayMeals.includes("almoco") && fc.usedAlmoco) discountAlmoco = refAlmoco; // Extra = Positivo
-    else discountAlmoco = 0;
+    // 2. ALMOÇO
+    if (dayMeals.includes("almoco") && !fc.usedAlmoco) {
+       discountAlmoco = -refAlmoco; // FALTA
+    } else if (!dayMeals.includes("almoco") && fc.usedAlmoco) {
+       discountAlmoco = refAlmoco;  // EXTRA
+    } else {
+       discountAlmoco = 0;
+    }
     
-    if (dayMeals.includes("janta") && !fc.usedJanta) discountJanta = -refJanta;
-    else if (!dayMeals.includes("janta") && fc.usedJanta) discountJanta = refJanta; // Extra = Positivo
-    else discountJanta = 0;
+    // 3. JANTA
+    if (dayMeals.includes("janta") && !fc.usedJanta) {
+       discountJanta = -refJanta; // FALTA
+    } else if (!dayMeals.includes("janta") && fc.usedJanta) {
+       discountJanta = refJanta;  // EXTRA
+    } else {
+       discountJanta = 0;
+    }
 
-    const usedAny = fc.usedCafe || fc.usedAlmoco || fc.usedJanta;
     const isExtra = (!dayMeals.includes("cafe") && fc.usedCafe) || (!dayMeals.includes("almoco") && fc.usedAlmoco) || (!dayMeals.includes("janta") && fc.usedJanta);
-    reason = "Ajuste via controle de alimentação (" + (isExtra ? "refeição extra" : (usedAny ? "consumiu parcial" : "não consumiu")) + ")";
+    const isAbsence = (dayMeals.includes("cafe") && !fc.usedCafe) || (dayMeals.includes("almoco") && !fc.usedAlmoco) || (dayMeals.includes("janta") && !fc.usedJanta);
+    
+    reason = "Ajuste via controle alimentar (" + (isExtra ? "refeição extra" : (isAbsence ? "não consumiu" : "consumiu planejado")) + ")";
   }
 
   const total = discountCafe + discountAlmoco + discountJanta;

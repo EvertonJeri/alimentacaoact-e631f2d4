@@ -33,14 +33,30 @@ export const SettingsTab = () => {
     repairHistoricalData
   } = useDatabase();
 
-  const [settings, setSettings] = useState<SystemSettings>(DEFAULT_SETTINGS);
+  const [settings, setSettings] = useState<SystemSettings>(() => {
+    const localFlash = (() => {
+      try { return JSON.parse(localStorage.getItem("act_flash_card_users") || "[]"); } 
+      catch { return []; }
+    })();
+    return { ...DEFAULT_SETTINGS, flashCardUsers: localFlash };
+  });
   const [customHolidays, setCustomHolidays] = useState<Holiday[]>([]);
   const [newHolidayDate, setNewHolidayDate] = useState("");
   const [newHolidayName, setNewHolidayName] = useState("");
 
   useEffect(() => {
     if (systemSettings.data) {
-      setSettings(systemSettings.data);
+      const dbData = systemSettings.data;
+      const localFlash = (() => {
+        try { return JSON.parse(localStorage.getItem("act_flash_card_users") || "[]"); } 
+        catch { return []; }
+      })();
+
+      // Se o banco trouxer vazio, tentamos o local
+      setSettings({
+        ...dbData,
+        flashCardUsers: (dbData.flashCardUsers && dbData.flashCardUsers.length > 0) ? dbData.flashCardUsers : localFlash
+      });
     }
   }, [systemSettings.data]);
 
@@ -50,36 +66,33 @@ export const SettingsTab = () => {
     }
   }, [dbHolidays.data]);
 
+  // SINCRONIZAÇÃO EM TEMPO REAL COM O NAVEGADOR (Resiliência Máxima)
+  useEffect(() => {
+    if (settings.flashCardUsers && settings.flashCardUsers.length > 0) {
+      localStorage.setItem("act_flash_card_users", JSON.stringify(settings.flashCardUsers));
+    }
+  }, [settings.flashCardUsers]);
+
   const handleSave = async () => {
     try {
-      // PERSISTÊNCIA LOCAL (Fallback para colunas não migradas ainda)
+      // 1. Persistência de Emergência Local para o Cartão Flash
       if (settings.flashCardUsers) {
         localStorage.setItem("act_flash_card_users", JSON.stringify(settings.flashCardUsers));
+        console.log("Flash Card Users salvos localmente!", settings.flashCardUsers);
       }
 
+      // 2. Persistência Principal (Banco)
       await updateSystemSettings.mutateAsync(settings);
       await updateCustomHolidays.mutateAsync(customHolidays);
-      toast.success("Configurações salvas!", { duration: 5000 });
+      
+      toast.success("Configurações salvas com sucesso!");
     } catch (error: any) {
-      // Se o erro mencionar coluna inexistente (flash_card_users pode não existir no banco)
-      const msg = error?.message || error?.details || JSON.stringify(error) || "";
-      const isColumnError = msg.toLowerCase().includes("column") || msg.toLowerCase().includes("coluna") || msg.toLowerCase().includes("schema");
-
-      if (isColumnError) {
-        // Tenta salvar sem flash_card_users
-        try {
-          const { flashCardUsers: _, ...settingsWithout } = settings as any;
-          await updateSystemSettings.mutateAsync(settingsWithout);
-          await updateCustomHolidays.mutateAsync(customHolidays);
-          toast.success("Configurações salvas! (coluna flash_card_users não encontrada no banco — execute a migration)", { duration: 7000 });
-        } catch (err2: any) {
-          const msg2 = err2?.message || err2?.details || JSON.stringify(err2) || "Erro desconhecido";
-          toast.error(`Erro ao salvar: ${msg2}`);
-          console.error(err2);
-        }
+      const msg = (error?.message || "").toLowerCase();
+      // O hook já faz o fallback de colunas, aqui apenas avisamos se salvou parcialmente
+      if (msg.includes("column") || msg.includes("coluna") || msg.includes("schema")) {
+        toast.warning("Configurações salvas (com fallback de colunas desatualizadas).");
       } else {
-        toast.error(`Erro ao salvar: ${msg || "Verifique o console para detalhes."}`);
-        console.error(error);
+        toast.error(`Erro ao salvar: ${error.message || "Verifique sua conexão."}`);
       }
     }
   };

@@ -79,22 +79,24 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
 
     // Passo 0: Coletar todos os dias com atividade para garantir que órfãos não sumam
     const allActivityDates = new Set<string>();
-    safeRequests.forEach(r => getDatesInRange(r.startDate, r.endDate).forEach(d => allActivityDates.add(`${r.personId}|${d}`)));
-    safeTime.forEach(e => allActivityDates.add(`${e.personId}|${e.date}`));
-    safeFood.forEach(f => allActivityDates.add(`${f.personId}|${f.date}`));
+    safeRequests.forEach(r => getDatesInRange(r.startDate, r.endDate).forEach(d => allActivityDates.add(`${r.personId}|${d}|${r.jobId}`)));
+    safeTime.forEach(e => allActivityDates.add(`${e.personId}|${e.date}|${e.jobId}`));
+    safeFood.forEach(f => allActivityDates.add(`${f.personId}|${f.date}|${f.jobId}`));
 
     // Passo 1: Para cada atividade detectada, calcula o solicitado e os descontos
     Array.from(allActivityDates).forEach(activity => {
-      const [pid, date] = activity.split('|');
+      const [pid, date, activityJobId] = activity.split('|');
       const person = people.find(p => p.id === pid);
       if (!person) return;
 
       // Tenta achar uma solicitação para este dia
-      const req = safeRequests.find(r => r.personId === pid && date >= r.startDate && date <= r.endDate);
-      const jobId = req?.jobId || safeFood.find(f => f.personId === pid && f.date === date)?.jobId || safeTime.find(e => e.personId === pid && e.date === date)?.jobId || 'unknown';
+      const req = safeRequests.find(r => r.personId === pid && date >= r.startDate && date <= r.endDate && r.jobId === activityJobId);
+      const jobId = activityJobId || 'unknown';
       const key = `${pid}-${jobId}`;
 
-      const isLiquidated = req ? !!getConfirmation(`stmt-${req.id}`)?.confirmed : false;
+      const isLiquidated = req 
+        ? !!getConfirmation(`stmt-${req.id}`)?.confirmed 
+        : safeConfs.some(c => 'id' in c && c.id === `orphan-${pid}-${date}` && c.confirmed);
 
       if (!data[key]) {
         data[key] = {
@@ -108,6 +110,10 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
           totalFinal: 0,
           details: []
         };
+      } else {
+        // Atualiza datas
+        if (date < data[key].startDate) data[key].startDate = date;
+        if (date > data[key].endDate) data[key].endDate = date;
       }
 
       const dayKey = `${pid}-${jobId}-${date}`;
@@ -122,11 +128,21 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
       }
       data[key].totalRequested += dayValue;
 
-      // Descontos/extras do dia
-      const entry = safeTime.find(e => String(e.personId) === String(pid) && String(e.jobId) === String(jobId) && e.date === date);
-      const fc = safeFood.find(f => String(f.personId) === String(pid) && String(f.jobId) === String(jobId) && f.date === date);
+      // Descontos/extras do dia - Busca MAIS FLEXÍVEL para jobId
+      const jobMatchFinder = (itemJobId: string, targetJobId: string) => {
+          if (!itemJobId || !targetJobId) return false;
+          if (itemJobId === targetJobId) return true;
+          // Se um for o número e o outro o UUID ou Nome, tenta bater
+          const job = jobs.find(j => j.id === targetJobId);
+          if (!job) return false;
+          const jobNumber = job.name.split(" - ")[0].trim();
+          return itemJobId === jobNumber || itemJobId === job.name;
+      };
+
+      const entry = safeTime.find(e => String(e.personId) === String(pid) && jobMatchFinder(e.jobId, jobId) && e.date === date);
+      const fc = safeFood.find(f => String(f.personId) === String(pid) && jobMatchFinder(f.jobId, jobId) && f.date === date);
       
-      // Cálculo de desconto (se não tem req, passa um mock para assumir direito ZERO)
+      // Cálculo de desconto
       const dayCalc = calculateDayDiscount(
         req || { id: `orphan-${pid}-${date}`, personId: pid, jobId, startDate: date, endDate: date, meals: [] }, 
         date, entry || undefined, fc, people
@@ -134,7 +150,6 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
 
       if (Math.abs(dayCalc.total) > 0.01) {
         const discountId = req ? `discount-${req.id}-${date}` : `orphan-${pid}-${date}`;
-        // BUSCA ROBUSTA EM TODAS AS CONFIRMS (inclusive orphas)
         const isItemDone = safeConfs.some(c => 'id' in c && (c.id === discountId || c.id === `orphan-${pid}-${date}`) && c.confirmed);
         
         // Ajuste só entra no total a pagar se NÃO está resolvido
@@ -150,61 +165,62 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
           jobId: jobId,
           projectName: getJobName(jobId),
           discountId,
-          isDiscountDone: isItemDone, // Este flag agora será usado no visual
+          isDiscountDone: isItemDone,
           isOtherJob: false
         });
       }
     });
 
-    // Passo 2: Para cada pessoa/job, buscar descontos de OUTROS jobs (não liquidados)
+    // Passo 2: Para cada pessoa/job, buscar descontos de QUALQUER outro job (não liquidados)
+    // Isso inclui órfãos de outros jobs.
     Object.values(data).forEach(ps => {
       if (ps.isLiquidated) return;
 
-      const otherReqs = safeRequests.filter(r => 
-        String(r.personId) === String(ps.personId) && 
-        String(r.jobId) !== String(ps.jobId) && 
-        !getConfirmation(`stmt-${r.id}`)?.confirmed
-      );
+      // Busca por todos os ajustes pendentes que não pertencem a este ps.jobId
+      const allOtherAdjustments = Array.from(allActivityDates)
+        .map(activity => {
+          const [pid, date, jobId] = activity.split('|');
+          if (pid !== ps.personId || jobId === ps.jobId) return null;
+          
+          const req = safeRequests.find(r => r.personId === pid && date >= r.startDate && date <= r.endDate && r.jobId === jobId);
+          const entry = safeTime.find(e => e.personId === pid && e.jobId === jobId && e.date === date);
+          const fc = safeFood.find(f => f.personId === pid && f.jobId === jobId && f.date === date);
+          
+          const discountId = req ? `discount-${req.id}-${date}` : `orphan-${pid}-${date}`;
+          const isItemDone = safeConfs.some(c => 'id' in c && c.id === discountId && c.confirmed);
+          if (isItemDone) return null;
 
-      // Limitar a 50 datas por pessoa de outros jobs para não travar
-      let otherDayCount = 0;
-      const MAX_OTHER_DAYS = 50;
+          // Só nos importa se for de um job ainda NÃO liquidado
+          const isOtherJobLiquidated = req ? !!getConfirmation(`stmt-${req.id}`)?.confirmed : false;
+          if (isOtherJobLiquidated) return null;
 
-      otherReqs.forEach(otherReq => {
-        if (otherDayCount >= MAX_OTHER_DAYS) return;
-        const otherDates = getDatesInRange(otherReq.startDate, otherReq.endDate);
-        const otherJobName = getJobName(otherReq.jobId);
+          const dayCalc = calculateDayDiscount(
+            req || { id: `orphan-${pid}-${date}`, personId: pid, jobId, startDate: date, endDate: date, meals: [] }, 
+            date, entry || undefined, fc, people
+          );
 
-        otherDates.forEach(d => {
-          if (otherDayCount >= MAX_OTHER_DAYS) return;
-          const otherDayKey = `other-${ps.personId}-${otherReq.jobId}-${d}`;
-          if (processedDays.has(otherDayKey)) return;
-          processedDays.add(otherDayKey);
-          otherDayCount++;
+          if (Math.abs(dayCalc.total) < 0.01) return null;
 
-          const entry = safeTime.find(e => String(e.personId) === String(otherReq.personId) && String(e.jobId) === String(otherReq.jobId) && e.date === d);
-          const fc = safeFood.find(f => String(f.personId) === String(otherReq.personId) && String(f.jobId) === String(otherReq.jobId) && f.date === d);
-          const dayCalc = calculateDayDiscount(otherReq, d, entry || undefined, fc, people);
+          return { date, dayCalc, jobId, discountId };
+        })
+        .filter(Boolean) as { date: string, dayCalc: any, jobId: string, discountId: string }[];
 
-          if (Math.abs(dayCalc.total) > 0.01) {
-            const discountId = `discount-${otherReq.id}-${d}`;
-            const isItemDone = safeConfs.some(c => 'id' in c && c.id === discountId && c.confirmed);
+      // Evitar duplicatas em processedDays (já processado no ps.details principal)
+      allOtherAdjustments.forEach(adj => {
+        const otherDayKey = `other-${ps.personId}-${ps.jobId}-${adj.jobId}-${adj.date}`;
+        if (processedDays.has(otherDayKey)) return;
+        processedDays.add(otherDayKey);
 
-            if (!isItemDone) {
-              ps.totalAdjustments += dayCalc.total;
-            }
-
-            ps.details.push({
-              date: d,
-              type: dayCalc.total < 0 ? 'desconto' : 'extra',
-              reason: `[OUTRO JOB: ${otherJobName}] ${dayCalc.reason}`,
-              value: dayCalc.total,
-              jobId: otherReq.jobId,
-              discountId,
-              isDiscountDone: isItemDone,
-              isOtherJob: true
-            });
-          }
+        ps.totalAdjustments += adj.dayCalc.total;
+        ps.details.push({
+          date: adj.date,
+          type: adj.dayCalc.total < 0 ? 'desconto' : 'extra',
+          reason: `[OUTRO JOB: ${getJobName(adj.jobId)}] ${adj.dayCalc.reason}`,
+          value: adj.dayCalc.total,
+          jobId: adj.jobId,
+          discountId: adj.discountId,
+          isDiscountDone: false,
+          isOtherJob: true
         });
       });
     });
@@ -215,10 +231,10 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
         ...ps,
         totalFinal: Math.max(0, ps.totalRequested + ps.totalAdjustments)
       }))
-      // FILTRO: Mostra se tiver valor solicitado (refeições) OU se tiver ajustes pendentes
       .filter(ps => (selectedJob === "all" || ps.jobId === selectedJob) && (ps.totalRequested > 0 || Math.abs(ps.totalAdjustments) > 0.01))
       .sort((a, b) => getPersonName(a.personId).localeCompare(getPersonName(b.personId)));
   }, [requests, foodControl, people, timeEntries, confirmations, selectedJob, jobs]);
+
 
   const pendingStatements = useMemo(() => {
     return personStatements
@@ -240,24 +256,54 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
 
   const handleSettlePerson = (personId: string, jobId: string) => {
     if (!onUpdatePaymentConfirmation) return;
-    const pending = requests.filter(r => String(r.personId) === String(personId) && String(r.jobId) === String(jobId) && !getConfirmation(`stmt-${r.id}`)?.confirmed);
-    pending.forEach(req => {
-      const today = new Date().toISOString().split("T")[0];
+    const today = new Date().toISOString().split("T")[0];
+    
+    // 1. Liquidar Requests
+    const pendingReqs = requests.filter(r => String(r.personId) === String(personId) && String(r.jobId) === String(jobId) && !getConfirmation(`stmt-${r.id}`)?.confirmed);
+    pendingReqs.forEach(req => {
       onUpdatePaymentConfirmation({ id: `stmt-${req.id}`, type: 'request', confirmed: true, paymentDate: today });
     });
-    if (pending.length > 0) toast.success("Ajustes liquidados!");
+
+    // 2. Liquidar Orphans (Descontos avulsos sem request)
+    // Buscamos todas as atividades deste person/job que resultaram em descontos
+    const orphanPrefix = `orphan-${personId}-`;
+    const pendingOrphans = personStatements.find(ps => ps.personId === personId && ps.jobId === jobId)?.details
+      .filter(d => d.discountId?.startsWith('orphan-') && !d.isDiscountDone) || [];
+    
+    pendingOrphans.forEach(d => {
+      if (d.discountId) {
+        onUpdatePaymentConfirmation({ id: d.discountId, type: 'discount', confirmed: true, paymentDate: today });
+      }
+    });
+
+    if (pendingReqs.length > 0 || pendingOrphans.length > 0) {
+      toast.success("Ajustes e solicitações liquidadas!");
+    }
   };
 
   const handleRevertSettle = (personId: string, jobId: string) => {
     if (!onUpdatePaymentConfirmation) return;
-    const liquidated = requests.filter(r => String(r.personId) === String(personId) && String(r.jobId) === String(jobId) && getConfirmation(`stmt-${r.id}`)?.confirmed);
-    liquidated.forEach(req => {
+    
+    // 1. Reverter Requests
+    const liquidatedReqs = requests.filter(r => String(r.personId) === String(personId) && String(r.jobId) === String(jobId) && getConfirmation(`stmt-${r.id}`)?.confirmed);
+    liquidatedReqs.forEach(req => {
       const existing = getConfirmation(`stmt-${req.id}`);
-      if (existing) {
-        onUpdatePaymentConfirmation({ ...existing, confirmed: false });
+      if (existing) onUpdatePaymentConfirmation({ ...existing, confirmed: false });
+    });
+
+    // 2. Reverter Orphans
+    const liquidatedOrphans = personStatements.find(ps => ps.personId === personId && ps.jobId === jobId)?.details
+      .filter(d => d.discountId?.startsWith('orphan-') && d.isDiscountDone) || [];
+    
+    liquidatedOrphans.forEach(d => {
+      if (d.discountId) {
+        onUpdatePaymentConfirmation({ id: d.discountId, type: 'discount', confirmed: false, paymentDate: '' });
       }
     });
-    if (liquidated.length > 0) toast.success("Liquida\u00e7\u00e3o revertida! Item voltou para Pendentes.");
+
+    if (liquidatedReqs.length > 0 || liquidatedOrphans.length > 0) {
+      toast.success("Liquidação revertida! Itens voltaram para Pendentes.");
+    }
   };
 
   const handleRevertDiscount = (discountId: string) => {

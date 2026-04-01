@@ -45,16 +45,24 @@ export const useDatabase = () => {
     queryFn: async () => {
       const { data, error } = await supabase.from("meal_requests").select("*").order("start_date", { ascending: false }).limit(50000);
       if (error) throw error;
-      return (data || []).map((r: any) => ({
-        id: r.id,
-        personId: r.person_id,
-        jobId: r.job_id,
-        startDate: r.start_date,
-        endDate: r.end_date,
-        meals: r.meals,
-        location: r.location,
-        dailyOverrides: r.daily_overrides,
-      })) as MealRequest[];
+      const allJobs = jobs.data || [];
+      
+      return (data || []).map((r: any) => {
+        let resolvedJobId = r.job_id;
+        const jobMatch = allJobs.find(j => j.id === r.job_id || j.name.startsWith(r.job_id + " - ") || j.name === r.job_id);
+        if (jobMatch) resolvedJobId = jobMatch.id;
+
+        return {
+          id: r.id,
+          personId: r.person_id,
+          jobId: resolvedJobId,
+          startDate: r.start_date,
+          endDate: r.end_date,
+          meals: r.meals,
+          location: r.location,
+          dailyOverrides: r.daily_overrides,
+        };
+      }) as MealRequest[];
     },
   });
 
@@ -164,9 +172,16 @@ export const useDatabase = () => {
         const { data, error } = await supabase.from("system_settings").select("*").eq("id", "default").single();
         if (error && error.code !== 'PGRST116') throw error;
         
-        if (!data) return DEFAULT_SETTINGS;
-
         const d = data as any;
+        const localFlash = (() => {
+          try { 
+            const saved = localStorage.getItem("act_flash_card_users");
+            return saved ? JSON.parse(saved) : []; 
+          } catch { return []; }
+        })();
+
+        if (!data) return { ...DEFAULT_SETTINGS, flashCardUsers: localFlash };
+
         return {
           teamsWebhookUrl: d.teams_webhook_url,
           managerWhatsApp: d.manager_whatsapp,
@@ -191,10 +206,7 @@ export const useDatabase = () => {
           pjPeriod1EndDay: d.pj_period1_end_day || 15,
           pjPeriod1PaymentDay: d.pj_period1_payment_day || 19,
           pjPeriod2PaymentDay: d.pj_period2_payment_day || 4,
-          flashCardUsers: d.flash_card_users ? d.flash_card_users : (() => {
-            try { return JSON.parse(localStorage.getItem("act_flash_card_users") || "[]"); } 
-            catch { return []; }
-          })(),
+          flashCardUsers: (d.flash_card_users && d.flash_card_users.length > 0) ? d.flash_card_users : localFlash,
         } as SystemSettings;
       } catch (e) {
         return DEFAULT_SETTINGS;
@@ -217,7 +229,8 @@ export const useDatabase = () => {
 
   const updateSystemSettings = useMutation({
     mutationFn: async (settings: SystemSettings) => {
-      const payload: any = {
+      // 1. TENTATIVA COMPLETA (Tudo o que o sistema suporta)
+      const fullPayload: any = {
         id: "default",
         teams_webhook_url: settings.teamsWebhookUrl,
         manager_whatsapp: settings.managerWhatsApp,
@@ -246,13 +259,14 @@ export const useDatabase = () => {
       };
 
       try {
-        const { error } = await supabase.from("system_settings").upsert(payload, { onConflict: 'id' });
+        const { error } = await supabase.from("system_settings").upsert(fullPayload, { onConflict: 'id' });
         if (error) throw error;
+        return;
       } catch (error: any) {
-        console.error("Error saving system settings, trying fallback...", error);
+        console.warn("Save failed at full payload, trying intermediate...", error);
         
-        // Se der erro de coluna não encontrada, tentamos enviar um payload mínimo com as colunas essenciais que sabemos que existem
-        const minPayload = {
+        // 2. TENTATIVA INTERMEDIÁRIA (Apenas colunas que existiam antes desta última atualização)
+        const intermediatePayload: any = {
           id: "default",
           teams_webhook_url: settings.teamsWebhookUrl,
           manager_whatsapp: settings.managerWhatsApp,
@@ -267,22 +281,30 @@ export const useDatabase = () => {
           hr_emails: settings.hrEmails,
           discount_alert_date: settings.discountAlertDate,
           discount_auto_send: settings.discountAutoSend,
-          flash_card_users: settings.flashCardUsers || [],
-          clt_alert_day: settings.cltAlertDay,
-          clt_alert_day2: settings.cltAlertDay2,
-          pj_alert_day: settings.pjAlertDay,
-          pj_alert_day2: settings.pjAlertDay2,
-          clt_payment_day: settings.cltPaymentDay,
-          clt_advance_day: settings.cltAdvanceDay,
-          clt_sheet_close_day: settings.cltSheetCloseDay,
-          pj_period1_end_day: settings.pjPeriod1EndDay,
-          pj_period1_payment_day: settings.pjPeriod1PaymentDay,
-          pj_period2_payment_day: settings.pjPeriod2PaymentDay,
         };
-        const { error: err2 } = await supabase.from("system_settings").upsert(minPayload, { onConflict: 'id' });
-        if (err2) {
-            throw new Error(err2.message || err2.details || JSON.stringify(err2));
+
+        try {
+          const { error: err2 } = await supabase.from("system_settings").upsert(intermediatePayload, { onConflict: 'id' });
+          if (!err2) return;
+          console.warn("Save failed at intermediate payload, trying minimal...", err2);
+        } catch (e2) {
+           // Continua para o minimal
         }
+
+        // 3. TENTATIVA MÍNIMA (Apenas o core original)
+        const minimalPayload = {
+          id: "default",
+          teams_webhook_url: settings.teamsWebhookUrl,
+          manager_whatsapp: settings.managerWhatsApp,
+          admin_emails: settings.adminEmails,
+          admin_whatsapp: settings.adminWhatsApp,
+          enable_teams: settings.enableTeams,
+          enable_whatsapp: settings.enableWhatsApp,
+          enable_email: settings.enableEmail,
+        };
+
+        const { error: err3 } = await supabase.from("system_settings").upsert(minimalPayload, { onConflict: 'id' });
+        if (err3) throw err3;
       }
     },
     onSuccess: () => {
