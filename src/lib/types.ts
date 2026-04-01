@@ -286,111 +286,80 @@ export function calculateDayDiscount(
   let discountJanta = 0;
   let reason = "";
 
-  const dayMeals = getActiveMeals(req, date, person);
-
   const localToday = new Date().toISOString().split("T")[0];
   const isPast = date < localToday;
-  
-  if (!entry) {
-    if (isPast) {
-      const dCafe = dayMeals.includes("cafe") ? -refCafe : 0;
-      const dAlmoco = dayMeals.includes("almoco") ? -refAlmoco : 0;
-      const dJanta = dayMeals.includes("janta") ? -refJanta : 0;
-      return { 
-        discountCafe: dCafe, 
-        discountAlmoco: dAlmoco, 
-        discountJanta: dJanta, 
-        total: dCafe + dAlmoco + dJanta, 
-        reason: "Falta - sem registro de horas" 
-      };
-    }
-    return { discountCafe: 0, discountAlmoco: 0, discountJanta: 0, total: 0, reason: "" };
+  const isToday = date === localToday;
+  const dayMeals = getActiveMeals(req, date, person);
+  const isTravelDay = date === req.startDate && !!req.travelTime;
+  const hasHours = !!(entry && (entry.entry1 || entry.exit1 || entry.isTravelOut || entry.isTravelReturn || entry.isAutoFilled));
+
+  // 1. Caso base: Se não há registro de horas e é PASSADO e NÃO tem controle manual
+  if (!hasHours && isPast && !fc && !isTravelDay) {
+    const dCafe = dayMeals.includes("cafe") ? -refCafe : 0;
+    const dAlmoco = dayMeals.includes("almoco") ? -refAlmoco : 0;
+    const dJanta = dayMeals.includes("janta") ? -refJanta : 0;
+    const hasAnyRequested = dayMeals.length > 0;
+
+    return { 
+      discountCafe: dCafe, 
+      discountAlmoco: dAlmoco, 
+      discountJanta: dJanta, 
+      total: dCafe + dAlmoco + dJanta, 
+      reason: hasAnyRequested ? "Falta - sem registro de horas" : "" 
+    };
   }
 
-  const isTravelDay = date === req.startDate && !!req.travelTime;
-  const hasHours = calcTotalMinutes(entry) > 0;
-  const hasTouch = !!(entry.entry1 || entry.exit1 || entry.isTravelOut || entry.isTravelReturn || entry.isAutoFilled);
-  
-  if (!isPast && !hasTouch) {
+  // 2. Se for HOJE ou FUTURO e não tem nada batido nem marcação manual, ignora (limpo)
+  if ((isToday || date > localToday) && !hasHours && !fc) {
      return { discountCafe: 0, discountAlmoco: 0, discountJanta: 0, total: 0, reason: "" };
   }
 
+  // 3. Determina o uso baseado em horas ou controle manual
   let usedCafe = false;
   let usedAlmoco = false;
   let usedJanta = false;
 
-  if (hasHours && entry) {
-       const u = determineMealsUsed(entry, req, date);
-       usedCafe = u.cafe;
-       usedAlmoco = u.almoco;
-       usedJanta = u.janta;
-    } else if (isTravelDay) {
-       const u = determineMealsUsed(undefined, req, date);
-       usedCafe = u.cafe;
-       usedAlmoco = u.almoco;
-       usedJanta = u.janta;
-    }
-
-    if (dayMeals.includes("cafe") && !usedCafe) discountCafe = -refCafe; // Consumiu menos -> Débito (Não consumido)
-    if (dayMeals.includes("almoco") && !usedAlmoco) discountAlmoco = -refAlmoco;
-    if (dayMeals.includes("janta") && !usedJanta) discountJanta = -refJanta;
-
-    if (!hasHours && !isPast && !isTravelDay) {
-       // Se é HOJE e não tem horas nem viagem, ainda não decidimos se é falta
-       // A menos que haja controle manual (FC), que será tratado abaixo.
-    }
-
-    if (!hasHours && !isTravelDay && isPast) {
-      reason = "Falta - sem registro de horas";
-      if (dayMeals.includes("cafe")) discountCafe = -refCafe;
-      if (dayMeals.includes("almoco")) discountAlmoco = -refAlmoco;
-      if (dayMeals.includes("janta")) discountJanta = -refJanta;
-    } else if (isTravelDay && !hasHours) {
-      reason = `Dia de viagem (${req.transportType === "aviao" ? "Avião" : "Ônibus"}) às ${req.travelTime}`;
-    } else {
-      const misses = [];
-      if (discountCafe < 0) misses.push("café");
-      if (discountAlmoco < 0) misses.push("almoço");
-      if (discountJanta < 0) misses.push("janta");
-
-      if (misses.length > 0) {
-        reason = `Horários divergentes para: ${misses.join(", ")}`;
-      }
-    }
-
-  // Se tem controle manual (Food Control), ele se sobrepõe
   if (fc) {
-    // 1. CAFÉ DA MANHÃ
-    if (dayMeals.includes("cafe") && !fc.usedCafe) {
-       discountCafe = -refCafe; // FALTA: Tinha direito mas não usou -> DÉBITO
-    } else if (!dayMeals.includes("cafe") && fc.usedCafe) {
-       discountCafe = refCafe;  // EXTRA: Não tinha direito mas usou -> CRÉDITO (Reembolso Extra)
-    } else {
-       discountCafe = 0; // Tudo como planejado
-    }
-    
-    // 2. ALMOÇO
-    if (dayMeals.includes("almoco") && !fc.usedAlmoco) {
-       discountAlmoco = -refAlmoco; // FALTA
-    } else if (!dayMeals.includes("almoco") && fc.usedAlmoco) {
-       discountAlmoco = refAlmoco;  // EXTRA
-    } else {
-       discountAlmoco = 0;
-    }
-    
-    // 3. JANTA
-    if (dayMeals.includes("janta") && !fc.usedJanta) {
-       discountJanta = -refJanta; // FALTA
-    } else if (!dayMeals.includes("janta") && fc.usedJanta) {
-       discountJanta = refJanta;  // EXTRA
-    } else {
-       discountJanta = 0;
-    }
+    usedCafe = fc.usedCafe;
+    usedAlmoco = fc.usedAlmoco;
+    usedJanta = fc.usedJanta;
+  } else if (hasHours && entry) {
+    const u = determineMealsUsed(entry, req, date);
+    usedCafe = u.cafe;
+    usedAlmoco = u.almoco;
+    usedJanta = u.janta;
+  } else if (isTravelDay) {
+    const u = determineMealsUsed(undefined, req, date);
+    usedCafe = u.cafe;
+    usedAlmoco = u.almoco;
+    usedJanta = u.janta;
+  }
 
-    const isExtra = (!dayMeals.includes("cafe") && fc.usedCafe) || (!dayMeals.includes("almoco") && fc.usedAlmoco) || (!dayMeals.includes("janta") && fc.usedJanta);
-    const isAbsence = (dayMeals.includes("cafe") && !fc.usedCafe) || (dayMeals.includes("almoco") && !fc.usedAlmoco) || (dayMeals.includes("janta") && !fc.usedJanta);
-    
+  // 4. Aplica os descontos (Faltas) ou Créditos (Extras)
+  // ABSENCE (Tinha direito mas não usou) = NEGATIVO
+  // EXTRA (Não tinha direito mas usou) = POSITIVO
+  
+  if (dayMeals.includes("cafe") && !usedCafe) discountCafe = -refCafe;
+  else if (!dayMeals.includes("cafe") && usedCafe) discountCafe = refCafe;
+
+  if (dayMeals.includes("almoco") && !usedAlmoco) discountAlmoco = -refAlmoco;
+  else if (!dayMeals.includes("almoco") && usedAlmoco) discountAlmoco = refAlmoco;
+
+  if (dayMeals.includes("janta") && !usedJanta) discountJanta = -refJanta;
+  else if (!dayMeals.includes("janta") && usedJanta) discountJanta = refJanta;
+
+  // 5. Define a justificativa
+  const isExtra = (!dayMeals.includes("cafe") && usedCafe) || (!dayMeals.includes("almoco") && usedAlmoco) || (!dayMeals.includes("janta") && usedJanta);
+  const isAbsence = (dayMeals.includes("cafe") && !usedCafe) || (dayMeals.includes("almoco") && !usedAlmoco) || (dayMeals.includes("janta") && !usedJanta);
+
+  if (fc) {
     reason = "Ajuste via controle alimentar (" + (isExtra ? "refeição extra" : (isAbsence ? "não consumiu" : "consumiu planejado")) + ")";
+  } else if (isTravelDay && !hasHours) {
+    reason = `Dia de viagem (${req.transportType === "aviao" ? "Avião" : "Ônibus"}) às ${req.travelTime}`;
+  } else if (isAbsence) {
+    reason = "Horários divergentes ou falta parcial";
+  } else if (isExtra) {
+    reason = "Refeição extra detectada";
   }
 
   const total = discountCafe + discountAlmoco + discountJanta;

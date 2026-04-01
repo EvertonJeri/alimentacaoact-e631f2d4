@@ -75,21 +75,30 @@ export const useDatabase = () => {
         .order("date", { ascending: false })
         .limit(50000);
       if (error) throw error;
-      return (data || []).map((e: any) => ({
-        id: e.id,
-        personId: e.person_id,
-        jobId: e.job_id,
-        date: e.date,
-        entry1: e.entry1 || "",
-        exit1: e.exit1 || "",
-        entry2: e.entry2 || "",
-        exit2: e.exit2 || "",
-        entry3: e.entry3 || "",
-        exit3: e.exit3 || "",
-        isTravelOut: e.is_travel_out,
-        isTravelReturn: e.is_travel_return,
-        isAutoFilled: e.is_auto_filled,
-      })) as TimeEntry[];
+      const allJobs = jobs.data || [];
+
+      return (data || []).map((e: any) => {
+        // Resolve jobId para UUID
+        let resolvedJobId = e.job_id;
+        const jobMatch = allJobs.find(j => j.id === e.job_id || j.name.startsWith(e.job_id + " - ") || j.name === e.job_id);
+        if (jobMatch) resolvedJobId = jobMatch.id;
+
+        return {
+          id: e.id,
+          personId: e.person_id,
+          jobId: resolvedJobId,
+          date: e.date,
+          entry1: e.entry1 || "",
+          exit1: e.exit1 || "",
+          entry2: e.entry2 || "",
+          exit2: e.exit2 || "",
+          entry3: e.entry3 || "",
+          exit3: e.exit3 || "",
+          isTravelOut: e.is_travel_out,
+          isTravelReturn: e.is_travel_return,
+          isAutoFilled: e.is_auto_filled,
+        };
+      }) as TimeEntry[];
     },
   });
 

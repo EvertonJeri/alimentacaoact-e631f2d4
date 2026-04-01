@@ -127,8 +127,14 @@ const DiscountsTab = ({
     timeEntries.forEach(e => allActivityDates.add(`${e.personId}|${e.date}`));
     foodControl.forEach(f => allActivityDates.add(`${f.personId}|${f.date}`));
 
+    const todayStr = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD Local
+
     Array.from(allActivityDates).forEach(activity => {
       const [pid, date] = activity.split('|');
+      
+      // FILTRO: Só considera até ontem (passado)
+      if (date >= todayStr) return;
+
       const req = registeredRequests.find(r => r.personId === pid && date >= r.startDate && date <= r.endDate);
       
       const dayKey = `${pid}-${req?.jobId || 'orphan'}-${date}`;
@@ -166,11 +172,11 @@ const DiscountsTab = ({
     return rows;
   }, [registeredRequests, timeEntries, foodControl, people, filterJob, confirmations]);
 
-  // Descontos: Quando o funcionário deve pagar (Total < 0, ex: refeição extra)
+  // Descontos: Quando o funcionário falha e deve perder o crédito (Total < 0, ex: falta)
   const discounts = useMemo(() => allAdjustments.filter(d => d.total < 0), [allAdjustments]);
   const activeDiscounts = useMemo(() => discounts.filter(d => !d._done), [discounts]);
   
-  // Saldo positivo: Quando o funcionário tem crédito (Total > 0, ex: não consumiu o solicitado)
+  // Saldo positivo: Quando o funcionário consome a mais e deve ganhar crédito (Total > 0, ex: refeição extra)
   const positiveBalances = useMemo(() => allAdjustments.filter(d => d.total > 0), [allAdjustments]);
 
   // Group discounts by person

@@ -77,11 +77,21 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
     const safeFood = foodControl || [];
     const safeConfs = confirmations || [];
 
+    const todayStr = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD Local
+    
     // Passo 0: Coletar todos os dias com atividade para garantir que órfãos não sumam
     const allActivityDates = new Set<string>();
-    safeRequests.forEach(r => getDatesInRange(r.startDate, r.endDate).forEach(d => allActivityDates.add(`${r.personId}|${d}|${r.jobId}`)));
-    safeTime.forEach(e => allActivityDates.add(`${e.personId}|${e.date}|${e.jobId}`));
-    safeFood.forEach(f => allActivityDates.add(`${f.personId}|${f.date}|${f.jobId}`));
+    safeRequests.forEach(r => {
+      getDatesInRange(r.startDate, r.endDate).forEach(d => {
+        if (d < todayStr) allActivityDates.add(`${r.personId}|${d}|${r.jobId}`);
+      });
+    });
+    safeTime.forEach(e => {
+        if (e.date < todayStr) allActivityDates.add(`${e.personId}|${e.date}|${e.jobId}`);
+    });
+    safeFood.forEach(f => {
+        if (f.date < todayStr) allActivityDates.add(`${f.personId}|${f.date}|${f.jobId}`);
+    });
 
     // Passo 1: Para cada atividade detectada, calcula o solicitado e os descontos
     Array.from(allActivityDates).forEach(activity => {
