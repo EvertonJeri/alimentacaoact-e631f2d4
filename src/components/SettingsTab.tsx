@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { Bell, CalendarDays, Plus, Save, Settings, ShieldCheck, Trash2, X, AlertTriangle } from "lucide-react";
+import { Bell, CalendarDays, Plus, Save, Settings, ShieldCheck, Trash2, X, AlertTriangle, CreditCard } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { toast } from "sonner";
@@ -185,73 +185,6 @@ export const SettingsTab = () => {
            </CardContent>
         </Card>
 
-        {/* REGRAS ESPECIAIS / CARTÃO FLASH */}
-        <Card className="border-border shadow-md lg:col-span-3">
-          <CardHeader className="bg-muted/30 border-b border-border py-4">
-             <CardTitle className="text-sm font-bold flex items-center gap-2 font-black uppercase tracking-widest">💳 Regras de Pagamento</CardTitle>
-             <CardDescription className="text-xs">Profissionais PJ (avulsos) que recebem via Cartão Flash ⚡ em vez de Pix.</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-6">
-             <div className="space-y-3">
-               <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Profissionais PJ com Cartão Flash ⚡</Label>
-               {/* Linha de adição — só mostra PJ que ainda não estão na lista */}
-               <div className="flex gap-2">
-                 <Select
-                   value=""
-                   onValueChange={(id) => {
-                     if (!id) return;
-                     const arr = settings.flashCardUsers || [];
-                     if (!arr.includes(id)) {
-                       setSettings({ ...settings, flashCardUsers: [...arr, id] });
-                     }
-                   }}
-                 >
-                   <SelectTrigger className="flex-1 h-9 text-xs">
-                     <SelectValue placeholder="Selecione um profissional PJ para adicionar..." />
-                   </SelectTrigger>
-                   <SelectContent>
-                     {people.data
-                       ?.filter(p => !p.isRegistered && !(settings.flashCardUsers || []).includes(p.id))
-                       .map(p => (
-                         <SelectItem key={p.id} value={p.id} className="text-xs">
-                           {p.name} {p.department ? `· ${p.department}` : ''}
-                         </SelectItem>
-                       ))}
-                     {(people.data || []).filter(p => !p.isRegistered && !(settings.flashCardUsers || []).includes(p.id)).length === 0 && (
-                       <div className="text-xs text-muted-foreground px-3 py-2 italic">Nenhum profissional PJ disponível para adicionar.</div>
-                     )}
-                   </SelectContent>
-                 </Select>
-               </div>
-               {/* Lista de tags */}
-               <div className="flex flex-wrap gap-2 min-h-[40px] p-3 border rounded-xl bg-muted/10">
-                 {(!settings.flashCardUsers || settings.flashCardUsers.length === 0) && (
-                   <span className="text-xs text-muted-foreground italic self-center">Nenhum profissional PJ com Cartão Flash cadastrado.</span>
-                 )}
-                 {(settings.flashCardUsers || []).map(id => {
-                   const person = people.data?.find(p => p.id === id);
-                   if (!person) return null;
-                   return (
-                     <span
-                       key={id}
-                       className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full text-[11px] font-bold bg-orange-100 text-orange-700 border border-orange-200"
-                     >
-                       ⚡ {person.name}
-                       <button
-                         type="button"
-                         onClick={() => setSettings({ ...settings, flashCardUsers: (settings.flashCardUsers || []).filter(uid => uid !== id) })}
-                         className="ml-1 rounded-full hover:bg-orange-200 p-0.5 transition-colors"
-                         title="Remover"
-                       >
-                         <X className="h-3 w-3" />
-                       </button>
-                     </span>
-                   );
-                 })}
-               </div>
-             </div>
-          </CardContent>
-        </Card>
 
         {/* CANAIS DE NOTIFICAÇÃO - 3 tipos */}
         <Card className="border-border shadow-md lg:col-span-3">
@@ -322,6 +255,51 @@ export const SettingsTab = () => {
                <Save className="h-4 w-4" /> Salvar Configurações
              </Button>
           </CardFooter>
+        </Card>
+
+        {/* CARTÃO FLASH */}
+        <Card className="border-border shadow-md lg:col-span-3 border-l-4 border-l-amber-500">
+          <CardHeader className="bg-amber-50/50 border-b border-border py-4">
+             <CardTitle className="text-sm font-bold flex items-center gap-2 font-black uppercase tracking-widest"><CreditCard className="h-4 w-4 text-amber-600" /> Profissionais Cartão Flash</CardTitle>
+             <CardDescription className="text-xs">Pessoas nesta lista serão identificadas na aba de pagamentos para recebimento via Cartão Flash (RH).</CardDescription>
+          </CardHeader>
+          <CardContent className="pt-6 space-y-4">
+             <div className="flex gap-3">
+                <div className="flex-1">
+                   <SearchableSelect
+                      options={people.data?.filter(p => !(settings.flashCardUsers || []).includes(p.id)).map(p => ({ value: p.id, label: p.name })) || []}
+                      onValueChange={(val) => {
+                        if (val && !(settings.flashCardUsers || []).includes(val)) {
+                           setSettings({ ...settings, flashCardUsers: [...(settings.flashCardUsers || []), val] });
+                        }
+                      }}
+                      placeholder="Adicionar profissional..."
+                   />
+                </div>
+             </div>
+             
+             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                {(settings.flashCardUsers || []).map(pid => {
+                   const p = people.data?.find(pers => pers.id === pid);
+                   return (
+                      <div key={pid} className="flex items-center justify-between p-2 bg-amber-50 border border-amber-100 rounded-lg text-xs">
+                         <span className="font-bold text-amber-900 truncate pr-2">{p?.name || pid}</span>
+                         <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-5 w-5 text-amber-700 hover:text-red-600 hover:bg-red-50"
+                            onClick={() => setSettings({ ...settings, flashCardUsers: settings.flashCardUsers?.filter(id => id !== pid) })}
+                         >
+                            <X className="h-3 w-3" />
+                         </Button>
+                      </div>
+                   );
+                })}
+                {(settings.flashCardUsers || []).length === 0 && (
+                   <p className="text-[10px] text-muted-foreground italic col-span-full py-4 text-center">Nenhum profissional na lista do Cartão Flash.</p>
+                )}
+             </div>
+          </CardContent>
         </Card>
 
         {/* FERIADOS */}

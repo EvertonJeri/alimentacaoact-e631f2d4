@@ -98,10 +98,43 @@ export const sendWhatsAppMessage = (message: string, phoneNumber?: string, setti
     return;
   }
 
-  const cleanPhone = target.replace(/\D/g, '');
-  const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(appendAppLink(message))}`;
-  window.open(url, '_blank');
-  toast.success("📲 WhatsApp: Conversa aberta!", { duration: 3000 });
+  const encoded = encodeURIComponent(message);
+  const cleanTarget = String(target).replace(/\D/g, "");
+  const url = `https://wa.me/${cleanTarget}?text=${encoded}`;
+  window.open(url, "_blank");
+};
+
+/**
+ * Abre o menu de compartilhamento nativo do sistema ou WhatsApp Picker.
+ * @param message Texto a ser compartilhado
+ * @param title Título opcional para o compartilhamento (usado em alguns apps)
+ */
+export const shareMessage = async (message: string, title: string = "Sistema ACT - Extrato") => {
+  const settings = getStoredSettings();
+  
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: title,
+        text: message,
+      });
+      return true;
+    } catch (error: any) {
+      // Ignora erro de cancelamento do usuário
+      if (error.name !== 'AbortError') {
+        console.error("Erro ao compartilhar:", error);
+      }
+    }
+  }
+
+  // Fallback: Abre WhatsApp web/app sem destino definido para abrir seletor de contatos
+  if (settings.enableWhatsApp) {
+    const encoded = encodeURIComponent(message);
+    window.open(`https://wa.me/?text=${encoded}`, "_blank");
+  } else {
+    toast.error("Compartilhamento não suportado neste navegador e WhatsApp desativado.");
+  }
+  return false;
 };
 
 export const sendEmailNotification = (subject: string, body: string, emailsOverride?: string, settingsOverride?: SystemSettings) => {

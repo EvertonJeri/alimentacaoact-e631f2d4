@@ -133,10 +133,12 @@ export const useDatabase = () => {
       return (data || []).map((c: any) => ({
         id: c.id,
         type: c.type,
+        personId: c.person_id,
         paymentDate: c.payment_date,
         confirmed: c.confirmed,
         applyBalance: c.apply_balance,
-        appliedBalance: c.applied_balance
+        appliedBalance: c.applied_balance,
+        finalValue: c.final_value
       })) as PaymentConfirmation[];
     },
   });
@@ -265,6 +267,17 @@ export const useDatabase = () => {
           hr_emails: settings.hrEmails,
           discount_alert_date: settings.discountAlertDate,
           discount_auto_send: settings.discountAutoSend,
+          flash_card_users: settings.flashCardUsers || [],
+          clt_alert_day: settings.cltAlertDay,
+          clt_alert_day2: settings.cltAlertDay2,
+          pj_alert_day: settings.pjAlertDay,
+          pj_alert_day2: settings.pjAlertDay2,
+          clt_payment_day: settings.cltPaymentDay,
+          clt_advance_day: settings.cltAdvanceDay,
+          clt_sheet_close_day: settings.cltSheetCloseDay,
+          pj_period1_end_day: settings.pjPeriod1EndDay,
+          pj_period1_payment_day: settings.pjPeriod1PaymentDay,
+          pj_period2_payment_day: settings.pjPeriod2PaymentDay,
         };
         const { error: err2 } = await supabase.from("system_settings").upsert(minPayload, { onConflict: 'id' });
         if (err2) {
@@ -282,10 +295,12 @@ export const useDatabase = () => {
       const payload: any = {
         id: conf.id,
         type: conf.type,
+        person_id: conf.personId,
         payment_date: conf.paymentDate,
         confirmed: conf.confirmed,
         apply_balance: conf.applyBalance,
-        applied_balance: conf.appliedBalance
+        applied_balance: conf.appliedBalance,
+        final_value: conf.finalValue
       };
 
       const { error } = await supabase.from("payment_confirmations").upsert(payload, { onConflict: "id" });

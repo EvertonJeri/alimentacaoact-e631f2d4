@@ -114,20 +114,21 @@ const PaymentTab = ({
     });
   }, [requests, timeEntries]);
 
-  // PERFORMANCE: Calculamos os saldos apenas para as pessoas visíveis nesta aba!
+  // PERFORMANCE & CONSISTENCY: Calculamos os saldos para todas as pessoas envolvidas em requisições
   const personBalancesMap = useMemo(() => {
     const map = new Map<string, number>();
-    const uniquePersons = new Set(registeredRequests.map(r => r.personId));
-    uniquePersons.forEach(pid => {
+    const allPersonsIds = new Set(requests.map(r => r.personId));
+    
+    allPersonsIds.forEach(pid => {
        try {
-         map.set(pid, calculatePersonBalance(pid, requests, foodControl, confirmations, people, timeEntries));
+         const balanceObj = calculatePersonBalance(pid, requests, foodControl, confirmations, people, timeEntries);
+         map.set(pid, balanceObj.totalWallet);
        } catch (e) {
-         console.error("Balance Error:", e);
          map.set(pid, 0);
        }
     });
     return map;
-  }, [registeredRequests, requests, foodControl, confirmations, people, timeEntries]);
+  }, [requests, foodControl, confirmations, people, timeEntries]);
 
   const filteredRequests = (filterJob === "all")
     ? registeredRequests
@@ -162,7 +163,9 @@ const PaymentTab = ({
   };
 
   const getConfirmation = (id: string) => {
-    return (confirmations || []).find((c) => 'id' in c && c.id === id) as PaymentConfirmation | undefined;
+    const rawConfs = (confirmations || []);
+    // Busca tanto o ID puro quanto com o prefixo 'stmt-' (vindo do extrato geral)
+    return rawConfs.find(c => 'id' in c && (c.id === id || c.id === `stmt-${id}`)) as PaymentConfirmation | undefined;
   };
 
   const calcRequestBruto = (req: MealRequest) => {
@@ -180,16 +183,33 @@ const PaymentTab = ({
 
   const getRequestDiscounts = (req: MealRequest) => {
     let total = 0;
-    const dates = getDatesInRange(req.startDate, req.endDate);
-    dates.forEach(d => {
-        const entry = timeEntries.find(e => e.personId === req.personId && e.jobId === req.jobId && e.date === d);
-        const fc = foodControl.find(f => f.personId === req.personId && f.jobId === req.jobId && f.date === d);
-        if (entry) {
-          total += calculateDayDiscount(req, d, entry, fc, people).total;
-        } else if (d < new Date().toISOString().split("T")[0]) {
-          total += calculateDayDiscount(req, d, undefined, fc, people).total;
+    
+    // NOVO: Em vez de iterar apenas pelas datas da solicitação, 
+    // buscamos AGRESSIVAMENTE todos os registros de tempo e comida deste JOB para esta PESSOA.
+    // Isso garante que gastos fora da data (caso do Allan - 79 reais) apareçam.
+    
+    const personTime = timeEntries.filter(e => String(e.personId) === String(req.personId) && String(e.jobId) === String(req.jobId));
+    const personFood = foodControl.filter(f => String(f.personId) === String(req.personId) && String(f.jobId) === String(req.jobId));
+    
+    const allRelevantDates = new Set<string>([
+       ...getDatesInRange(req.startDate, req.endDate),
+       ...personTime.map(e => e.date),
+       ...personFood.map(f => f.date)
+    ]);
+
+    allRelevantDates.forEach(d => {
+        const discountId = `discount-${req.id}-${d}`;
+        // Se já foi confirmado individualmente, ignoramos
+        if (confirmations.some(c => 'id' in c && (c.id === discountId || c.id === `orphan-${req.personId}-${d}`) && c.confirmed)) return;
+
+        const entry = personTime.find(e => e.date === d);
+        const fc = personFood.find(f => f.date === d);
+        
+        if (entry || fc || (d < new Date().toISOString().split("T")[0])) {
+           total += calculateDayDiscount(req, d, entry, fc, people).total;
         }
     });
+    
     return total;
   };
 
@@ -202,30 +222,41 @@ const PaymentTab = ({
         const shouldApply = (applyBalanceMap[id] !== false);
         const currentReqBruto = calcRequestBruto(req) || 0;
         const currentReqDiscounts = getRequestDiscounts(req) || 0;
-        const currentReqNet = currentReqBruto - currentReqDiscounts;
-        const totalWallet = calculatePersonBalance(req.personId, requests, foodControl, confirmations, people, timeEntries) || 0;
-        const retroBalance = isNaN(totalWallet - currentReqNet) ? 0 : (totalWallet - currentReqNet);
+        const currentReqNet = currentReqBruto + currentReqDiscounts;
+        
+        // Pega o saldo da carteira ANTES deste pagamento
+        const balanceObj = calculatePersonBalance(req.personId, requests, foodControl, confirmations, people, timeEntries, req.id);
+        const totalWallet = balanceObj.totalWallet || 0;
+        const retroBalance = totalWallet - currentReqNet;
+        
+        // O valor do PIX é exatamente o que está na tela
         const finalValue = shouldApply ? Math.max(0, currentReqNet + retroBalance) : currentReqBruto;
+        
+        console.log(`[PAGAMENTO] Início da confirmação para ${req.id}:`, {
+            bruto: currentReqBruto,
+            net: currentReqNet,
+            retroBalance,
+            finalValue,
+            shouldApply
+        });
 
         const personName = getPersonName(req.personId);
         const jobName = getJobName(req.jobId);
 
-        // Segurança: data não pode ser vazia
-        const finalPaymentDate = paymentDate || new Date().toISOString().split('T')[0];
-
-        // 1. Atualiza o banco de dados
+        // SALVA o finalValue congelado - esse valor NUNCA mais será recalculado
         await onUpdateConfirmation({ 
             id, 
             type, 
-            paymentDate: finalPaymentDate, 
+            personId: req.personId, // ADICIONADO: Essencial para o vínculo no banco
+            paymentDate: paymentDate || new Date().toISOString().split('T')[0], 
             confirmed: true,
             applyBalance: shouldApply,
-            appliedBalance: isNaN(retroBalance) ? 0 : retroBalance
+            appliedBalance: shouldApply ? retroBalance : 0,
+            finalValue: finalValue
         });
 
         const isFlashUser = systemSettings?.flashCardUsers?.includes(req.personId);
 
-        // 2. Notificação automática
         const waMsg = `✅ *Pagamento Confirmado - Sistema ACT*\n\n👤 Funcionário: ${personName}\n🏗️ Projeto: ${jobName}\n📅 Data: ${paymentDate}\n💰 Valor: R$ ${finalValue.toFixed(2)}${isFlashUser ? '\n💳 Modalidade: Cartão Flash' : ''}`;
         
         if (isFlashUser) {
@@ -259,17 +290,23 @@ const PaymentTab = ({
         // Atualiza todos os profissionais do job
         for (const req of jobReqs) {
           const shouldApply = (applyBalanceMap[req.id] !== false);
-          const totalW = calculatePersonBalance(req.personId, requests, foodControl, confirmations, people, timeEntries);
-          const neto = calcRequestBruto(req) - getRequestDiscounts(req);
+          const bruto = calcRequestBruto(req) || 0;
+          const disc = getRequestDiscounts(req) || 0;
+          const neto = bruto + disc;
+          const balanceObj = calculatePersonBalance(req.personId, requests, foodControl, confirmations, people, timeEntries, req.id);
+          const totalW = balanceObj.totalWallet || 0;
           const retro = totalW - neto;
+          const reqFinalValue = shouldApply ? Math.max(0, neto + retro) : bruto;
 
           await onUpdateConfirmation({ 
               id: req.id, 
               type: 'request', 
+              personId: req.personId, // ADICIONADO: Essencial para o vínculo no banco
               paymentDate, 
               confirmed: true,
               applyBalance: shouldApply,
-              appliedBalance: shouldApply ? retro : 0
+              appliedBalance: shouldApply ? retro : 0,
+              finalValue: reqFinalValue
           });
         }
 
@@ -363,25 +400,45 @@ const PaymentTab = ({
                   const isPaid = conf?.confirmed;
                   const paymentDate = conf?.paymentDate || jobPaymentDate;
 
-                  const currentReqBruto = calcRequestBruto(req);
-                  const discounts = getRequestDiscounts(req);
-                  const currentReqNet = currentReqBruto - discounts;
+                  const dbApply = conf?.applyBalance;
+                  const localApply = applyBalanceMap[req.id] !== false;
+                  const frozenApply = isPaid 
+                    ? (dbApply !== undefined && dbApply !== null ? dbApply !== false : localApply)
+                    : localApply;
                   
-                  // Se já está pago: usa o estado CONGELADO do banco
-                  // Se ainda não pago: usa o estado local (applyBalanceMap)
-                  const frozenApply = isPaid ? (conf?.applyBalance !== false) : (applyBalanceMap[req.id] !== false);
+                  const currentReqBruto = calcRequestBruto(req) || 0;
+                  const currentReqDiscounts = getRequestDiscounts(req) || 0; 
+                  const currentReqNet = currentReqBruto + currentReqDiscounts;
                   
-                  // PERFORMANCE: Usamos o saldo pré-calculado localmente!
-                  const totalWallet = personBalancesMap.get(req.personId) ?? 0;
+                  // NOVO: IMPORTANTE! Passamos o req.id para que o cálculo do saldo NÃO diminua 
+                  // o pagamento que já está lá (se já confirmado no banco), 
+                  // evitando que o valor PIX vire 0 logo após confirmar.
+                  const balanceObj = calculatePersonBalance(req.personId, requests, foodControl, confirmations, people, timeEntries, req.id);
+                  const totalWallet = balanceObj.totalWallet || 0;
                   const retroBalance = totalWallet - currentReqNet;
+                  const adjustmentsFromBalance = balanceObj.adjustments || [];
 
-                  const finalTotal = isPaid 
-                    ? (frozenApply ? (currentReqNet + (conf?.appliedBalance || 0)) : currentReqBruto) 
-                    : (frozenApply ? Math.max(0, currentReqNet + retroBalance) : currentReqBruto);
-
-                  const displayAdjustment = isPaid 
-                    ? (frozenApply ? (conf?.appliedBalance || 0) : 0)
-                    : (frozenApply ? retroBalance : 0);
+                  // SE JÁ ESTÁ PAGO: usa o valor congelado salvo no banco, sem recalcular NADA
+                  // SE NÃO ESTÁ PAGO: calcula normalmente
+                  let finalTotal: number;
+                  let displayAdjustment: number;
+                  
+                  if (isPaid && conf?.finalValue !== undefined && conf?.finalValue !== null) {
+                    // VALOR CONGELADO - exibe exatamente o que foi salvo
+                    finalTotal = conf.finalValue;
+                    displayAdjustment = conf.appliedBalance || 0;
+                  } else if (isPaid) {
+                    // Fallback para pagamentos antigos sem finalValue
+                    const dbAppliedBalance = conf?.appliedBalance ?? retroBalance;
+                    finalTotal = frozenApply ? Math.max(0, currentReqNet + dbAppliedBalance) : currentReqBruto;
+                    displayAdjustment = dbAppliedBalance;
+                  } else {
+                    // NÃO PAGO - calcula em tempo real
+                    finalTotal = frozenApply ? Math.max(0, currentReqNet + retroBalance) : currentReqBruto;
+                    displayAdjustment = frozenApply ? (currentReqDiscounts + retroBalance) : 0;
+                  }
+                  
+                  const currentDiscounts = Math.abs(currentReqDiscounts);
 
                   const isFlashUser = systemSettings?.flashCardUsers?.includes(req.personId);
 
@@ -411,6 +468,14 @@ const PaymentTab = ({
                               <p className="text-[10px] text-muted-foreground uppercase font-medium">
                                 {req.location || 'Local Não Definido'} • {fDate(req.startDate)} a {fDate(req.endDate)}
                               </p>
+                              {/* Botão de Detalhes de Saldo */}
+                              <Badge 
+                                variant="outline" 
+                                className="text-[9px] h-4 cursor-pointer hover:bg-muted/50 border-muted-foreground/20 text-muted-foreground font-bold"
+                                onClick={(e) => { e.stopPropagation(); toggleRequest(req.id); }}
+                              >
+                                {expandedRequests.has(req.id) ? "VER RESUMO" : "VER AJUSTES DETALHADOS"}
+                              </Badge>
                               {getJobName(req.jobId).includes("Removido (") && (
                                 <div className="flex items-center gap-1.5 ring-1 ring-red-200 rounded px-1.5 bg-red-50">
                                   <span className="text-[8px] text-red-500 font-bold uppercase">Corrigir Job:</span>
@@ -442,25 +507,37 @@ const PaymentTab = ({
                               R$ {finalTotal.toFixed(2)}
                             </p>
                             
-                            <div className="flex flex-col items-end pt-1">
-                              {/* Se Saldo ON: Mostra o desconto da montagem atual riscado */}
-                              {(frozenApply && discounts > 0) && (
-                                <span className="text-[10px] text-destructive font-medium opacity-60 line-through">
-                                  - R$ {discounts.toFixed(2)} [DESC. FALTA]
+                            <div className="flex flex-col items-end pt-1 gap-0.5">
+                              {/* Sempre mostra o bruto como referência */}
+                              <span className="text-[9px] text-muted-foreground/50 font-medium">
+                                Bruto: R$ {currentReqBruto.toFixed(2)}
+                              </span>
+
+                              {/* Descontos DESTE projeto */}
+                              {currentDiscounts > 0 && (
+                                <span className={`text-[10px] font-bold ${frozenApply ? 'text-destructive' : 'text-muted-foreground/40 line-through'}`}>
+                                  {currentReqDiscounts > 0 ? '+' : ''}{currentReqDiscounts.toFixed(2)} [DESCONTOS PROJETO]
                                 </span>
                               )}
                               
-                              {/* Se Saldo ON: Mostra o ajuste retroativo (se houver) */}
-                              {(frozenApply && Math.abs(displayAdjustment) > 0.1) && (
-                                <span className={`text-[10px] font-bold ${displayAdjustment < 0 ? 'text-destructive' : 'text-blue-600'}`}>
-                                  {displayAdjustment < 0 ? '' : '+'} R$ {displayAdjustment.toFixed(2)} [SALDO ANTERIOR]
+                              {/* Saldo de OUTROS projetos */}
+                              {Math.abs(retroBalance) > 0.01 && (
+                                <span className={`text-[10px] font-bold ${frozenApply ? (retroBalance < 0 ? 'text-destructive' : 'text-blue-600') : 'text-muted-foreground/40 line-through'}`}>
+                                  {retroBalance > 0 ? '+' : ''}R$ {retroBalance.toFixed(2)} [SALDO OUTROS PROJETOS]
                                 </span>
                               )}
 
-                              {/* Se Saldo OFF: Mostra o valor bruto da montagem sem descontos */}
-                              {!frozenApply && (
+                              {/* Indicador quando NÃO aplicado */}
+                              {!frozenApply && (currentDiscounts > 0 || Math.abs(retroBalance) > 0.01) && (
                                 <span className="text-[10px] text-destructive font-black italic">
                                   SALDO/DESC. NÃO APLICADO
+                                </span>
+                              )}
+
+                              {/* Indicador quando não há nenhum desconto/saldo */}
+                              {currentDiscounts === 0 && Math.abs(retroBalance) < 0.01 && (
+                                <span className="text-[9px] text-muted-foreground/40 italic">
+                                  Sem ajustes pendentes
                                 </span>
                               )}
                             </div>
@@ -549,27 +626,60 @@ const PaymentTab = ({
                             )}
                           </div>
                         </div>
+
+                        {/* Detalhamento de Ajustes Expandido - EXATAMENTE IGUAL AO EXTRATO */}
+                        {expandedRequests.has(req.id) && (
+                          <div className="w-full mt-4 pt-4 border-t border-dashed border-border bg-muted/20 rounded-lg p-3">
+                            <h4 className="text-[10px] font-black uppercase text-muted-foreground mb-2 flex items-center gap-2">
+                              <Calendar className="h-3 w-3" /> Detalhamento de Ajustes e Saldo Carteira
+                            </h4>
+                            <div className="space-y-1">
+                               {adjustmentsFromBalance.length > 0 ? (
+                                 adjustmentsFromBalance.map((adj: any) => (
+                                   <div key={`${adj.date}-${adj.label}`} className="flex justify-between text-[11px] py-1 border-b border-border/30 last:border-0 border-dashed">
+                                     <span className="flex items-center gap-2">
+                                       <span className="text-muted-foreground w-16">{fDate(adj.date)}</span>
+                                       <span>{adj.label}</span>
+                                     </span>
+                                     <span className={`font-bold ${adj.amount < 0 ? 'text-destructive' : 'text-green-600'}`}>
+                                       {adj.amount > 0 ? '+' : ''}R$ {Math.abs(adj.amount).toFixed(2)}
+                                     </span>
+                                   </div>
+                                 ))
+                               ) : (
+                                 <p className="text-[10px] text-muted-foreground italic py-1">Nenhum ajuste específico calculado para este período.</p>
+                               )}
+                            </div>
+
+                            {Math.abs(retroBalance) > 0.01 && (
+                                <div className="mt-2 pt-2 border-t border-blue-100">
+                                  <div className="flex justify-between text-[11px] font-bold text-blue-700 bg-blue-50/50 p-1 rounded">
+                                    <span>Saldo Acumulado de Outros Projetos</span>
+                                    <span>{retroBalance > 0 ? '+' : ''}R$ {retroBalance.toFixed(2)}</span>
+                                  </div>
+                                </div>
+                            )}
+                              
+                            <div className="flex justify-between items-center mt-3 pt-2 border-t border-border/60">
+                                <span className="text-[10px] font-black uppercase">Total a Pagar Final (Com Ajustes)</span>
+                                <span className={`text-xs font-black ${frozenApply ? (displayAdjustment < 0 ? 'text-destructive' : 'text-blue-600') : 'text-muted-foreground opacity-30 text-lg line-through'}`}>
+                                  {displayAdjustment > 0 ? '+' : ''}R$ {displayAdjustment.toFixed(2)}
+                                </span>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      {expandedRequests.has(req.id) && (
-                        <div className="mt-4 ml-10 p-3 rounded-lg border border-border bg-muted/20">
-                           <p className="text-[10px] font-black uppercase text-muted-foreground mb-2">Detalhamento</p>
-                           <div className="flex flex-wrap gap-2">
-                             {req.meals.map(m => <Badge key={m} variant="outline" className="text-[10px]">{MEAL_LABELS[m]}</Badge>)}
-                           </div>
-                           <p className="text-xs text-muted-foreground mt-2 italic">Saldo Retroativo Atual: R$ {retroBalance.toFixed(2)}</p>
-                        </div>
-                      )}
                     </div>
                   );
                 })}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
-  );
+  </div>
+);
 };
 
 export default PaymentTab;

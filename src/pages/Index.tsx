@@ -293,7 +293,7 @@ const Index = () => {
               </div>
             </div>
             <div className="text-2xs text-white font-mono tabular-nums bg-green-600 px-2 py-1 rounded shadow-sm">
-              v1.5.9-stable
+              v1.6.0-stable
             </div>
           </header>
 

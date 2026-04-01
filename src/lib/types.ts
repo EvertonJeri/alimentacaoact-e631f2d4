@@ -124,6 +124,8 @@ export interface PaymentConfirmation {
   confirmed: boolean;
   appliedBalance?: number;
   applyBalance?: boolean;
+  finalValue?: number; // Valor congelado no momento da confirmação
+  personId?: string; // ADICIONADO: Essencial para o saldo global
 }
 
 
@@ -380,24 +382,27 @@ export function calculatePersonBalance(
   foodControl: FoodControlEntry[],
   confirmations: (DiscountConfirmation | PaymentConfirmation)[],
   people: Person[],
-  timeEntries: TimeEntry[]
-): number {
+  timeEntries: TimeEntry[],
+  excludeRequestId?: string // ADICIONADO: Essencial para não zerar o PIX ao confirmar
+): { totalWallet: number; currentReqNet: number; retroBalance: number; adjustments: any[] } {
   const person = people.find(p => p.id === personId);
-  if (!person) return 0;
+  if (!person) return { totalWallet: 0, currentReqNet: 0, retroBalance: 0, adjustments: [] };
 
-  const personRequests = requests.filter(r => r.personId === personId);
-  const reqIds = new Set(personRequests.map(r => r.id));
+  const pId = String(personId || "").toLowerCase();
+  const excludeId = String(excludeRequestId || "").toLowerCase();
   
-  // OTIMIZAÇÃO: Filtramos as confirmações de uma vez só, sem loops aninhados pesados!
+  const personRequests = requests.filter(r => String(r.personId || "").toLowerCase() === pId);
   const personConfs = confirmations.filter(c => {
-    if ('personId' in c) return c.personId === personId;
-    if ('id' in c) return reqIds.has(c.id) || c.id === `job-${personId}`; // Fallback para job IDs legacy
-    return false;
+    if ('personId' in c && String(c.personId || "").toLowerCase() === pId) return true;
+    const cid = ('id' in c) ? String(c.id || "").toLowerCase() : '';
+    if (cid.includes(pId)) return true;
+    return personRequests.some(r => cid.includes(String(r.id || "").toLowerCase()));
   });
 
   let walletBalance = 0;
-  
-  // 1. Créditos (O que a pessoa ganha por solicitação)
+  const adjustments: any[] = [];
+
+  // Parte 1: Créditos (O que a pessoa ganha por solicitação)
   const processedDaysReq = new Set<string>();
   personRequests.forEach(req => {
     const dates = getDatesInRange(req.startDate, req.endDate);
@@ -413,50 +418,84 @@ export function calculatePersonBalance(
     });
   });
 
-  // 2. Débitos e Créditos Diários (Faltas e Extras)
+  // Parte 2: Débitos e Ajustes Diários (Faltas e Extras)
   const processedDaysDisc = new Set<string>();
-  personRequests.forEach(req => {
-    const dates = getDatesInRange(req.startDate, req.endDate);
-    dates.forEach(date => {
-      const dayKey = `${req.jobId}-${date}`;
-      if (processedDaysDisc.has(dayKey)) return;
-      processedDaysDisc.add(dayKey);
+  const allPersonDates = new Set<string>();
+  personRequests.forEach(r => getDatesInRange(r.startDate, r.endDate).forEach(d => allPersonDates.add(d)));
+  foodControl.forEach(f => { if (String(f.personId || "").toLowerCase() === pId) allPersonDates.add(f.date); });
+  timeEntries.forEach(e => { if (String(e.personId || "").toLowerCase() === pId) allPersonDates.add(e.date); });
 
-      // Verificação vital: se o desconto desse dia foi "retirado" (OK manual no item)
-      const discountId = `discount-${req.id}-${date}`;
-      const isItemConfirmed = personConfs.some(c => 'id' in c && c.id === discountId && c.confirmed);
-      if (isItemConfirmed) return;
+  allPersonDates.forEach(date => {
+    const dayKey = `${date}`;
+    if (processedDaysDisc.has(dayKey)) return;
+    processedDaysDisc.add(dayKey);
 
-      const entries = timeEntries.filter(e => e.personId === personId && e.jobId === req.jobId && e.date === date);
-      const entry = entries.find(e => e.isTravelOut || e.isTravelReturn) || entries[0];
-      const fc = foodControl.find(f => f.personId === personId && f.jobId === req.jobId && f.date === date);
-      
-      if (entry || fc) {
-        const dayCalc = calculateDayDiscount(req, date, entry, fc, people);
-        walletBalance += dayCalc.total;
-      }
-    });
-  });
-
-  // 3. Pagamentos Já Realizados (O que diminui o saldo acumulado)
-  personConfs.forEach(conf => {
-    if (!conf.confirmed) return;
+    const req = personRequests.find(r => date >= r.startDate && date <= r.endDate);
+    const entries = timeEntries.filter(e => String(e.personId || "").toLowerCase() === pId && e.date === date);
+    const entry = entries.find(e => e.isTravelOut || e.isTravelReturn) || entries[0];
+    const fc = foodControl.find(f => String(f.personId || "").toLowerCase() === pId && f.date === date);
     
-    // Se for confirmação de solicitação específica
-    const req = personRequests.find(r => r.id === ('id' in conf ? conf.id : ''));
-    if (req) {
-        let paidAmount = 0;
-        getDatesInRange(req.startDate, req.endDate).forEach(d => {
-            getActiveMeals(req, d, person).forEach(m => {
-                paidAmount += getMealValue(m, d, person, req.location);
-            });
-        });
-        const applied = 'appliedBalance' in conf ? (conf.appliedBalance || 0) : 0;
-        walletBalance -= (paidAmount + applied);
+    const orphanReq: MealRequest = { 
+        id: `orphan-${personId}-${date}`, 
+        personId: String(personId), 
+        jobId: String(fc?.jobId || entry?.jobId || 'unknown'), 
+        startDate: date, 
+        endDate: date, 
+        meals: [] as MealType[],
+        location: 'Fora SP' as LocationType
+    };
+
+    const dayCalc = calculateDayDiscount(req || orphanReq, date, entry, fc, people);
+    const val = dayCalc.total;
+    if (Math.abs(val) > 0.01) {
+       const discountId = req ? `discount-${req.id}-${date}` : `orphan-${personId}-${date}`;
+       const isItemHandled = personConfs.some(c => String(c.id || "").toLowerCase() === discountId.toLowerCase() && c.confirmed);
+       
+       if (!isItemHandled) {
+          walletBalance += val;
+          adjustments.push({ date, amount: val, label: dayCalc.reason });
+       }
     }
   });
 
-  return walletBalance;
+  // Parte 3: Pagamentos Já Realizados
+  let currentReqNet = 0;
+  personConfs.forEach(conf => {
+    // Se este for o ID que queremos ignorar (o pagamento que está acontecendo agora), pulamos
+    if (String(conf.id || "").toLowerCase() === excludeId) return;
+
+    if (conf.confirmed) {
+        let valToSubtract = 0;
+        
+        // Se já tiver valor final congelado, usamos ele
+        if ('finalValue' in conf && conf.finalValue !== undefined && conf.finalValue !== null) {
+            valToSubtract = conf.finalValue;
+        } else if ('type' in conf && conf.type === 'request') {
+            const r = requests.find(req => req.id === conf.id);
+            if (r) {
+                const dates = getDatesInRange(r.startDate, r.endDate);
+                dates.forEach(d => {
+                    const meals = getActiveMeals(r, d, person);
+                    meals.forEach(m => valToSubtract += getMealValue(m, d, person, r.location));
+                });
+            }
+        }
+        walletBalance -= valToSubtract;
+    } else {
+        if ('type' in conf && conf.type === 'request') {
+           const r = requests.find(req => req.id === conf.id);
+           if (r) {
+               const dates = getDatesInRange(r.startDate, r.endDate);
+               dates.forEach(d => {
+                   const meals = getActiveMeals(r, d, person);
+                   meals.forEach(m => currentReqNet += getMealValue(m, d, person, r.location));
+               });
+           }
+        }
+    }
+  });
+
+  return { totalWallet: walletBalance, currentReqNet, retroBalance: walletBalance - currentReqNet, adjustments };
 }
 
 export function determineMealsUsed(

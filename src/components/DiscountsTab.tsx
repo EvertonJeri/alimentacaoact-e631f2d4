@@ -107,8 +107,8 @@ const DiscountsTab = ({
   }, [requests]);
 
   // Helper: check if a specific day's discount was already applied (toggled off in Statement)
-  const isDiscountDone = (reqId: string, date: string) => {
-    const discountId = `discount-${reqId}-${date}`;
+  const isDiscountDone = (personId: string, reqId: string | undefined, date: string) => {
+    const discountId = reqId ? `discount-${reqId}-${date}` : `orphan-${personId}-${date}`;
     return (confirmations || []).find(c => 'id' in c && c.id === discountId)?.confirmed || false;
   };
 
@@ -117,36 +117,50 @@ const DiscountsTab = ({
       date >= r.startDate && date <= r.endDate)?.id || '';
   };
 
-  // Calcula TODOS os ajustes (positivos e negativos) por dia
   const allAdjustments = useMemo(() => {
     const rows: DiscountRow[] = [];
     const processedDays = new Set<string>();
 
-    registeredRequests.forEach((req) => {
-      const dates = getDatesInRange(req.startDate, req.endDate);
-      dates.forEach((date) => {
-        const dayKey = `${req.personId}-${req.jobId}-${date}`;
-        if (processedDays.has(dayKey)) return;
-        processedDays.add(dayKey);
+    // NOVO: Busca agressiva incluindo órfãos (para casos como o do Allan)
+    const allActivityDates = new Set<string>();
+    registeredRequests.forEach(r => getDatesInRange(r.startDate, r.endDate).forEach(d => allActivityDates.add(`${r.personId}|${d}`)));
+    timeEntries.forEach(e => allActivityDates.add(`${e.personId}|${e.date}`));
+    foodControl.forEach(f => allActivityDates.add(`${f.personId}|${f.date}`));
 
-        const entries = timeEntries.filter(
-          (e) => e.personId === req.personId && e.jobId === req.jobId && e.date === date
-        );
-        const entry = entries.find(e => e.isTravelOut || e.isTravelReturn) || entries[0];
+    Array.from(allActivityDates).forEach(activity => {
+      const [pid, date] = activity.split('|');
+      const req = registeredRequests.find(r => r.personId === pid && date >= r.startDate && date <= r.endDate);
+      
+      const dayKey = `${pid}-${req?.jobId || 'orphan'}-${date}`;
+      if (processedDays.has(dayKey)) return;
+      processedDays.add(dayKey);
 
-        const fc = foodControl.find(
-          (f) => f.personId === req.personId && f.jobId === req.jobId && f.date === date
-        );
+      const entries = timeEntries.filter(e => String(e.personId) === String(pid) && e.date === date);
+      const entry = entries.find(e => e.isTravelOut || e.isTravelReturn) || entries[0];
+      const fc = foodControl.find(f => String(f.personId) === String(pid) && f.date === date);
 
-        const dayCalc = calculateDayDiscount(req, date, entry || undefined, fc, people);
+      const jobId = req?.jobId || fc?.jobId || entry?.jobId || 'unknown';
+      if (filterJob !== "all" && jobId !== filterJob) return;
+
+      const dayCalc = calculateDayDiscount(
+        req || { id: `orphan-${pid}-${date}`, personId: pid, jobId, startDate: date, endDate: date, meals: [] }, 
+        date, entry || undefined, fc, people
+      );
+
+      if (dayCalc.total !== 0) {
+        const discountId = req ? `discount-${req.id}-${date}` : `orphan-${pid}-${date}`;
+        // Para verificar se já está resolvido, precisamos olhar o discountId correto
+        const done = isDiscountDone(pid, req?.id, date);
         
-        if (dayCalc.total !== 0) {
-          if (filterJob === "all" || req.jobId === filterJob) {
-            const done = isDiscountDone(req.id, date);
-            rows.push({ personId: req.personId, jobId: req.jobId, date, ...dayCalc, _reqId: req.id, _done: done });
-          }
-        }
-      });
+        rows.push({ 
+          personId: pid, 
+          jobId, 
+          date, 
+          ...dayCalc, 
+          _reqId: req?.id, // se for nulo, indica órfão
+          _done: done 
+        });
+      }
     });
 
     return rows;
@@ -428,7 +442,7 @@ const DiscountsTab = ({
                               {done && <Badge variant="outline" className="text-[8px] h-3 px-1 bg-muted/50 border-muted-foreground/30">JÁ RETIRADO</Badge>}
                             </div>
                           </td>
-                          {discountId && onUpdatePaymentConfirmation && (
+                          {onUpdatePaymentConfirmation && (
                             <td className="px-2 py-1.5 text-right">
                               <Button
                                 variant="outline"
@@ -440,8 +454,9 @@ const DiscountsTab = ({
                                 }`}
                                 onClick={(e) => {
                                   e.stopPropagation();
+                                  const finalDiscountId = d._reqId ? `discount-${d._reqId}-${d.date}` : `orphan-${d.personId}-${d.date}`;
                                   onUpdatePaymentConfirmation({
-                                    id: discountId,
+                                    id: finalDiscountId,
                                     type: 'discount',
                                     confirmed: !done,
                                     paymentDate: new Date().toISOString().split('T')[0]
@@ -455,7 +470,8 @@ const DiscountsTab = ({
                             </td>
                           )}
                         </tr>
-                      )})}
+                      );
+                    })}
                     </tbody>
                   </table>
                 </div>

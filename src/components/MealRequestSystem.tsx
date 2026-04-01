@@ -95,7 +95,8 @@ const MealRequestSystem = ({
 
   const balance = useMemo(() => {
     if (!personId || !people || !requests) return 0;
-    return calculatePersonBalance(personId, requests, foodControl, confirmations, people, timeEntries);
+    const balanceObj = calculatePersonBalance(personId, requests, foodControl, confirmations, people, timeEntries);
+    return balanceObj.totalWallet;
   }, [personId, requests, foodControl, confirmations, people, timeEntries]);
 
   const filtered = useMemo(() => {
