@@ -183,27 +183,47 @@ export type Database = {
       }
       payment_confirmations: {
         Row: {
+          applied_balance: number | null
+          apply_balance: boolean | null
           confirmed: boolean
           created_at: string | null
+          final_value: number | null
           id: string
           payment_date: string | null
+          person_id: string | null
           type: string
         }
         Insert: {
+          applied_balance?: number | null
+          apply_balance?: boolean | null
           confirmed?: boolean
           created_at?: string | null
+          final_value?: number | null
           id: string
           payment_date?: string | null
+          person_id?: string | null
           type?: string
         }
         Update: {
+          applied_balance?: number | null
+          apply_balance?: boolean | null
           confirmed?: boolean
           created_at?: string | null
+          final_value?: number | null
           id?: string
           payment_date?: string | null
+          person_id?: string | null
           type?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "payment_confirmations_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       people: {
         Row: {
@@ -244,6 +264,7 @@ export type Database = {
           enable_whatsapp: boolean | null
           finance_emails: string | null
           finance_whatsapp: string | null
+          flash_card_users: string[] | null
           hr_emails: string | null
           hr_whatsapp: string | null
           id: string
@@ -263,6 +284,7 @@ export type Database = {
           enable_whatsapp?: boolean | null
           finance_emails?: string | null
           finance_whatsapp?: string | null
+          flash_card_users?: string[] | null
           hr_emails?: string | null
           hr_whatsapp?: string | null
           id?: string
@@ -282,6 +304,7 @@ export type Database = {
           enable_whatsapp?: boolean | null
           finance_emails?: string | null
           finance_whatsapp?: string | null
+          flash_card_users?: string[] | null
           hr_emails?: string | null
           hr_whatsapp?: string | null
           id?: string

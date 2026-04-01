@@ -476,8 +476,8 @@ const TimeRegistrationTab = ({
   return (
     <div className="space-y-4">
       {/* Add row controls */}
-      <div className="flex flex-wrap gap-3 items-end">
-        <div className="flex-1 min-w-[180px]">
+      <div className="flex flex-col sm:flex-row flex-wrap gap-3 items-stretch sm:items-end">
+        <div className="flex-1 min-w-0 sm:min-w-[180px]">
           <label className="text-2xs uppercase tracking-wider font-medium text-muted-foreground block mb-1.5">
             Pessoa
           </label>
@@ -493,7 +493,7 @@ const TimeRegistrationTab = ({
             searchPlaceholder="Buscar pessoa..."
           />
         </div>
-        <div className="flex-1 min-w-[200px]">
+        <div className="flex-1 min-w-0 sm:min-w-[200px]">
           <label className="text-2xs uppercase tracking-wider font-medium text-muted-foreground block mb-1.5">
             Job
           </label>
@@ -513,7 +513,7 @@ const TimeRegistrationTab = ({
             searchPlaceholder="Buscar JOB..."
           />
         </div>
-        <div className="min-w-[160px]">
+        <div className="min-w-0 sm:min-w-[160px]">
           <label className="text-2xs uppercase tracking-wider font-medium text-muted-foreground block mb-1.5">
             Data
           </label>
@@ -524,16 +524,16 @@ const TimeRegistrationTab = ({
             className="tabular-nums"
           />
         </div>
-        <Button onClick={addEntry} disabled={!selectedPerson || !selectedJob} className="gap-1.5 bg-foreground text-background hover:bg-foreground/90">
+        <Button onClick={addEntry} disabled={!selectedPerson || !selectedJob} className="gap-1.5 bg-foreground text-background hover:bg-foreground/90 w-full sm:w-auto">
           <Plus className="h-3.5 w-3.5" />
           Adicionar
         </Button>
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3 items-end p-3 rounded-lg border border-border bg-muted/30">
-        <Filter className="h-4 w-4 text-muted-foreground mt-1" />
-        <div className="min-w-[160px]">
+      <div className="flex flex-col sm:flex-row flex-wrap gap-3 items-stretch sm:items-end p-3 rounded-lg border border-border bg-muted/30">
+        <Filter className="h-4 w-4 text-muted-foreground hidden sm:block mt-1" />
+        <div className="min-w-0 sm:min-w-[160px]">
           <label className="text-2xs uppercase tracking-wider font-medium text-muted-foreground block mb-1.5">
             Filtrar Pessoa
           </label>
@@ -551,7 +551,7 @@ const TimeRegistrationTab = ({
             className="h-8 text-xs"
           />
         </div>
-        <div className="min-w-[200px]">
+        <div className="min-w-0 sm:min-w-[200px]">
           <label className="text-2xs uppercase tracking-wider font-medium text-muted-foreground block mb-1.5">
             Filtrar Job
           </label>
@@ -572,7 +572,7 @@ const TimeRegistrationTab = ({
             className="h-8 text-xs"
           />
         </div>
-        <div className="min-w-[160px]">
+        <div className="min-w-0 sm:min-w-[160px]">
           <label className="text-2xs uppercase tracking-wider font-medium text-muted-foreground block mb-1.5">
             Filtrar Data
           </label>
@@ -584,9 +584,6 @@ const TimeRegistrationTab = ({
           />
         </div>
         <div className="flex gap-2">
-            <label className="text-2xs uppercase tracking-wider font-medium text-muted-foreground block mb-1.5 invisible">
-              Ordem
-            </label>
             <Button 
                 variant="outline" 
                 size="sm" 
@@ -599,15 +596,17 @@ const TimeRegistrationTab = ({
             </Button>
         </div>
         <div className="flex-1"></div>
-        <TimeRegistrationImportDialog />
-        <Button onClick={exportToExcel} variant="outline" className="h-8 text-xs gap-1.5 shadow-sm">
-          <Download className="h-3.5 w-3.5" />
-          Exportar .xlsx
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <TimeRegistrationImportDialog />
+          <Button onClick={exportToExcel} variant="outline" className="h-8 text-xs gap-1.5 shadow-sm w-full sm:w-auto">
+            <Download className="h-3.5 w-3.5" />
+            Exportar .xlsx
+          </Button>
+        </div>
       </div>
 
-      {/* Table */}
-      <div className="rounded-xl border border-border overflow-x-auto shadow-card">
+      {/* Desktop Table */}
+      <div className="rounded-xl border border-border overflow-x-auto shadow-card hidden md:block">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-muted/50">
@@ -628,7 +627,7 @@ const TimeRegistrationTab = ({
           <tbody className="divide-y divide-border">
             {filteredEntries.length === 0 ? (
               <tr>
-                <td colSpan={11} className="text-center py-10 text-sm text-muted-foreground">
+                <td colSpan={12} className="text-center py-10 text-sm text-muted-foreground">
                   Nenhum registro. Adicione uma pessoa, job e data acima.
                 </td>
               </tr>
@@ -636,15 +635,11 @@ const TimeRegistrationTab = ({
               filteredEntries.map((entry) => {
                 const total = calcTotalMinutes(entry);
                 const has6 = !!(entry.entry3 || entry.exit3);
-                
                 const local = localOverrides[entry.id];
                 const sysTravel = getTravelInfo(entry);
-                
-                // Prioridade total para o que você escolheu no cache local (marcar/desmarcar)
                 const isOut = local?.isTravelOut !== undefined ? local.isTravelOut : (entry.isTravelOut || sysTravel?.type === 'outbound');
                 const isRet = local?.isTravelReturn !== undefined ? local.isTravelReturn : (entry.isTravelReturn || sysTravel?.type === 'return');
                 const isAutoFilled = local?.isAutoFilled !== undefined ? local.isAutoFilled : entry.isAutoFilled;
-
                 const trClass = isOut 
                   ? "bg-orange-100/40 hover:bg-orange-100/60 border-l-8 border-l-orange-500" 
                   : isRet 
@@ -694,54 +689,37 @@ const TimeRegistrationTab = ({
                           )}
                         </div>
                         <div className="flex gap-1 mt-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => autofillRow(entry, 'outbound')}
-                            className={`h-5 px-1.5 text-[8px] font-black border gap-1 shadow-sm transition-all ${isOut ? 'bg-orange-600 text-white border-orange-700 hover:bg-orange-700' : 'bg-muted/30 text-muted-foreground border-border hover:bg-orange-50'}`}
-                          >
+                          <Button variant="ghost" size="sm" onClick={() => autofillRow(entry, 'outbound')}
+                            className={`h-5 px-1.5 text-[8px] font-black border gap-1 shadow-sm transition-all ${isOut ? 'bg-orange-600 text-white border-orange-700 hover:bg-orange-700' : 'bg-muted/30 text-muted-foreground border-border hover:bg-orange-50'}`}>
                             <ArrowRight className="h-2 w-2" /> IDA
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => autofillRow(entry, 'return')}
-                            className={`h-5 px-1.5 text-[8px] font-black border gap-1 shadow-sm transition-all ${isRet ? 'bg-blue-600 text-white border-blue-700 hover:bg-blue-700' : 'bg-muted/30 text-muted-foreground border-border hover:bg-blue-50'}`}
-                          >
+                          <Button variant="ghost" size="sm" onClick={() => autofillRow(entry, 'return')}
+                            className={`h-5 px-1.5 text-[8px] font-black border gap-1 shadow-sm transition-all ${isRet ? 'bg-blue-600 text-white border-blue-700 hover:bg-blue-700' : 'bg-muted/30 text-muted-foreground border-border hover:bg-blue-50'}`}>
                             <ArrowLeft className="h-2 w-2" /> VOLTA
                           </Button>
                         </div>
                       </div>
                     </td>
-                    {(["entry1", "exit1", "entry2", "exit2", "entry3", "exit3"] as const).map(
-                      (field) => (
-                        <td key={field} className="px-1 py-1.5">
-                          <TimeInputCell
-                            initialValue={entry[field]}
-                            onCommit={(val) => updateField(entry.id, field, val)}
-                            className={`h-8 text-xs tabular-nums text-center w-[90px] mx-auto transition-colors ${isAutoFilled ? "text-red-600 font-extrabold border-red-200 bg-red-400/10" : ""}`}
-                          />
-                        </td>
-                      )
-                    )}
+                    {(["entry1", "exit1", "entry2", "exit2", "entry3", "exit3"] as const).map((field) => (
+                      <td key={field} className="px-1 py-1.5">
+                        <TimeInputCell
+                          initialValue={entry[field]}
+                          onCommit={(val) => updateField(entry.id, field, val)}
+                          className={`h-8 text-xs tabular-nums text-center w-[90px] mx-auto transition-colors ${isAutoFilled ? "text-red-600 font-extrabold border-red-200 bg-red-400/10" : ""}`}
+                        />
+                      </td>
+                    ))}
                     <td className="px-3 py-2 text-center text-xs">
                       <div className="flex flex-col items-center gap-1">
                         <span className={`tabular-nums font-semibold ${total > 0 ? "text-primary" : "text-muted-foreground"}`}>
                           {formatMinutes(total)}
                         </span>
-                        <span className="text-[10px] text-muted-foreground">
-                          ({has6 ? "6" : "4"} batidas)
-                        </span>
+                        <span className="text-[10px] text-muted-foreground">({has6 ? "6" : "4"} batidas)</span>
                       </div>
                     </td>
                     <td className="px-2 py-2 text-center">
-                      <Button 
-                        onClick={() => autofillRow(entry)}
-                        size="sm"
-                        variant="ghost"
-                        className={`h-7 px-3 text-[10px] font-black border gap-1.5 transition-all active:scale-95 ${isOut ? 'bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100 shadow-sm' : isRet ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 shadow-sm' : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted opacity-60 hover:opacity-100'}`}
-                        title={isOut ? "Preencher horário de IDA" : isRet ? "Preencher horário de VOLTA" : "Preencher horário padrão 08-18h"}
-                      >
+                      <Button onClick={() => autofillRow(entry)} size="sm" variant="ghost"
+                        className={`h-7 px-3 text-[10px] font-black border gap-1.5 transition-all active:scale-95 ${isOut ? 'bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100 shadow-sm' : isRet ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 shadow-sm' : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted opacity-60 hover:opacity-100'}`}>
                         {isOut ? <ArrowRight className="h-3 w-3" /> : isRet ? <ArrowLeft className="h-3 w-3" /> : <Zap className="h-3 w-3" />}
                         {isOut ? 'IDA' : isRet ? 'VOLTA' : '08-18h'}
                       </Button>
@@ -749,34 +727,15 @@ const TimeRegistrationTab = ({
                     <td className="px-2 py-2">
                       {confirmingDeleteId === entry.id ? (
                         <div className="flex flex-col gap-1 items-center animate-in fade-in zoom-in duration-200">
-                          <span className="text-[9px] font-bold text-red-600 leading-none">Apagar?</span>
+                          <span className="text-[9px] font-bold text-destructive leading-none">Apagar?</span>
                           <div className="flex gap-1">
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => removeEntry(entry.id)}
-                              className="h-5 px-2 text-[9px] font-bold"
-                            >
-                              Sim
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setConfirmingDeleteId(null)}
-                              className="h-5 px-2 text-[9px] font-bold"
-                            >
-                              Não
-                            </Button>
+                            <Button variant="destructive" size="sm" onClick={() => removeEntry(entry.id)} className="h-5 px-2 text-[9px] font-bold">Sim</Button>
+                            <Button variant="outline" size="sm" onClick={() => setConfirmingDeleteId(null)} className="h-5 px-2 text-[9px] font-bold">Não</Button>
                           </div>
                         </div>
                       ) : (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setConfirmingDeleteId(entry.id)}
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors relative"
-                          title="Apagar este registro"
-                        >
+                        <Button variant="ghost" size="icon" onClick={() => setConfirmingDeleteId(entry.id)}
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors" title="Apagar este registro">
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       )}
@@ -787,6 +746,117 @@ const TimeRegistrationTab = ({
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile Cards */}
+      <div className="flex flex-col gap-3 md:hidden">
+        {filteredEntries.length === 0 ? (
+          <div className="text-center py-10 text-sm text-muted-foreground border border-border rounded-xl bg-muted/10">
+            Nenhum registro. Adicione uma pessoa, job e data acima.
+          </div>
+        ) : (
+          filteredEntries.map((entry) => {
+            const total = calcTotalMinutes(entry);
+            const has6 = !!(entry.entry3 || entry.exit3);
+            const local = localOverrides[entry.id];
+            const sysTravel = getTravelInfo(entry);
+            const isOut = local?.isTravelOut !== undefined ? local.isTravelOut : (entry.isTravelOut || sysTravel?.type === 'outbound');
+            const isRet = local?.isTravelReturn !== undefined ? local.isTravelReturn : (entry.isTravelReturn || sysTravel?.type === 'return');
+            const isAutoFilled = local?.isAutoFilled !== undefined ? local.isAutoFilled : entry.isAutoFilled;
+
+            const cardBorder = isOut 
+              ? "border-l-4 border-l-orange-500 bg-orange-50/50" 
+              : isRet 
+              ? "border-l-4 border-l-blue-500 bg-blue-50/50" 
+              : "border-border";
+
+            const jNameStr = getJobName(entry);
+            const jobParts = jNameStr.split(" - ");
+            const jobNum = jobParts[0];
+            const jobDesc = jobParts.slice(1).join(" - ");
+
+            return (
+              <div key={entry.id} className={`rounded-xl border shadow-card p-4 space-y-3 ${cardBorder}`}>
+                {/* Header: Pessoa + Job + Data */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {people.find(p => p.id === entry.personId)?.isRegistered && <span className="text-muted-foreground text-xs opacity-70">(CLT)</span>}
+                      <span className="font-semibold text-sm text-foreground">{getPersonName(entry.personId)}</span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="font-black text-xs text-primary tabular-nums">{jobNum}</span>
+                      {jobDesc && <span className="text-[10px] uppercase font-bold text-muted-foreground truncate">{jobDesc}</span>}
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    <span className="font-bold text-sm tabular-nums text-muted-foreground">
+                      {entry.date?.includes("-") ? entry.date.split("-").reverse().join("/") : entry.date || "—"}
+                    </span>
+                    {isOut && <span className="text-[9px] px-1.5 py-0.5 rounded-full font-black uppercase bg-orange-200 text-orange-800 border border-orange-400">✈️ IDA</span>}
+                    {isRet && <span className="text-[9px] px-1.5 py-0.5 rounded-full font-black uppercase bg-blue-200 text-blue-800 border border-blue-400">✈️ VOLTA</span>}
+                  </div>
+                </div>
+
+                {/* Time inputs grid */}
+                <div className="grid grid-cols-2 gap-2">
+                  {([
+                    ["entry1", "Ent. 1"], ["exit1", "Saída 1"],
+                    ["entry2", "Ent. 2"], ["exit2", "Saída 2"],
+                    ["entry3", "Ent. 3"], ["exit3", "Saída 3"]
+                  ] as [keyof TimeEntry, string][]).map(([field, label]) => (
+                    <div key={field} className="flex flex-col">
+                      <span className="text-[10px] uppercase tracking-wider font-medium text-muted-foreground mb-0.5">{label}</span>
+                      <TimeInputCell
+                        initialValue={entry[field] as string}
+                        onCommit={(val) => updateField(entry.id, field, val)}
+                        className={`h-9 text-sm tabular-nums text-center transition-colors ${isAutoFilled ? "text-red-600 font-extrabold border-red-200 bg-red-400/10" : ""}`}
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                {/* Footer: Total + Actions */}
+                <div className="flex items-center justify-between pt-1 border-t border-border">
+                  <div className="flex items-center gap-3">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] uppercase text-muted-foreground">Total</span>
+                      <span className={`tabular-nums font-bold text-base ${total > 0 ? "text-primary" : "text-muted-foreground"}`}>
+                        {formatMinutes(total)}
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-muted-foreground">({has6 ? "6" : "4"} batidas)</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="sm" onClick={() => autofillRow(entry, 'outbound')}
+                      className={`h-7 px-2 text-[9px] font-black border gap-1 ${isOut ? 'bg-orange-600 text-white border-orange-700' : 'bg-muted/30 text-muted-foreground border-border'}`}>
+                      <ArrowRight className="h-2.5 w-2.5" /> IDA
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => autofillRow(entry, 'return')}
+                      className={`h-7 px-2 text-[9px] font-black border gap-1 ${isRet ? 'bg-blue-600 text-white border-blue-700' : 'bg-muted/30 text-muted-foreground border-border'}`}>
+                      <ArrowLeft className="h-2.5 w-2.5" /> VOLTA
+                    </Button>
+                    <Button onClick={() => autofillRow(entry)} size="sm" variant="ghost"
+                      className="h-7 px-2 text-[9px] font-black border bg-muted/50 text-muted-foreground border-border">
+                      <Zap className="h-2.5 w-2.5" /> 08-18
+                    </Button>
+                    {confirmingDeleteId === entry.id ? (
+                      <div className="flex gap-1 ml-1">
+                        <Button variant="destructive" size="sm" onClick={() => removeEntry(entry.id)} className="h-7 px-2 text-[9px] font-bold">Sim</Button>
+                        <Button variant="outline" size="sm" onClick={() => setConfirmingDeleteId(null)} className="h-7 px-2 text-[9px] font-bold">Não</Button>
+                      </div>
+                    ) : (
+                      <Button variant="ghost" size="icon" onClick={() => setConfirmingDeleteId(entry.id)}
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
     </div>
   );
