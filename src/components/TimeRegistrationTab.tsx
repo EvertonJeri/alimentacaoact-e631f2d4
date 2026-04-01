@@ -476,8 +476,8 @@ const TimeRegistrationTab = ({
   return (
     <div className="space-y-4">
       {/* Add row controls */}
-      <div className="flex flex-wrap gap-3 items-end">
-        <div className="flex-1 min-w-[180px]">
+      <div className="flex flex-col sm:flex-row flex-wrap gap-3 items-stretch sm:items-end">
+        <div className="flex-1 min-w-0 sm:min-w-[180px]">
           <label className="text-2xs uppercase tracking-wider font-medium text-muted-foreground block mb-1.5">
             Pessoa
           </label>
@@ -493,7 +493,7 @@ const TimeRegistrationTab = ({
             searchPlaceholder="Buscar pessoa..."
           />
         </div>
-        <div className="flex-1 min-w-[200px]">
+        <div className="flex-1 min-w-0 sm:min-w-[200px]">
           <label className="text-2xs uppercase tracking-wider font-medium text-muted-foreground block mb-1.5">
             Job
           </label>
@@ -513,7 +513,7 @@ const TimeRegistrationTab = ({
             searchPlaceholder="Buscar JOB..."
           />
         </div>
-        <div className="min-w-[160px]">
+        <div className="min-w-0 sm:min-w-[160px]">
           <label className="text-2xs uppercase tracking-wider font-medium text-muted-foreground block mb-1.5">
             Data
           </label>
@@ -524,7 +524,7 @@ const TimeRegistrationTab = ({
             className="tabular-nums"
           />
         </div>
-        <Button onClick={addEntry} disabled={!selectedPerson || !selectedJob} className="gap-1.5 bg-foreground text-background hover:bg-foreground/90">
+        <Button onClick={addEntry} disabled={!selectedPerson || !selectedJob} className="gap-1.5 bg-foreground text-background hover:bg-foreground/90 w-full sm:w-auto">
           <Plus className="h-3.5 w-3.5" />
           Adicionar
         </Button>
