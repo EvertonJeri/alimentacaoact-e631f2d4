@@ -147,7 +147,8 @@ export const useDatabase = () => {
     queryFn: async () => {
       const { data, error } = await supabase.from("payment_confirmations").select("*");
       if (error) throw error;
-      return (data || []).map((c: any) => ({
+      
+      const raw = (data || []).map((c: any) => ({
         id: c.id,
         type: c.type,
         personId: c.person_id,
@@ -157,6 +158,29 @@ export const useDatabase = () => {
         appliedBalance: c.applied_balance,
         finalValue: c.final_value
       })) as PaymentConfirmation[];
+
+      // DEDUPLICAÇÃO LÓGICA: Se houver 'stmt-abc' e 'abc', unifica em um único registro.
+      const map = new Map<string, PaymentConfirmation>();
+      
+      raw.forEach(c => {
+        // Normaliza o ID para a chave do mapa (sem o prefixo stmt-)
+        const logicalId = c.id.startsWith("stmt-") ? c.id.replace("stmt-", "") : c.id;
+        const existing = map.get(logicalId);
+        
+        if (!existing) {
+          map.set(logicalId, c);
+        } else {
+          // Prioridade 1: O que estiver confirmado
+          // Prioridade 2: O que tiver applyBalance definido (não nulo)
+          const shouldReplace = (!existing.confirmed && c.confirmed) || 
+                                (existing.applyBalance === null && c.applyBalance !== null);
+          if (shouldReplace) {
+             map.set(logicalId, c);
+          }
+        }
+      });
+
+      return Array.from(map.values());
     },
   });
 
