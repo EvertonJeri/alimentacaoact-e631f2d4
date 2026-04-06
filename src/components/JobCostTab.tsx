@@ -102,8 +102,8 @@ const JobCostTab = ({
       totalPlanned, 
       totalDiscount, 
       totalPlannedDiscount,
-      netCost: totalPaid - totalDiscount,
-      plannedNetCost: totalPlanned - totalPlannedDiscount
+      netCost: totalPaid + totalDiscount,
+      plannedNetCost: totalPlanned + totalPlannedDiscount
     };
   };
 
@@ -201,9 +201,13 @@ const JobCostTab = ({
                     )}
                   </td>
                   <td className="px-4 py-4 text-right tabular-nums">
-                    <div className="font-medium text-destructive">- R$ {totalDiscount.toFixed(2)}</div>
+                    <div className="font-medium text-destructive">
+                      {totalDiscount < 0 ? `- R$ ${Math.abs(totalDiscount).toFixed(2)}` : `+ R$ ${totalDiscount.toFixed(2)}`}
+                    </div>
                     {totalDiscount < totalPlannedDiscount && (
-                      <div className="text-[10px] text-muted-foreground italic">Previsto: - R$ {totalPlannedDiscount.toFixed(2)}</div>
+                      <div className="text-[10px] text-muted-foreground italic">
+                        Previsto: {totalPlannedDiscount < 0 ? `- R$ ${Math.abs(totalPlannedDiscount).toFixed(2)}` : `+ R$ ${totalPlannedDiscount.toFixed(2)}`}
+                      </div>
                     )}
                   </td>
                   <td className="px-4 py-4 text-right tabular-nums">
@@ -271,7 +275,10 @@ const JobCostTab = ({
             <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Total de Descontos</span>
           </div>
           <p className="text-2xl font-black tabular-nums text-destructive">
-            - R$ {jobs.reduce((sum, job) => sum + calculateJobCost(job.id).totalDiscount, 0).toFixed(2)}
+            R$ {jobs.reduce((sum, job) => {
+              const disc = calculateJobCost(job.id).totalDiscount;
+              return sum + (disc < 0 ? Math.abs(disc) : 0);
+            }, 0).toFixed(2)}
           </p>
         </div>
 
