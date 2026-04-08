@@ -107,10 +107,10 @@ const FoodControlTab = ({
         });
     });
 
-    // 3. Unificação por Pessoa e Data
+    // 3. Unificação por Pessoa e Data - AGORA RESTRITO AO QUE É "AUTORIZADO" 
+    // (Pessoas só aparecem se tiverem Horas no Job ou Solicitação de Refeição aprovada)
     const masterKeys = new Set<string>();
     timeEntriesByPersonDate.forEach((_, key) => masterKeys.add(key));
-    foodControlByPersonDate.forEach((_, key) => masterKeys.add(key));
     requestsByPersonDate.forEach((_, key) => masterKeys.add(key));
 
     const result: (FoodControlEntry & { key: string })[] = [];
