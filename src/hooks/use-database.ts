@@ -765,7 +765,7 @@ export const useDatabase = () => {
       if (!allP || allP.length <= 1) return;
 
       const normalize = (s: string) => s.toLowerCase()
-        .replace(/\s*\(inativo\)\s*/gi, "")
+        .replace(/\s*\(\s*inativo\s*\d*\s*\)\s*/gi, "")
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "")
         .trim()
