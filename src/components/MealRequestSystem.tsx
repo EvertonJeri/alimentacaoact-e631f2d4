@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { Plus, Trash2, AlertCircle, Utensils, Calendar, ChevronDown, ChevronRight, Send } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -826,7 +827,11 @@ const MealRequestSystem = ({
                                 <SelectValue placeholder="Vincular Job..." />
                               </SelectTrigger>
                               <SelectContent>
-                                {jobs.map(j => <SelectItem key={j.id} value={j.id} className="text-[10px]">{j.name}</SelectItem>)}
+                                {jobs.map(j => (
+                                  <SelectItem key={j.id} value={j.id} className="text-[10px]">
+                                    {j.name}
+                                  </SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
                           )}
@@ -866,7 +871,7 @@ const MealRequestSystem = ({
                             <span className="text-right">Total</span>
                           </div>
                           <div className="divide-y divide-border/50 max-h-[400px] overflow-y-auto">
-                            {(days || []).map(date => {
+                            {getDatesInRange(req.startDate, req.endDate).map(date => {
                               const activeMeals = getActiveMeals(req, date, person);
                               const weekend = isWeekend(date);
                               const holiday = isHoliday(date);

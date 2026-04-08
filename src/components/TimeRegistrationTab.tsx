@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, Filter, Download, Plane, Zap, ArrowRight, ArrowLeft, ArrowUpAZ, ArrowDownAZ } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -485,7 +486,11 @@ const TimeRegistrationTab = ({
             options={people.map(p => ({ 
               value: p.id, 
               label: p.isRegistered ? `(CLT) ${p.name}` : p.name,
-              description: `${p.department || "Geral"} • ${p.isRegistered ? "CLT" : "Avulso"}` 
+              description: (
+                <div className="flex flex-col">
+                    <span className="text-[10px] opacity-70">{p.department || "Geral"} • {p.isRegistered ? "CLT" : "Avulso"}</span>
+                </div>
+              ) as any
             }))}
             value={selectedPerson}
             onValueChange={setSelectedPerson}
@@ -652,7 +657,7 @@ const TimeRegistrationTab = ({
                       <div className="flex flex-col">
                         <span className="flex items-center gap-1">
                           {people.find(p => p.id === entry.personId)?.isRegistered && <span className="text-muted-foreground mr-1 opacity-70">(CLT)</span>}
-                          {getPersonName(entry.personId)}
+                          <span className="truncate max-w-[180px]">{getPersonName(entry.personId)}</span>
                         </span>
                         <span className="text-[9px] text-muted-foreground uppercase leading-none mt-1 opacity-70">
                           {people.find(p => p.id === entry.personId)?.department || "Geral"}

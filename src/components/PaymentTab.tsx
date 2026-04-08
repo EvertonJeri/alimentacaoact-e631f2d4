@@ -202,6 +202,13 @@ const PaymentTab = ({
             if (pFirst === idFirst && pSecond === idSecond) return true;
             if (pFirst === idFirst && pLast === idLast) return true;
             if (pFirst === idFirst && pLast === idSecond) return true;
+
+            // FALLBACK ULTRA LENIENTE: Se o primeiro nome bater perfeitamente, 
+            // basta que QUALQUER pedaço dos outros sobrenomes cruzem (mesmo com erros de digitação tipo Moraes vs Morais sutil ou abreviações)
+            if (pFirst === idFirst && idParts.length > 1) {
+                const superLenient = idParts.slice(1).some(idP => pParts.some(pP => pP.includes(idP) || idP.includes(pP)));
+                if (superLenient) return true;
+            }
          }
          return false;
       });

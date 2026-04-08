@@ -232,7 +232,11 @@ const FoodControlTab = ({
             <SelectContent>
               <SelectItem value="all">Todas as Pessoas</SelectItem>
               {people.sort((a, b) => a.name.localeCompare(b.name)).map((p) => (
-                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                <SelectItem key={p.id} value={p.id}>
+                    <div className="flex flex-col">
+                        <span>{p.name}</span>
+                    </div>
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -269,7 +273,16 @@ const FoodControlTab = ({
             ) : (
               filteredRows.map((row) => (
                 <tr key={row.key} className="hover:bg-muted/30 transition-colors">
-                  <td className="px-3 py-2 font-medium text-foreground whitespace-nowrap">{getPersonName(row.personId)}</td>
+                  <td className="px-3 py-2 font-medium text-foreground whitespace-nowrap">
+                    <div className="flex flex-col">
+                      <span className="flex items-center gap-1">
+                        {getPersonName(row.personId)}
+                      </span>
+                      <span className="text-[9px] text-muted-foreground uppercase opacity-70">
+                        {people.find(p => p.id === row.personId)?.department || "Geral"}
+                      </span>
+                    </div>
+                  </td>
                   <td className="px-3 py-2 tabular-nums text-muted-foreground whitespace-nowrap max-w-[160px] truncate">
                     {(() => {
                       const jStr = getJobName(row);

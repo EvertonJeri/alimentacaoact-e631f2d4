@@ -355,7 +355,16 @@ const DiscountsTab = ({
               >
                 <div className="flex items-center gap-3">
                   {expanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
-                  <span className="font-medium text-foreground">{getPersonName(personId)}</span>
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-foreground">{getPersonName(personId)}</span>
+                      {people.find(p => p.id === personId)?.company && (
+                        <Badge variant="outline" className="text-[8px] font-bold h-4 px-1 bg-emerald-50 text-emerald-700 border-emerald-200 uppercase">
+                          {people.find(p => p.id === personId)?.company}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
                   {isPositiveBalance ? (
                     <Badge className="text-2xs bg-green-100 text-green-700 hover:bg-green-100 border-green-200">
                       💰 Saldo a Pagar
