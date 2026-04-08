@@ -403,9 +403,6 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
           <Button className="bg-green-600 hover:bg-green-700 text-white font-bold gap-2" onClick={sendAllWhatsApp}>
             <Send className="h-4 w-4" /> MANDAR TODOS P/ ZAP
           </Button>
-          <Button variant="destructive" className="font-bold gap-2" onClick={handleSettleBatch}>
-            <CheckCircle2 className="h-4 w-4" /> LIQUIDAR TUDO (TESTE)
-          </Button>
           <Button onClick={() => window.print()}>PDF</Button>
         </div>
       </div>

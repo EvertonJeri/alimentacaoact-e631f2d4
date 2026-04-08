@@ -25,7 +25,7 @@ export const PersonImportDialog = () => {
   const [selectedSheet, setSelectedSheet] = useState<string>("");
   const [workbookCache, setWorkbookCache] = useState<XLSX.WorkBook | null>(null);
   const [pendingPeople, setPendingPeople] = useState<Omit<Person, "id">[]>([]);
-  const { bulkUpsertPeople } = useDatabase();
+  const { bulkUpsertPeople, people } = useDatabase();
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -151,9 +151,11 @@ export const PersonImportDialog = () => {
         const mod = colModalidade !== undefined ? getCellValue(r, colModalidade) : "";
         const cPix = colPix !== undefined ? getCellValue(r, colPix) : "";
         const cEmpresa = colEmpresa !== undefined ? getCellValue(r, colEmpresa) : "";
+        const pointName = colNomePonto !== undefined ? getCellValue(r, colNomePonto) : "";
         
-        // HACK DE BANCO DE DADOS: Guardamos a empresa e o departamento na mesma coluna nativa separados por "::"
-        const finalDept = cEmpresa ? `${cEmpresa}::${dept}` : dept;
+        // HACK DE BANCO DE DADOS: Guardamos a empresa, o departamento, o NOME (PONTO) e o STATUS na mesma coluna
+        // Estrutura: Empresa::Departamento::NomePonto::Status
+        const finalDept = `${cEmpresa}::${dept}::${pointName}::active`;
 
         const isReg = mod.toLowerCase().includes("registrado") || mod.toLowerCase().includes("contratado") || mod.toLowerCase().includes("clt");
 
@@ -213,8 +215,35 @@ export const PersonImportDialog = () => {
     if (pendingPeople.length === 0) return;
     setLoading(true);
     try {
-      await bulkUpsertPeople.mutateAsync(pendingPeople);
-      toast.success(`${pendingPeople.length} Funcionários sincronizados com sucesso!`);
+      // LOGICA DE "REPLACE" INTELIGENTE:
+      // Queremos que a lista no sistema seja IDENTICA ao que está no Excel agora,
+      // mas SEM apagar os registros de quem saiu (para não perder o histórico).
+      
+      const currentDbPeople = people.data || [];
+      const updatedList: Omit<Person, "id">[] = [...pendingPeople];
+
+      // 1. Identifica quem está no Banco mas NÃO está no novo Excel
+      const excelNames = new Set(pendingPeople.map(p => p.name.toLowerCase().trim()));
+      
+      currentDbPeople.forEach(dbP => {
+          const nameKey = dbP.name.toLowerCase().trim();
+          if (!excelNames.has(nameKey)) {
+              // Se não está no Excel, marcamos como INATIVO no banco
+              // Preservando os dados originais (Empresa::Depto::Alias)
+              const rawDept = dbP.company ? `${dbP.company}::${dbP.department}::${dbP.pointName || ''}::inactive` : `::${dbP.department}::${dbP.pointName || ''}::inactive`;
+              
+              updatedList.push({
+                  name: dbP.name,
+                  department: rawDept,
+                  isRegistered: dbP.isRegistered,
+                  pix: dbP.pix,
+                  isActive: false
+              });
+          }
+      });
+
+      await bulkUpsertPeople.mutateAsync(updatedList);
+      toast.success(`${pendingPeople.length} Funcionários sincronizados (Lista substituída mantendo histórico).`);
       handleClose();
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);

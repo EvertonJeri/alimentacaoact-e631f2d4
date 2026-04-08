@@ -169,8 +169,18 @@ const PaymentTab = ({
     // Se ainda não, tenta pelo formato "NOME.SOBRENOME" (NOME (PONTO))
     const pByPoint = people.find(p => {
         if (!p.pix) return false;
-        const pointName = p.name.replace(/\s+/g, '.').toUpperCase();
-        return id.toUpperCase() === pointName || id.toUpperCase() === p.name.toUpperCase();
+        const normalizedId = id.trim().toUpperCase();
+        const normalizedName = p.name.toUpperCase();
+        const normalizedAlias = (p.pointName || "").trim().toUpperCase();
+        
+        // 1. Match exato com Nome Completo
+        if (normalizedId === normalizedName) return true;
+        // 2. Match exato com Nome Ponto (Alias)
+        if (normalizedAlias && normalizedId === normalizedAlias) return true;
+        
+        // 3. Fallback pontuado (Joao.Silva)
+        const dottedName = p.name.replace(/\s+/g, '.').toUpperCase();
+        return normalizedId === dottedName;
     });
     if (pByPoint) return pByPoint;
 

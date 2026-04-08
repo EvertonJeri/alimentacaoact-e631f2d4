@@ -483,7 +483,7 @@ const TimeRegistrationTab = ({
             Pessoa
           </label>
           <SearchableSelect
-            options={people.map(p => ({ 
+            options={people.filter(p => p.isActive !== false).map(p => ({ 
               value: p.id, 
               label: p.isRegistered ? `(CLT) ${p.name}` : p.name,
               description: (
@@ -545,7 +545,7 @@ const TimeRegistrationTab = ({
           <SearchableSelect
             options={[
               { value: "all", label: "Todas" }, 
-              ...people.map(p => ({ 
+              ...people.filter(p => p.isActive !== false).map(p => ({ 
                 value: p.id, 
                 label: p.isRegistered ? `(CLT) ${p.name}` : p.name,
                 description: `${p.department || "Geral"} • ${p.isRegistered ? "CLT" : "Avulso"}`
@@ -602,7 +602,7 @@ const TimeRegistrationTab = ({
         </div>
         <div className="flex-1"></div>
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-          <TimeRegistrationImportDialog />
+          {/* Restauração removida por solicitação */}
           <Button onClick={exportToExcel} variant="outline" className="h-8 text-xs gap-1.5 shadow-sm w-full sm:w-auto">
             <Download className="h-3.5 w-3.5" />
             Exportar .xlsx

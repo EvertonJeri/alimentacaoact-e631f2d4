@@ -24,13 +24,15 @@ export const SettingsTab = () => {
     updateSystemSettings, 
     updateCustomHolidays,
     clearAllJobs,
+    clearAllPeople,
     people,
     jobs,
     timeEntries,
     requests: mealRequests,
     updateTimeEntries,
     updateMealRequests,
-    repairHistoricalData
+    repairHistoricalData,
+    repairPeopleData
   } = useDatabase();
 
   const [settings, setSettings] = useState<SystemSettings>(() => {
@@ -384,6 +386,8 @@ export const SettingsTab = () => {
             )}
           </Card>
         )}
+
+        {/* Seção de manutenção removida para segurança da produção */}
 
       </div>
     </div>

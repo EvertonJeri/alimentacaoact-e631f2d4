@@ -231,7 +231,7 @@ const FoodControlTab = ({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas as Pessoas</SelectItem>
-              {people.sort((a, b) => a.name.localeCompare(b.name)).map((p) => (
+              {people.filter(p => p.isActive !== false).sort((a, b) => a.name.localeCompare(b.name)).map((p) => (
                 <SelectItem key={p.id} value={p.id}>
                     <div className="flex flex-col">
                         <span>{p.name}</span>

@@ -214,9 +214,6 @@ export const TimeRegistrationImportDialog = () => {
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!loading) setOpen(v); }}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="border-green-600 text-green-700 bg-green-50 shadow-sm gap-2">
-          <Upload className="h-4 w-4" /> Restaurar Excel de Horas
-        </Button>
       </DialogTrigger>
       <DialogContent className="max-w-md">
         <DialogHeader>

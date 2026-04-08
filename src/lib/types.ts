@@ -6,6 +6,8 @@ export interface Person {
   department?: string;
   pix?: string;
   company?: string;
+  pointName?: string;
+  isActive?: boolean;
 }
 
 export interface TimeEntry {

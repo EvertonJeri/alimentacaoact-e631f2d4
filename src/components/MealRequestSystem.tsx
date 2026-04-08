@@ -582,7 +582,7 @@ const MealRequestSystem = ({
             <div className="space-y-3">
               <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Pessoa no Projeto</Label>
               <SearchableSelect
-                options={(people || []).map(p => ({
+                options={(people || []).filter(p => p.isActive !== false).map(p => ({
                   value: p.id,
                   label: p.isRegistered ? `⚠️ CLT • ${p.name}` : p.name,
                   description: `${p.department || "Geral"} • ${p.isRegistered ? "CLT (sem almoço seg-sex)" : "Avulso PJ"}`

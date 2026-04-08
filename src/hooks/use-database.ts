@@ -25,12 +25,21 @@ export const useDatabase = () => {
         let rawDept = p.department || "";
         let comp = "";
         let finalDept = rawDept;
+        let alias = "";
+        let active = true;
 
-        // Se houver a assinatura "::", separamos Empresa do Departamento
+        // Se houver a assinatura "::", separamos Empresa::Departamento::NomePonto::Status
         if (rawDept.includes("::")) {
             const parts = rawDept.split("::");
-            comp = parts[0];
-            finalDept = parts.slice(1).join("::"); // caso haja mais de um '::'
+            comp = parts[0] || "";
+            finalDept = parts[1] || "";
+            alias = parts[2] || "";
+            active = parts[3] !== "inactive";
+            
+            // Caso seja o formato antigo (apenas 2 partes)
+            if (parts.length === 2 && rawDept.split("::").length === 2) {
+                finalDept = parts[1];
+            }
         }
 
         return {
@@ -40,6 +49,8 @@ export const useDatabase = () => {
           isRegistered: p.is_registered || false,
           pix: p.pix || "",
           company: comp,
+          pointName: alias,
+          isActive: active
         };
       }) as Person[];
     },
@@ -712,22 +723,31 @@ export const useDatabase = () => {
   });
 
   const bulkUpsertPeople = useMutation({
-    mutationFn: async (list: Omit<Person, 'id'>[]) => {
-      // 1. Remove duplicatas do próprio Excel (mantém a última ocorrência)
-      const uniqueList = Array.from(
-        new Map(list.map(p => [p.name.toLowerCase().trim(), p])).values()
-      );
+    mutationFn: async (newList: Omit<Person, 'id'>[]) => {
+      // Deduplicação inicial
+      const uniqueMap = new Map<string, any>();
+      newList.forEach(p => {
+        const key = p.name.trim().toLowerCase();
+        if (!uniqueMap.has(key)) {
+          uniqueMap.set(key, p);
+        }
+      });
+      const uniqueList = Array.from(uniqueMap.values());
 
-      const toUpsert = uniqueList.map(person => ({
-        name: person.name,
-        department: person.department || 'Geral',
-        is_registered: person.isRegistered ?? false,
-        pix: person.pix || null,
-      }));
+      const toUpsert = uniqueList.map(person => {
+          // Constrói o departamento multiplexado
+          const isActive = person.isActive !== false;
+          const finalDept = `${person.company || ''}::${person.department || 'Geral'}::${person.pointName || ''}::${isActive ? 'active' : 'inactive'}`;
+          
+          return {
+            name: person.name.trim(),
+            department: finalDept,
+            is_registered: person.isRegistered ?? false,
+            pix: person.pix || null,
+          };
+      });
 
-      // 2. Faz o upsert direto pelo nome. Como o banco tem a constraint unique 'people_name_key', 
-      // isso atualizará corretamente os existentes e inserirá os novos, sem sofrer com o limite 
-      // de 1000 linhas de um SELECT prévio.
+      // 2. Faz o upsert direto pelo nome. 
       if (toUpsert.length > 0) {
         const { error } = await supabase.from('people').upsert(toUpsert, { onConflict: 'name' });
         if (error) throw new Error(`Erro ao salvar: ${error.message}`);
@@ -735,6 +755,113 @@ export const useDatabase = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['people'] });
+    },
+  });
+
+  const repairPeopleData = useMutation({
+    mutationFn: async () => {
+      // 1. Busca todos os Profissionais para identificar duplicatas sutilmente
+      const { data: allP } = await supabase.from("people").select("*").order("name");
+      if (!allP || allP.length <= 1) return;
+
+      const normalize = (s: string) => s.toLowerCase()
+        .replace(/\s*\(inativo\)\s*/gi, "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim()
+        .replace(/\s+/g, ' ');
+      
+      const winnersMap = new Map<string, any>(); // Normalized -> Best Record
+      const merges = new Map<string, string>();   // LoserID -> WinnerID
+
+      allP.forEach(p => {
+          const norm = normalize(p.name);
+          const isInactive = p.name.toLowerCase().includes("(inativo)");
+          const existingWinner = winnersMap.get(norm);
+
+          if (existingWinner) {
+              const winnerIsInactive = existingWinner.name.toLowerCase().includes("(inativo)");
+              
+              // Preferir o que NÃO é inativo, independente do tamanho
+              if (winnerIsInactive && !isInactive) {
+                  merges.set(existingWinner.id, p.id);
+                  winnersMap.set(norm, p);
+              } else if (!winnerIsInactive && isInactive) {
+                  merges.set(p.id, existingWinner.id);
+              } else {
+                  // Ambos ativos ou ambos inativos: vence o nome mais longo
+                  if (p.name.length > existingWinner.name.length) {
+                      merges.set(existingWinner.id, p.id);
+                      winnersMap.set(norm, p);
+                  } else {
+                      merges.set(p.id, existingWinner.id);
+                  }
+              }
+          } else {
+              winnersMap.set(norm, p);
+          }
+      });
+
+      // ADICIONAL: Qualquer um que ainda tenha (inativo) e NÃO foi mapeado como perdedor por nome (ex: único na base)
+      const individualInactives = allP.filter(p => p.name.toLowerCase().includes("(inativo)") && !merges.has(p.id));
+      individualInactives.forEach(p => {
+          merges.set(p.id, "DELETE_ONLY"); 
+      });
+
+      if (merges.size === 0) {
+          toast.info("Nenhuma duplicata ou inativo encontrado.");
+          return;
+      }
+
+      // 2. Busca dados históricos para re-link
+      const { data: entries } = await supabase.from("time_entries").select("*");
+      const { data: requests } = await supabase.from("meal_requests").select("*");
+      const { data: food } = await supabase.from("food_control").select("*");
+
+      const entriesToFix: any[] = [];
+      (entries || []).forEach(e => {
+          const winnerId = merges.get(e.person_id);
+          if (winnerId && winnerId !== "DELETE_ONLY") entriesToFix.push({ ...e, person_id: winnerId });
+      });
+
+      const reqsToFix: any[] = [];
+      (requests || []).forEach(r => {
+          const winnerId = merges.get(r.person_id);
+          if (winnerId && winnerId !== "DELETE_ONLY") reqsToFix.push({ ...r, person_id: winnerId });
+      });
+
+      const foodToFix: any[] = [];
+      (food || []).forEach(f => {
+          const winnerId = merges.get(f.person_id);
+          if (winnerId && winnerId !== "DELETE_ONLY") foodToFix.push({ ...f, person_id: winnerId });
+      });
+
+      // 3. Execução
+      if (entriesToFix.length > 0) await supabase.from("time_entries").upsert(entriesToFix);
+      if (reqsToFix.length > 0) await supabase.from("meal_requests").upsert(reqsToFix);
+      if (foodToFix.length > 0) await supabase.from("food_control").upsert(foodToFix);
+
+      // 4. Apaga os perdedores
+      const loserIds = Array.from(merges.keys());
+      await supabase.from("people").delete().in("id", loserIds);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["people"] });
+      queryClient.invalidateQueries({ queryKey: ["time_entries"] });
+      queryClient.invalidateQueries({ queryKey: ["meal_requests"] });
+      queryClient.invalidateQueries({ queryKey: ["food_control"] });
+      toast.success("Duplicatas unificadas e registros vinculados!");
+    },
+  });
+
+  const clearAllPeople = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("people").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["people"] });
+      toast.success("Banco de Profissionais limpo!");
     },
   });
 
@@ -962,7 +1089,9 @@ export const useDatabase = () => {
     updateCustomHolidays,
     bulkUpsertPeople,
     clearAllJobs,
+    clearAllPeople,
     bulkInsertJobs,
     repairHistoricalData,
+    repairPeopleData,
   };
 };
