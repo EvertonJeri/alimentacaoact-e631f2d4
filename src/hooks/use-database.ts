@@ -21,14 +21,27 @@ export const useDatabase = () => {
     queryFn: async () => {
       const { data, error } = await supabase.from("people").select("*").order("name");
       if (error) throw error;
-      return (data || []).map((p: any) => ({
-        id: p.id,
-        name: p.name,
-        department: p.department || "",
-        isRegistered: p.is_registered || false,
-        pix: p.pix || "",
-        company: p.company || "",
-      })) as Person[];
+      return (data || []).map((p: any) => {
+        let rawDept = p.department || "";
+        let comp = "";
+        let finalDept = rawDept;
+
+        // Se houver a assinatura "::", separamos Empresa do Departamento
+        if (rawDept.includes("::")) {
+            const parts = rawDept.split("::");
+            comp = parts[0];
+            finalDept = parts.slice(1).join("::"); // caso haja mais de um '::'
+        }
+
+        return {
+          id: p.id,
+          name: p.name,
+          department: finalDept,
+          isRegistered: p.is_registered || false,
+          pix: p.pix || "",
+          company: comp,
+        };
+      }) as Person[];
     },
   });
 
@@ -710,7 +723,6 @@ export const useDatabase = () => {
         department: person.department || 'Geral',
         is_registered: person.isRegistered ?? false,
         pix: person.pix || null,
-        company: person.company || null,
       }));
 
       // 2. Faz o upsert direto pelo nome. Como o banco tem a constraint unique 'people_name_key', 

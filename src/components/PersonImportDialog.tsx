@@ -151,13 +151,16 @@ export const PersonImportDialog = () => {
         const mod = colModalidade !== undefined ? getCellValue(r, colModalidade) : "";
         const cPix = colPix !== undefined ? getCellValue(r, colPix) : "";
         const cEmpresa = colEmpresa !== undefined ? getCellValue(r, colEmpresa) : "";
+        
+        // HACK DE BANCO DE DADOS: Guardamos a empresa e o departamento na mesma coluna nativa separados por "::"
+        const finalDept = cEmpresa ? `${cEmpresa}::${dept}` : dept;
 
         const isReg = mod.toLowerCase().includes("registrado") || mod.toLowerCase().includes("contratado") || mod.toLowerCase().includes("clt");
 
         const lowerName = name.toLowerCase();
 
         const newEntry = {
-            p: { name: name.trim(), department: dept, isRegistered: isReg, pix: cPix, company: cEmpresa },
+            p: { name: name.trim(), department: finalDept, isRegistered: isReg, pix: cPix, company: cEmpresa },
             sit
         };
 
