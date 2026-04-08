@@ -27,6 +27,7 @@ export const useDatabase = () => {
         department: p.department || "",
         isRegistered: p.is_registered || false,
         pix: p.pix || "",
+        company: p.company || "",
       })) as Person[];
     },
   });
@@ -262,6 +263,13 @@ export const useDatabase = () => {
 
   const updateSystemSettings = useMutation({
     mutationFn: async (settings: SystemSettings) => {
+      // FALLBACK LOCAL: Sempre salva os Flash Users localmente para persistir independente do banco
+      try {
+          if (settings.flashCardUsers) {
+              localStorage.setItem("act_flash_card_users", JSON.stringify(settings.flashCardUsers));
+          }
+      } catch(e) { console.error("Erro ao salvar cartões flash no localStorage", e); }
+
       // 1. TENTATIVA COMPLETA (Tudo o que o sistema suporta)
       const fullPayload: any = {
         id: "default",
@@ -702,6 +710,7 @@ export const useDatabase = () => {
         department: person.department || 'Geral',
         is_registered: person.isRegistered ?? false,
         pix: person.pix || null,
+        company: person.company || null,
       }));
 
       // 2. Faz o upsert direto pelo nome. Como o banco tem a constraint unique 'people_name_key', 
