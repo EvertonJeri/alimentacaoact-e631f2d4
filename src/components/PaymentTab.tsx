@@ -152,6 +152,22 @@ const PaymentTab = ({
     });
   };
 
+  const getPerson = (id: string) => {
+    const p = people.find((p) => p.id === id);
+    if (p) return p;
+
+    // Se não achou pelo ID, tenta pelo Nome (caso o ID seja um nome vindo de importação)
+    const pByName = people.find(p => p.name.toLowerCase().trim() === id.toLowerCase().trim());
+    if (pByName) return pByName;
+
+    // Se ainda não achou, tenta bater pelo formato "NOME.SOBRENOME" (NOME (PONTO))
+    const pByPoint = people.find(p => {
+        const pointName = p.name.replace(/\s+/g, '.').toUpperCase();
+        return id.toUpperCase() === pointName || id.toUpperCase() === p.name.toUpperCase();
+    });
+    return pByPoint;
+  };
+
   const getConfirmation = (id: string) => {
     const rawConfs = (confirmations || []);
     // Busca tanto o ID puro quanto com o prefixo 'stmt-' (vindo do extrato geral)
@@ -250,7 +266,7 @@ const PaymentTab = ({
 
         const isFlashUser = systemSettings?.flashCardUsers?.includes(req.personId);
 
-        const waMsg = `✅ *Pagamento Confirmado - Sistema ACT*\n\n👤 Funcionário: ${personName}\n🏗️ Projeto: ${jobName}\n📅 Data: ${paymentDate}\n💰 Valor: R$ ${finalValue.toFixed(2)}${isFlashUser ? '\n💳 Modalidade: Cartão Flash' : ''}`;
+        const waMsg = `✅ *Pagamento Confirmado - Sistema ACT*\n\n👤 Funcionário: ${personName}\n🏗️ Projeto: ${jobName}\n📅 Período: ${fDate(req.startDate)} a ${fDate(req.endDate)}\n💰 Valor: R$ ${finalValue.toFixed(2)}${isFlashUser ? '\n💳 Modalidade: Cartão Flash' : ''}`;
         
         if (isFlashUser) {
            // Notifica Admin e Financeiro/RH (Cartão Flash)
@@ -322,7 +338,13 @@ const PaymentTab = ({
 
         // Notificação automática via E-mail e WhatsApp (conforme configurado em Settings)
         const jobName = getJobName(jobId, pendingJobReqs[0].personId);
-        const jobWaMsg = `🏦 *FECHAMENTO DE PROJETO (PENDENTES)*\n\n🏗️ Projeto: ${jobName}\n📅 Data: ${paymentDate}\n\n👥 *Profissionais Liquidados:*${personLines}\n\n💰 *Total Lote:* R$ ${totalLiquidated.toFixed(2)}`;
+        
+        // Pega o range de datas do lote
+        const startDates = pendingJobReqs.map(r => r.startDate).sort();
+        const endDates = pendingJobReqs.map(r => r.endDate).sort();
+        const periodStr = `${fDate(startDates[0])} a ${fDate(endDates[endDates.length - 1])}`;
+
+        const jobWaMsg = `🏦 *FECHAMENTO DE PROJETO (PENDENTES)*\n\n🏗️ Projeto: ${jobName}\n📅 Período Alimentação: ${periodStr}\n📅 Data Pagamento: ${paymentDate}\n\n👥 *Profissionais Liquidados:*${personLines}\n\n💰 *Total Lote:* R$ ${totalLiquidated.toFixed(2)}`;
         
         // Dispara para o Administrador
         notifyAdminPayment(jobWaMsg);
@@ -464,9 +486,9 @@ const PaymentTab = ({
                                       💳 Cartão Flash (RH)
                                     </Badge>
                                   )}
-                                  {people.find(p => p.id === req.personId)?.pix && !isFlashUser && (
+                                  {getPerson(req.personId)?.pix && !isFlashUser && (
                                     <Badge variant="secondary" className="text-[11px] font-bold tracking-tight text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 h-5 items-center">
-                                      PIX: {people.find(p => p.id === req.personId)?.pix}
+                                      PIX: {getPerson(req.personId)?.pix}
                                     </Badge>
                                   )}
                                 </p>

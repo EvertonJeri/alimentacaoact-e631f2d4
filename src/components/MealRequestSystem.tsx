@@ -686,7 +686,15 @@ const MealRequestSystem = ({
                 onClick={() => {
                   const job = jobs.find(j => j.id === selectedJob);
                   const jobName = job?.name || "";
-                  const msg = `🏗️ *RESUMO DO JOB*\n\n📌 *"Job" - "${jobName}"*\n\n👥 Profissionais Ativos: ${financeSummary.count}\n💰 Valor Estimado: R$ ${financeSummary.total.toFixed(2)}\n\n_Enviado via Sistema ACT_`;
+                  
+                  // Pega o range de datas do job selecionado
+                  const startDates = filtered.map(r => r.startDate).sort();
+                  const endDates = filtered.map(r => r.endDate).sort();
+                  const periodStr = filtered.length > 0 
+                    ? `${fDate(startDates[0])} a ${fDate(endDates[endDates.length - 1])}`
+                    : "Período não definido";
+
+                  const msg = `🏗️ *RESUMO DO JOB*\n\n📌 *"Job" - "${jobName}"*\n📅 Período: ${periodStr}\n\n👥 Profissionais Ativos: ${financeSummary.count}\n💰 Valor Estimado: R$ ${financeSummary.total.toFixed(2)}\n\n_Enviado via Sistema ACT_`;
 
                   if (navigator.share) {
                     // Tenta usar a API de compartilhamento do sistema (Funciona em mobile e navegadores modernos)
