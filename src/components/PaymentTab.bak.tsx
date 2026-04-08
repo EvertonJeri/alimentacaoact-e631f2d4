@@ -66,10 +66,7 @@ const PaymentTab = ({
   }, [initialJobFilter]);
   
   const fDate = (d: string) => (d && d.includes("-") ? d.split("-").reverse().join("/") : d || "—");
-  const getPersonName = (id: string) => {
-    const p = getPerson(id);
-    return p ? p.name : id;
-  };
+  const getPersonName = (id: string) => people.find((p) => p.id === id)?.name || "—";
   const getJobName = (id: string, personId?: string) => {
     if (!id) return "—";
     const cleanId = id.trim();
@@ -156,60 +153,19 @@ const PaymentTab = ({
   };
 
   const getPerson = (id: string) => {
-    // Busca inicial pelo ID
-    let bestMatch = people.find((p) => p.id === id);
-    
-    // Se achou alguém, e tem PIX, já pode retornar com segurança
-    if (bestMatch?.pix) return bestMatch;
+    const p = people.find((p) => p.id === id);
+    if (p) return p;
 
-    // Se não achou pelo ID (ou achou um dummy sem PIX), tenta pelo Nome exato
-    const pByName = people.find(p => p.name.toLowerCase().trim() === id.toLowerCase().trim() && p.pix);
+    // Se não achou pelo ID, tenta pelo Nome (caso o ID seja um nome vindo de importação)
+    const pByName = people.find(p => p.name.toLowerCase().trim() === id.toLowerCase().trim());
     if (pByName) return pByName;
 
-    // Se ainda não, tenta pelo formato "NOME.SOBRENOME" (NOME (PONTO))
+    // Se ainda não achou, tenta bater pelo formato "NOME.SOBRENOME" (NOME (PONTO))
     const pByPoint = people.find(p => {
-        if (!p.pix) return false;
         const pointName = p.name.replace(/\s+/g, '.').toUpperCase();
         return id.toUpperCase() === pointName || id.toUpperCase() === p.name.toUpperCase();
     });
-    if (pByPoint) return pByPoint;
-
-    // Fallback agressivo: Tenta buscar pelo "Nome + Primeiro Sobrenome" ou "Nome + Último Sobrenome"
-    const normalize = (str: string) => str.toLowerCase().trim().replace(/\s+/g, ' ');
-    const idParts = normalize(id).split(' ');
-    
-    if (idParts.length >= 2) {
-      const idFirst = idParts[0];
-      const idSecond = idParts[1]; 
-      const idLast = idParts[idParts.length - 1];
-
-      // OTIMIZAÇÃO MAXIMA FUZZY: Verifica se TODAS as partes do nome encurtado existem no nome longo do banco, em qualquer ordem!
-      const pByParts = people.find(p => {
-         if (!p.pix) return false;
-         
-         const pParts = normalize(p.name).split(' ');
-         
-         // Se todas as palavras do ID constarem dentro das palavras do nome real
-         const allKeywordsMatch = idParts.every(part => pParts.includes(part));
-         if (allKeywordsMatch) return true;
-
-         // Fallback clássico por posições caso haja preposições coladas
-         if (pParts.length >= 2) {
-            const pFirst = pParts[0];
-            const pSecond = pParts[1];
-            const pLast = pParts[pParts.length - 1];
-            
-            if (pFirst === idFirst && pSecond === idSecond) return true;
-            if (pFirst === idFirst && pLast === idLast) return true;
-            if (pFirst === idFirst && pLast === idSecond) return true;
-         }
-         return false;
-      });
-      if (pByParts) return pByParts;
-    }
-    
-    // Se tudo falhar e só sobrou o dummy, devolve ele
-    return bestMatch;
+    return pByPoint;
   };
 
   const getConfirmation = (id: string) => {
@@ -426,74 +382,8 @@ const PaymentTab = ({
     });
   };
 
-  const financialSummary = useMemo(() => {
-    let pendingLiquido = 0;
-    let pendingBruto = 0;
-    let paidLiquido = 0;
-    let paidBruto = 0;
-
-    const currentMonth = new Date().getMonth();
-    const currentYear = new Date().getFullYear();
-
-    registeredRequests.forEach(req => {
-      const conf = getConfirmation(req.id);
-      const isPaid = conf?.confirmed;
-      
-      const bruto = calcRequestBruto(req);
-      const disc = getRequestDiscounts(req);
-      const neto = bruto + disc;
-      
-      const pDate = conf?.paymentDate ? new Date(conf.paymentDate + 'T12:00:00') : null;
-      const isCurrentMonth = pDate && pDate.getMonth() === currentMonth && pDate.getFullYear() === currentYear;
-
-      if (!isPaid) {
-        // Calcula o valor final estimado como a tela faz (com retroBalance)
-        const shouldApply = (conf?.applyBalance !== false);
-        const balanceObj = calculatePersonBalance(req.personId, requests, foodControl, confirmations, people, timeEntries, req.id);
-        const totalWallet = balanceObj.totalWallet || 0;
-        const retroBalance = totalWallet - neto;
-        const finalEst = shouldApply ? Math.max(0, neto + retroBalance) : bruto;
-        pendingBruto += bruto;
-        pendingLiquido += finalEst;
-      } else if (conf?.finalValue !== undefined && conf?.finalValue !== null) {
-        // usa valor congelado no banco
-        if (isCurrentMonth) { paidBruto += bruto; paidLiquido += conf.finalValue; }
-      } else if (isCurrentMonth) {
-        // fallback para pagamentos antigos sem finalValue
-        const dbApplied = conf?.appliedBalance ?? 0;
-        paidBruto += bruto;
-        paidLiquido += Math.max(0, neto + dbApplied);
-      }
-    });
-
-    return { pendingBruto, pendingLiquido, paidBruto, paidLiquido };
-  }, [registeredRequests, confirmations, people, requests, foodControl, timeEntries]);
-
   return (
     <div className="space-y-4">
-      {/* RESUMO FINANCEIRO (TESTE) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <div className="p-4 rounded-xl border border-blue-100 bg-blue-50/50 shadow-sm relative overflow-hidden">
-          <div className="absolute top-0 right-0 px-2 py-0.5 bg-blue-600 text-[8px] text-white font-black uppercase tracking-widest rounded-bl-lg">Teste</div>
-          <p className="text-[10px] font-black uppercase text-blue-600 tracking-widest mb-1">Pendentes (Total Geral)</p>
-          <div className="flex items-end gap-3">
-             <div>
-                <p className="text-2xl font-black text-blue-900 tracking-tighter">R$ {financialSummary.pendingLiquido.toFixed(2)}</p>
-                <p className="text-[10px] text-blue-700/60 font-medium">Bruto: R$ {financialSummary.pendingBruto.toFixed(2)} | Líquido Estimado (c/ Saldo)</p>
-             </div>
-          </div>
-        </div>
-        <div className="p-4 rounded-xl border border-green-100 bg-green-50/50 shadow-sm relative overflow-hidden">
-          <div className="absolute top-0 right-0 px-2 py-0.5 bg-green-600 text-[8px] text-white font-black uppercase tracking-widest rounded-bl-lg">Teste</div>
-          <p className="text-[10px] font-black uppercase text-green-600 tracking-widest mb-1">Liquidados (Este Mês)</p>
-          <div className="flex items-end gap-3">
-             <div>
-                <p className="text-2xl font-black text-green-900 tracking-tighter">R$ {financialSummary.paidLiquido.toFixed(2)}</p>
-                <p className="text-[10px] text-green-700/60 font-medium">Bruto: R$ {financialSummary.paidBruto.toFixed(2)} | Líquido Real Pago</p>
-             </div>
-          </div>
-        </div>
-      </div>
       <div className="flex flex-wrap gap-3 items-end p-3 rounded-lg border border-border bg-muted/30">
         <Filter className="h-4 w-4 text-muted-foreground mt-1" />
         <div className="min-w-[200px]">
@@ -594,11 +484,6 @@ const PaymentTab = ({
                                   {isFlashUser && (
                                     <Badge variant="destructive" className="text-[11px] font-black tracking-widest bg-amber-500 hover:bg-amber-600 border-none px-2 py-0.5 h-5 items-center uppercase text-white shadow-sm">
                                       💳 Cartão Flash (RH)
-                                    </Badge>
-                                  )}
-                                  {getPerson(req.personId)?.company && (
-                                    <Badge variant="secondary" className="text-[10px] font-bold tracking-tight text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 h-5 items-center ml-1">
-                                      🏢 {getPerson(req.personId)?.company}
                                     </Badge>
                                   )}
                                   {getPerson(req.personId)?.pix && !isFlashUser && (

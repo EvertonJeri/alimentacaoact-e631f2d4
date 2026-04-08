@@ -314,6 +314,11 @@ export const useDatabase = () => {
           hr_emails: settings.hrEmails,
           discount_alert_date: settings.discountAlertDate,
           discount_auto_send: settings.discountAutoSend,
+          clt_alert_day: settings.cltAlertDay,
+          clt_alert_day2: settings.cltAlertDay2,
+          pj_alert_day: settings.pjAlertDay,
+          pj_alert_day2: settings.pjAlertDay2,
+          flash_card_users: settings.flashCardUsers || [],
         };
 
         try {
@@ -334,6 +339,7 @@ export const useDatabase = () => {
           enable_teams: settings.enableTeams,
           enable_whatsapp: settings.enableWhatsApp,
           enable_email: settings.enableEmail,
+          flash_card_users: settings.flashCardUsers || [],
         };
 
         const { error: err3 } = await supabase.from("system_settings").upsert(minimalPayload, { onConflict: 'id' });

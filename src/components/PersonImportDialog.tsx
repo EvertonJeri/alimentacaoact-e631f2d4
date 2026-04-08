@@ -125,6 +125,7 @@ export const PersonImportDialog = () => {
       const colModalidade = headerMap.get("MODALIDADE");
       const colPix = headerMap.get("PIX");
       const colSit = headerMap.get("SITUAÇÃO") ?? headerMap.get("SITUACAO");
+      const colEmpresa = headerMap.get("EMPRESA");
 
       const peopleToInsertMap = new Map<string, { p: Omit<Person, "id">, sit: string }>();
 
@@ -133,6 +134,15 @@ export const PersonImportDialog = () => {
         if (colNome !== undefined) name = getCellValue(r, colNome);
         if (!name && colNomePonto !== undefined) name = getCellValue(r, colNomePonto);
         
+        // Se as colunas oficiais estão vazias, mas a premissa é não perder o PIX de um nome abreviado:
+        // A regra do RH manda tentar puxar da Coluna A (índice 0) brutalmente como último recurso
+        if (!name) {
+          const fallbackA = getCellValue(r, 0);
+          if (fallbackA && fallbackA.trim().length > 2) {
+             name = fallbackA;
+          }
+        }
+        
         if (!name) continue;
 
         const sit = colSit !== undefined ? getCellValue(r, colSit).toLowerCase() : "";
@@ -140,13 +150,14 @@ export const PersonImportDialog = () => {
         const dept = colDepto !== undefined ? getCellValue(r, colDepto) : "Geral";
         const mod = colModalidade !== undefined ? getCellValue(r, colModalidade) : "";
         const cPix = colPix !== undefined ? getCellValue(r, colPix) : "";
+        const cEmpresa = colEmpresa !== undefined ? getCellValue(r, colEmpresa) : "";
 
         const isReg = mod.toLowerCase().includes("registrado") || mod.toLowerCase().includes("contratado") || mod.toLowerCase().includes("clt");
 
         const lowerName = name.toLowerCase();
 
         const newEntry = {
-            p: { name: name.trim(), department: dept, isRegistered: isReg, pix: cPix },
+            p: { name: name.trim(), department: dept, isRegistered: isReg, pix: cPix, company: cEmpresa },
             sit
         };
 
@@ -160,11 +171,17 @@ export const PersonImportDialog = () => {
             if (!newEntry.p.pix && existing.p.pix) {
                 newEntry.p.pix = existing.p.pix;
             }
+            if (!newEntry.p.company && existing.p.company) {
+                newEntry.p.company = existing.p.company;
+            }
             peopleToInsertMap.set(lowerName, newEntry);
           } else {
             // Se já tem um ativo registrado (ou ambos são inativos), apenas absorve o PIX caso esteja faltando
             if (!existing.p.pix && newEntry.p.pix) {
                 existing.p.pix = newEntry.p.pix;
+            }
+            if (!existing.p.company && newEntry.p.company) {
+                existing.p.company = newEntry.p.company;
             }
           }
         }
@@ -228,7 +245,7 @@ export const PersonImportDialog = () => {
             Sincronizar Lista de Funcionários
           </DialogTitle>
           <DialogDescription>
-            Envie a planilha de <strong>Funcionários</strong> com colunas como NOME COMPLETO, MODALIDADE, DEPARTAMENTO, PIX.
+            Envie a planilha de <strong>Funcionários</strong> com colunas como NOME COMPLETO, MODALIDADE, DEPARTAMENTO, PIX, EMPRESA.
           </DialogDescription>
         </DialogHeader>
 
@@ -289,7 +306,7 @@ export const PersonImportDialog = () => {
             <div className="flex items-start gap-2 text-[10px] text-muted-foreground">
               <AlertCircle className="h-3 w-3 shrink-0 mt-0.5 text-blue-500" />
               <span>
-                Colaboradores com o <strong>mesmo nome exato</strong> serão atualizados (Setor, PIX, CLT). Novos nomes serão criados e adicionados.
+                Colaboradores com o <strong>mesmo nome exato</strong> serão atualizados (Setor, PIX, EMPRESA, CLT). Novos nomes serão criados e adicionados.
               </span>
             </div>
           </div>

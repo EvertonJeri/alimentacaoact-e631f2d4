@@ -71,6 +71,7 @@ const DiscountsTab = ({
   const [filterJob, setFilterJob] = useState(initialJobFilter);
   const [activeView, setActiveView] = useState<"descontos" | "saldo">("descontos");
   const [showHistory, setShowHistory] = useState(false);
+  const [rowDates, setRowDates] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (initialJobFilter) setFilterJob(initialJobFilter);
@@ -425,7 +426,14 @@ const DiscountsTab = ({
                     <tbody className="divide-y divide-border/50">
                       {personRows.map((d, i) => {
                         const done = d._done || false;
-                        const discountId = d._reqId ? `discount-${d._reqId}-${d.date}` : undefined;
+                        const finalDiscountId = d._reqId ? `discount-${d._reqId}-${d.date}` : `orphan-${d.personId}-${d.date}`;
+                        
+                        // We fetch the existing payment date from the DB for this row if recorded.
+                        const rowConf = confirmations.find(c => 'id' in c && c.id === finalDiscountId) as PaymentConfirmation | undefined;
+                        const dbRowDate = rowConf?.paymentDate || "";
+                        // Usa a data local se foi mexida, senao usa a do banco (ou vazio)
+                        const rowDateToDisplay = rowDates[finalDiscountId] !== undefined ? rowDates[finalDiscountId] : dbRowDate;
+
                         return (
                         <tr key={`${d.date}-${i}`} className={`hover:bg-muted/20 transition-colors ${done ? 'opacity-50' : ''}`}>
                           <td className="px-2 py-1.5 tabular-nums text-muted-foreground">{d.date?.includes("-") ? d.date.split("-").reverse().join("/") : "—"}</td>
@@ -449,26 +457,40 @@ const DiscountsTab = ({
                             </div>
                           </td>
                           {onUpdatePaymentConfirmation && (
-                            <td className="px-2 py-1.5 text-right">
+                            <td className="px-2 py-1.5 text-right flex items-center justify-end gap-1">
+                              {/* Campo de data por LINHA */}
+                              <input
+                                type="date"
+                                className="h-6 text-[9px] w-28 px-1 rounded border border-border bg-background shadow-sm"
+                                value={rowDateToDisplay}
+                                disabled={done}
+                                onClick={(e) => e.stopPropagation()}
+                                onChange={e => {
+                                  e.stopPropagation();
+                                  setRowDates(prev => ({ ...prev, [finalDiscountId]: e.target.value }));
+                                }}
+                              />
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className={`h-5 w-auto px-2 text-[8px] font-black uppercase ${
+                                className={`h-6 w-auto px-2 text-[8px] font-black uppercase ${
                                   done
                                     ? 'bg-primary/10 text-primary border-primary/20 hover:bg-primary/20'
                                     : 'bg-background hover:bg-muted text-muted-foreground border-border/60'
                                 }`}
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  const finalDiscountId = d._reqId ? `discount-${d._reqId}-${d.date}` : `orphan-${d.personId}-${d.date}`;
+                                  // Se tiver data preenchida (local ou banco) usa ela. Se não usa hoje
+                                  const effectiveDate = rowDateToDisplay ? rowDateToDisplay : new Date().toISOString().split('T')[0];
                                   onUpdatePaymentConfirmation({
                                     id: finalDiscountId,
-                                    type: 'discount',
+                                    type: 'discount' as any,
+                                    personId: d.personId,
                                     confirmed: !done,
-                                    paymentDate: new Date().toISOString().split('T')[0]
+                                    paymentDate: effectiveDate
                                   });
                                   if (done) toast.success('Desconto reativado.');
-                                  else toast.success('Desconto marcado como retirado (não afeta o total).');
+                                  else toast.success('Desconto marcado como retirado.');
                                 }}
                               >
                                 {done ? 'Reverter' : '- Retirar'}

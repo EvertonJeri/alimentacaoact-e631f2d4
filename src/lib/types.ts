@@ -5,6 +5,7 @@ export interface Person {
   isRegistered?: boolean; // CLT registrado - já recebe almoço seg-sex
   department?: string;
   pix?: string;
+  company?: string;
 }
 
 export interface TimeEntry {

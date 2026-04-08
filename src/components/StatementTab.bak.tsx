@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SearchableSelect } from "@/components/ui/searchable-select";
-import { User, ChevronDown, ChevronUp, Send, CheckCircle2 } from "lucide-react";
+import { User, ChevronDown, ChevronUp, Send } from "lucide-react";
 import {
   type Person,
   type Job,
@@ -59,13 +59,7 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
   const [selectedJob, setSelectedJob] = useState("all");
   const [expandedPeople, setExpandedPeople] = useState<Set<string>>(new Set());
 
-  const getPersonName = (id: string) => {
-    const p = people.find((p) => p.id === id);
-    if (p) return p.name;
-    const pByName = people.find(p => p.name.toLowerCase().trim() === id.toLowerCase().trim());
-    if (pByName) return pByName.name;
-    return id;
-  };
+  const getPersonName = (id: string) => people.find(p => p.id === id)?.name || "\u2014";
   const getJobName = (id: string) => jobs.find(j => j.id === id)?.name || "\u2014";
 
   const getConfirmation = (id: string) => {
@@ -365,21 +359,6 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
     return msg;
   };
 
-  const handleSettleBatch = () => {
-    if (!onUpdatePaymentConfirmation) return;
-    if (pendingStatements.length === 0) {
-      toast.info("Não há extratos pendentes para liquidar.");
-      return;
-    }
-
-    if (confirm(`Deseja liquidar ${pendingStatements.length} extratos em aberto? Isso moverá todos para 'Liquidados'.`)) {
-      pendingStatements.forEach(ps => {
-         handleSettlePerson(ps.personId, ps.jobId);
-      });
-      toast.success("Liquidação em lote processada!");
-    }
-  };
-
   const sendAllWhatsApp = () => {
     const allMsgs = pendingStatements.map(ps => buildWhatsAppMessage(ps)).join("\n\n---\n\n");
     shareMessage(allMsgs);
@@ -402,9 +381,6 @@ const StatementTab = ({ people = [], jobs = [], requests = [], timeEntries = [],
           <Button variant="outline" onClick={() => setExpandedPeople(new Set())}>Recolher</Button>
           <Button className="bg-green-600 hover:bg-green-700 text-white font-bold gap-2" onClick={sendAllWhatsApp}>
             <Send className="h-4 w-4" /> MANDAR TODOS P/ ZAP
-          </Button>
-          <Button variant="destructive" className="font-bold gap-2" onClick={handleSettleBatch}>
-            <CheckCircle2 className="h-4 w-4" /> LIQUIDAR TUDO (TESTE)
           </Button>
           <Button onClick={() => window.print()}>PDF</Button>
         </div>

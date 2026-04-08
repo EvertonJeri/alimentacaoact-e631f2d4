@@ -75,10 +75,11 @@ const Index = () => {
   const [autoFillTravel, setAutoFillTravel] = useState(true);
   const [jobFilter, setJobFilter] = useState("all");
 
-  // Reset filter when navigating unless it's a deep link from JobCost
+  // Reset filter when navigating away from certain pages to prevent sticky hidden filters
   useEffect(() => {
-    if (activePage !== "pagamento" && activePage !== "horas" && activePage !== "refeicoes" && activePage !== "descontos" && activePage !== "controle" && activePage !== "fechamento") {
-      // Keep filter
+    // Se não estamos mais em páginas onde o filtro faz sentido manter, limpa-o
+    if (activePage !== "pagamento" && activePage !== "horas" && activePage !== "descontos" && activePage !== "controle") {
+      setJobFilter("all");
     }
   }, [activePage]);
 
@@ -266,7 +267,10 @@ const Index = () => {
               <SidebarMenuItem key={item.id}>
                 <SidebarMenuButton 
                   isActive={activePage === item.id} 
-                  onClick={() => setActivePage(item.id)}
+                  onClick={() => {
+                    setActivePage(item.id);
+                    setJobFilter("all"); // Sempre força limpar o filtro ao clicar no menu lateral
+                  }}
                   className="transition-all duration-200"
                 >
                   <item.icon className={`h-4 w-4 ${activePage === item.id ? 'text-primary' : 'text-muted-foreground'}`} />

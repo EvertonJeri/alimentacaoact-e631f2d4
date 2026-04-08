@@ -23,7 +23,6 @@ import {
   isWeekend,
   isWeekendOrHoliday,
   getActiveMeals,
-  calculateDayDiscount,
   type FoodControlEntry,
   type TimeEntry,
   type DiscountConfirmation,
@@ -96,61 +95,8 @@ const MealRequestSystem = ({
 
   const balance = useMemo(() => {
     if (!personId || !people || !requests) return 0;
-    
-    // Cópia EXATA da lógica da aba de Descontos/Saldo
-    const allActivityDates = new Set<string>();
-    const strPid = String(personId);
-    requests.forEach(r => {
-      if (String(r.personId) === strPid) {
-        getDatesInRange(r.startDate, r.endDate).forEach(d => allActivityDates.add(d));
-      }
-    });
-    timeEntries.forEach(e => {
-      if (String(e.personId) === strPid) allActivityDates.add(e.date);
-    });
-    foodControl.forEach(f => {
-      if (String(f.personId) === strPid) allActivityDates.add(f.date);
-    });
-
-    const isDiscountDone = (pid: string, reqId: string | undefined, date: string) => {
-      const discountId = reqId ? `discount-${reqId}-${date}` : `orphan-${pid}-${date}`;
-      return (confirmations || []).find(c => 'id' in c && c.id === discountId)?.confirmed || false;
-    };
-
-    const todayStr = new Date().toLocaleDateString('en-CA');
-    const processedDays = new Set<string>();
-    let netSaldo = 0;
-
-    Array.from(allActivityDates).forEach(date => {
-      if (date >= todayStr) return; // Só descontos/créditos até ontem
-
-      const req = requests.find(r => String(r.personId) === strPid && date >= r.startDate && date <= r.endDate);
-      const dayKey = `${strPid}-${req?.jobId || 'orphan'}-${date}`;
-      
-      if (processedDays.has(dayKey)) return;
-      processedDays.add(dayKey);
-
-      const entries = timeEntries.filter(e => String(e.personId) === strPid && e.date === date);
-      const entry = entries.find(e => e.isTravelOut || e.isTravelReturn) || entries[0];
-      const fc = foodControl.find(f => String(f.personId) === strPid && f.date === date);
-
-      const jobId = req?.jobId || fc?.jobId || entry?.jobId || 'unknown';
-
-      const dayCalc = calculateDayDiscount(
-        req || { id: `orphan-${strPid}-${date}`, personId: strPid, jobId, startDate: date, endDate: date, meals: [] } as MealRequest, 
-        date, entry || undefined, fc, people
-      );
-
-      if (dayCalc.total !== 0) {
-        const done = isDiscountDone(strPid, req?.id, date);
-        if (!done) {
-           // Crédito (+) ou Débito (-)
-           netSaldo += dayCalc.total;
-        }
-      }
-    });
-
-    return netSaldo;
+    const balanceObj = calculatePersonBalance(personId, requests, foodControl, confirmations, people, timeEntries);
+    return balanceObj.totalWallet;
   }, [personId, requests, foodControl, confirmations, people, timeEntries]);
 
   const filtered = useMemo(() => {
@@ -196,9 +142,6 @@ const MealRequestSystem = ({
     // Identificar se há usuários Flash no lote que está sendo enviado
     const hasFlashUsers = pendingOnly.some(req => systemSettings?.flashCardUsers?.includes(req.personId));
 
-    // Helper de formatação de data
-    const fDate = (d: string) => d ? d.split("-").reverse().join("/") : "";
-
     // Criar lista nominal com valores individuais APENAS DOS PENDENTES
     let personLines = "";
     pendingOnly.forEach(req => {
@@ -210,15 +153,10 @@ const MealRequestSystem = ({
       }, 0);
 
       const pName = person?.name || "—";
-      personLines += `\n• ${pName} (${fDate(req.startDate)} a ${fDate(req.endDate)}): R$ ${personTotal.toFixed(2)}`;
+      personLines += `\n• ${pName}: R$ ${personTotal.toFixed(2)}`;
     });
 
-    // Cálculo do período geral do lote
-    const allStarts = pendingOnly.map(r => r.startDate).sort();
-    const allEnds = pendingOnly.map(r => r.endDate).sort();
-    const batchPeriod = allStarts.length > 0 ? `${fDate(allStarts[0])} a ${fDate(allEnds[allEnds.length - 1])}` : "—";
-
-    const details = `⚠️ *NOVOS LANÇAMENTOS PARA PAGAMENTO (EM ABERTO)*\n\n🏗️ Projeto: ${jobName}\n📅 Período Alimentação: ${batchPeriod}\n\n👥 *Profissionais a Confirmar:*${personLines}\n\n💰 *Valor Estimado Total:* R$ ${financeSummary.total.toFixed(2)}\n\n*Os valores acima acabaram de ser lançados no sistema e já estão disponíveis para conferência e pagamento na aba 'Pagamentos'.*`;
+    const details = `⚠️ *NOVOS LANÇAMENTOS PARA PAGAMENTO (EM ABERTO)*\n\n🏗️ Projeto: ${jobName}\n\n👥 *Profissionais a Confirmar:*${personLines}\n\n💰 *Valor Estimado Total:* R$ ${financeSummary.total.toFixed(2)}\n\n*Os valores acima acabaram de ser lançados no sistema e já estão disponíveis para conferência e pagamento na aba 'Pagamentos'.*`;
 
     if (hasFlashUsers) {
       // Se houver gente do Flash, avisa os dois e-mails
