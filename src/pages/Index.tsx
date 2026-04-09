@@ -46,6 +46,7 @@ const Index = () => {
     foodControl,
     discountConfirmations,
     paymentConfirmations,
+    manualAdjustments,
     updateFoodControl,
     updateDiscountConfirmation,
     updatePaymentConfirmation,
@@ -54,6 +55,8 @@ const Index = () => {
     deleteMealRequest: removeMealRequest,
     deleteTimeEntry: removeTimeEntry,
     deletePaymentConfirmation: removePaymentConfirmation,
+    updateManualAdjustment,
+    deleteManualAdjustment,
     systemSettings,
     customHolidays,
   } = useDatabase();
@@ -93,6 +96,7 @@ const Index = () => {
   const foodControlData = useMemo(() => foodControl.data || [], [foodControl.data]);
   const discountConfirmationsData = useMemo(() => discountConfirmations.data || [], [discountConfirmations.data]);
   const paymentConfirmationsData = useMemo(() => paymentConfirmations.data || [], [paymentConfirmations.data]);
+  const manualAdjustmentsData = useMemo(() => manualAdjustments.data || [], [manualAdjustments.data]);
 
   const allConfirmations = useMemo(() => [
     ...(discountConfirmations.data || []),
@@ -179,6 +183,7 @@ const Index = () => {
             onUpdateDiscountConfirmation={(conf) => updateDiscountConfirmation.mutate(conf)}
             initialJobFilter={jobFilter}
             systemSettings={systemSettings.data}
+            manualAdjustments={manualAdjustmentsData}
           />
         );
       case "extrato":
@@ -192,6 +197,7 @@ const Index = () => {
             confirmations={allConfirmations}
             onUpdatePaymentConfirmation={(conf) => updatePaymentConfirmation.mutate(conf)}
             systemSettings={systemSettings.data}
+            manualAdjustments={manualAdjustmentsData}
           />
         );
       case "controle":
@@ -219,6 +225,9 @@ const Index = () => {
             onUpdateConfirmation={(conf) => updateDiscountConfirmation.mutate(conf)}
             onUpdatePaymentConfirmation={(conf) => updatePaymentConfirmation.mutate(conf)}
             initialJobFilter={jobFilter}
+            manualAdjustments={manualAdjustmentsData}
+            onAddManualAdjustment={(adj) => updateManualAdjustment.mutate(adj)}
+            onDeleteManualAdjustment={(id) => deleteManualAdjustment.mutate(id)}
           />
         );
       case "fechamento":

@@ -131,6 +131,15 @@ export interface PaymentConfirmation {
   personId?: string; // ADICIONADO: Essencial para o saldo global
 }
 
+export interface ManualAdjustment {
+  id: string;
+  personId: string;
+  amount: number;
+  description: string;
+  date: string;
+  type: "desconto" | "credito";
+}
+
 
 
 export interface Job {
@@ -376,7 +385,8 @@ export function calculatePersonBalance(
   confirmations: (DiscountConfirmation | PaymentConfirmation)[],
   people: Person[],
   timeEntries: TimeEntry[],
-  excludeRequestId?: string // ADICIONADO: Essencial para não zerar o PIX ao confirmar
+  excludeRequestId?: string,
+  manualAdjustments?: ManualAdjustment[]
 ): { totalWallet: number; currentReqNet: number; retroBalance: number; adjustments: any[] } {
   const person = people.find(p => p.id === personId);
   if (!person) return { totalWallet: 0, currentReqNet: 0, retroBalance: 0, adjustments: [] };
@@ -487,6 +497,16 @@ export function calculatePersonBalance(
         }
     }
   });
+
+  // Parte 4: Ajustes Manuais
+  if (manualAdjustments) {
+    const personAdj = manualAdjustments.filter(a => String(a.personId || "").toLowerCase() === pId);
+    personAdj.forEach(a => {
+      const val = a.type === "credito" ? Math.abs(a.amount) : -Math.abs(a.amount);
+      walletBalance += val;
+      adjustments.push({ date: a.date, amount: val, label: `[Manual] ${a.description}` });
+    });
+  }
 
   return { totalWallet: walletBalance, currentReqNet, retroBalance: walletBalance - currentReqNet, adjustments };
 }

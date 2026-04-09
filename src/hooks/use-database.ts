@@ -8,6 +8,7 @@ import {
   type TimeEntry, 
   type FoodControlEntry, 
   type PaymentConfirmation, 
+  type ManualAdjustment,
   type SystemSettings,
   DEFAULT_SETTINGS
 } from "@/lib/types";
@@ -1065,6 +1066,51 @@ export const useDatabase = () => {
     },
   });
 
+  const manualAdjustments = useQuery({
+    queryKey: ["manual_adjustments"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("manual_adjustments").select("*").order("date", { ascending: false });
+      if (error) throw error;
+      return (data || []).map((a: any) => ({
+        id: a.id,
+        personId: a.person_id,
+        amount: Number(a.amount),
+        description: a.description,
+        date: a.date,
+        type: a.type,
+      })) as ManualAdjustment[];
+    },
+  });
+
+  const updateManualAdjustment = useMutation({
+    mutationFn: async (adj: ManualAdjustment) => {
+      const { error } = await supabase.from("manual_adjustments").upsert({
+        id: adj.id || undefined,
+        person_id: adj.personId,
+        amount: adj.amount,
+        description: adj.description,
+        date: adj.date,
+        type: adj.type,
+      } as any, { onConflict: "id" });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["manual_adjustments"] });
+      toast.success("Ajuste manual salvo!");
+    },
+  });
+
+  const deleteManualAdjustment = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("manual_adjustments").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["manual_adjustments"] });
+      toast.success("Ajuste manual removido!");
+    },
+  });
+
   return {
     people,
     jobs,
@@ -1075,6 +1121,7 @@ export const useDatabase = () => {
     discountConfirmations,
     systemSettings,
     customHolidays,
+    manualAdjustments,
     updateSystemSettings,
     updateDiscountConfirmation,
     updatePaymentConfirmation,
@@ -1093,5 +1140,7 @@ export const useDatabase = () => {
     bulkInsertJobs,
     repairHistoricalData,
     repairPeopleData,
+    updateManualAdjustment,
+    deleteManualAdjustment,
   };
 };

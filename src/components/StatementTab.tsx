@@ -9,6 +9,7 @@ import {
   type MealRequest,
   type TimeEntry,
   type FoodControlEntry,
+  type ManualAdjustment,
   getDatesInRange,
   getMealValue,
   calculateDayDiscount,
@@ -29,6 +30,7 @@ interface StatementTabProps {
   confirmations: (DiscountConfirmation | PaymentConfirmation)[];
   onUpdatePaymentConfirmation?: (conf: PaymentConfirmation) => void;
   systemSettings?: SystemSettings;
+  manualAdjustments?: ManualAdjustment[];
 }
 
 interface StatementDetail {
