@@ -117,7 +117,7 @@ const PaymentTab = ({
     
     allPersonsIds.forEach(pid => {
        try {
-         const balanceObj = calculatePersonBalance(pid, requests, foodControl, confirmations, people, timeEntries);
+         const balanceObj = calculatePersonBalance(pid, requests, foodControl, confirmations, people, timeEntries, undefined, manualAdjustments);
          map.set(pid, balanceObj.totalWallet);
        } catch (e) {
          map.set(pid, 0);
@@ -296,7 +296,7 @@ const PaymentTab = ({
         const currentReqNet = currentReqBruto + currentReqDiscounts;
         
         // Pega o saldo da carteira ANTES deste pagamento
-        const balanceObj = calculatePersonBalance(req.personId, requests, foodControl, confirmations, people, timeEntries, req.id);
+        const balanceObj = calculatePersonBalance(req.personId, requests, foodControl, confirmations, people, timeEntries, req.id, manualAdjustments);
         const totalWallet = balanceObj.totalWallet || 0;
         const retroBalance = totalWallet - currentReqNet;
         
@@ -379,7 +379,7 @@ const PaymentTab = ({
           const bruto = calcRequestBruto(req) || 0;
           const disc = getRequestDiscounts(req) || 0;
           const neto = bruto + disc;
-          const balanceObj = calculatePersonBalance(req.personId, requests, foodControl, confirmations, people, timeEntries, req.id);
+          const balanceObj = calculatePersonBalance(req.personId, requests, foodControl, confirmations, people, timeEntries, req.id, manualAdjustments);
           const totalW = balanceObj.totalWallet || 0;
           const retro = totalW - neto;
           const reqFinalValue = shouldApply ? Math.max(0, neto + retro) : bruto;
@@ -469,7 +469,7 @@ const PaymentTab = ({
       if (!isPaid) {
         // Calcula o valor final estimado como a tela faz (com retroBalance)
         const shouldApply = (conf?.applyBalance !== false);
-        const balanceObj = calculatePersonBalance(req.personId, requests, foodControl, confirmations, people, timeEntries, req.id);
+        const balanceObj = calculatePersonBalance(req.personId, requests, foodControl, confirmations, people, timeEntries, req.id, manualAdjustments);
         const totalWallet = balanceObj.totalWallet || 0;
         const retroBalance = totalWallet - neto;
         const finalEst = shouldApply ? Math.max(0, neto + retroBalance) : bruto;
@@ -577,7 +577,7 @@ const PaymentTab = ({
                       const currentReqDiscounts = getRequestDiscounts(req) || 0; 
                       const currentReqNet = currentReqBruto + currentReqDiscounts;
                       
-                      const balanceObj = calculatePersonBalance(req.personId, requests, foodControl, confirmations, people, timeEntries, req.id);
+                      const balanceObj = calculatePersonBalance(req.personId, requests, foodControl, confirmations, people, timeEntries, req.id, manualAdjustments);
                       const totalWallet = balanceObj.totalWallet || 0;
                       const retroBalance = totalWallet - currentReqNet;
                       const adjustmentsFromBalance = balanceObj.adjustments || [];
