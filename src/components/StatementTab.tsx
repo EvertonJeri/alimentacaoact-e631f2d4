@@ -9,6 +9,7 @@ import {
   type MealRequest,
   type TimeEntry,
   type FoodControlEntry,
+  type ManualAdjustment,
   getDatesInRange,
   getMealValue,
   calculateDayDiscount,
