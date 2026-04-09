@@ -45,6 +45,7 @@ export const SettingsTab = () => {
   const [customHolidays, setCustomHolidays] = useState<Holiday[]>([]);
   const [newHolidayDate, setNewHolidayDate] = useState("");
   const [newHolidayName, setNewHolidayName] = useState("");
+  const today = new Date().getDate();
 
   useEffect(() => {
     if (systemSettings.data) {
@@ -53,10 +54,19 @@ export const SettingsTab = () => {
         try { return JSON.parse(localStorage.getItem("act_flash_card_users") || "[]"); } 
         catch { return []; }
       })();
+      
+      const localAlerts = (() => {
+        try { return JSON.parse(localStorage.getItem("act_alert_days") || "{}"); } 
+        catch { return {}; }
+      })();
 
-      // Se o banco trouxer vazio, tentamos o local
+      // Priorizamos o que está no localStorage para os alertas, pois o banco pode estar sem as colunas
       setSettings({
         ...dbData,
+        cltAlertDay: localAlerts.cltAlertDay ?? dbData.cltAlertDay,
+        cltAlertDay2: localAlerts.cltAlertDay2 ?? dbData.cltAlertDay2,
+        pjAlertDay: localAlerts.pjAlertDay ?? dbData.pjAlertDay,
+        pjAlertDay2: localAlerts.pjAlertDay2 ?? dbData.pjAlertDay2,
         flashCardUsers: (dbData.flashCardUsers && dbData.flashCardUsers.length > 0) ? dbData.flashCardUsers : localFlash
       });
     }
@@ -82,6 +92,14 @@ export const SettingsTab = () => {
         localStorage.setItem("act_flash_card_users", JSON.stringify(settings.flashCardUsers));
         console.log("Flash Card Users salvos localmente!", settings.flashCardUsers);
       }
+      
+      const alertDays = {
+        cltAlertDay: settings.cltAlertDay,
+        cltAlertDay2: settings.cltAlertDay2,
+        pjAlertDay: settings.pjAlertDay,
+        pjAlertDay2: settings.pjAlertDay2
+      };
+      localStorage.setItem("act_alert_days", JSON.stringify(alertDays));
 
       // 2. Persistência Principal (Banco)
       await updateSystemSettings.mutateAsync(settings);
@@ -141,9 +159,14 @@ export const SettingsTab = () => {
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto py-4 animate-in fade-in duration-500 pb-20">
-      <div className="flex items-center gap-3 mb-2">
-        <Settings className="h-6 w-6 text-primary" />
-        <h2 className="text-2xl font-black uppercase tracking-widest text-foreground">Configurações do Sistema</h2>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 sticky top-0 bg-background/80 backdrop-blur-md z-10 py-4 border-b border-border/50">
+        <div className="flex items-center gap-3">
+          <Settings className="h-6 w-6 text-primary" />
+          <h2 className="text-2xl font-black uppercase tracking-widest text-foreground">Configurações do Sistema</h2>
+        </div>
+        <Button onClick={handleSave} className="font-black uppercase tracking-widest text-xs px-10 h-12 shadow-xl gap-2 bg-primary hover:scale-105 transition-transform">
+          <Save className="h-5 w-5" /> Salvar Todas as Configurações
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -160,39 +183,57 @@ export const SettingsTab = () => {
               </div>
            </CardHeader>
            <CardContent className="pt-6 grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <div className="p-4 rounded-xl bg-muted/20 border border-border space-y-4">
-                 <p className="text-[10px] font-black uppercase text-violet-600 tracking-wider">CLT</p>
+              <div className={`p-4 rounded-xl border space-y-4 transition-all ${
+                (today === settings.cltAlertDay || today === settings.cltAlertDay2) 
+                ? 'bg-violet-50 border-violet-400 ring-2 ring-violet-200 shadow-md' 
+                : 'bg-muted/20 border-border'
+              }`}>
+                 <div className="flex justify-between items-center">
+                    <p className="text-[10px] font-black uppercase text-violet-600 tracking-wider">CLT</p>
+                    {(today === settings.cltAlertDay || today === settings.cltAlertDay2) && (
+                      <span className="flex items-center gap-1 bg-violet-600 text-white text-[8px] px-2 py-0.5 rounded-full font-black animate-pulse">HOJE É DIA!</span>
+                    )}
+                 </div>
                  <div className="flex items-center justify-between">
                     <Label className="text-xs font-bold">Dia do Alerta 1</Label>
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] text-muted-foreground">DIA</span>
-                      <Input type="number" min={1} max={31} className="w-16 h-8 text-center" value={settings.cltAlertDay ?? 5} onChange={(e) => setSettings({...settings, cltAlertDay: parseInt(e.target.value) || 5})} />
+                      <Input type="number" min={1} max={31} className="w-16 h-8 text-center bg-background" value={settings.cltAlertDay ?? 5} onChange={(e) => setSettings({...settings, cltAlertDay: parseInt(e.target.value) || 5})} />
                     </div>
                  </div>
                  <div className="flex items-center justify-between">
                     <Label className="text-xs font-bold">Dia do Alerta 2</Label>
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] text-muted-foreground">DIA</span>
-                      <Input type="number" min={1} max={31} className="w-16 h-8 text-center" value={settings.cltAlertDay2 ?? 20} onChange={(e) => setSettings({...settings, cltAlertDay2: parseInt(e.target.value) || 20})} />
+                      <Input type="number" min={1} max={31} className="w-16 h-8 text-center bg-background" value={settings.cltAlertDay2 ?? 20} onChange={(e) => setSettings({...settings, cltAlertDay2: parseInt(e.target.value) || 20})} />
                     </div>
                  </div>
                  <p className="text-[10px] text-muted-foreground italic">Alertas nos dias de fechamento/pagamento CLT.</p>
               </div>
 
-              <div className="p-4 rounded-xl bg-muted/20 border border-border space-y-4">
-                 <p className="text-[10px] font-black uppercase text-emerald-600 tracking-wider">PJ (Prestadores)</p>
+              <div className={`p-4 rounded-xl border space-y-4 transition-all ${
+                (today === settings.pjAlertDay || today === settings.pjAlertDay2) 
+                ? 'bg-emerald-50 border-emerald-400 ring-2 ring-emerald-200 shadow-md' 
+                : 'bg-muted/20 border-border'
+              }`}>
+                 <div className="flex justify-between items-center">
+                    <p className="text-[10px] font-black uppercase text-emerald-600 tracking-wider">PJ (Prestadores)</p>
+                    {(today === settings.pjAlertDay || today === settings.pjAlertDay2) && (
+                      <span className="flex items-center gap-1 bg-emerald-600 text-white text-[8px] px-2 py-0.5 rounded-full font-black animate-pulse">HOJE É DIA!</span>
+                    )}
+                 </div>
                  <div className="flex items-center justify-between">
                     <Label className="text-xs font-bold">Dia do Alerta 1</Label>
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] text-muted-foreground">DIA</span>
-                      <Input type="number" min={1} max={31} className="w-16 h-8 text-center" value={settings.pjAlertDay ?? 19} onChange={(e) => setSettings({...settings, pjAlertDay: parseInt(e.target.value) || 19})} />
+                      <Input type="number" min={1} max={31} className="w-16 h-8 text-center bg-background" value={settings.pjAlertDay ?? 19} onChange={(e) => setSettings({...settings, pjAlertDay: parseInt(e.target.value) || 19})} />
                     </div>
                  </div>
                  <div className="flex items-center justify-between">
                     <Label className="text-xs font-bold">Dia do Alerta 2</Label>
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] text-muted-foreground">DIA</span>
-                      <Input type="number" min={1} max={31} className="w-16 h-8 text-center" value={settings.pjAlertDay2 ?? 4} onChange={(e) => setSettings({...settings, pjAlertDay2: parseInt(e.target.value) || 4})} />
+                      <Input type="number" min={1} max={31} className="w-16 h-8 text-center bg-background" value={settings.pjAlertDay2 ?? 4} onChange={(e) => setSettings({...settings, pjAlertDay2: parseInt(e.target.value) || 4})} />
                     </div>
                  </div>
                  <p className="text-[10px] text-muted-foreground italic">Alertas nos dias de fechamento/pagamento PJ.</p>
@@ -266,9 +307,6 @@ export const SettingsTab = () => {
                <JobImportDialog />
                <PersonImportDialog />
               </div>
-             <Button onClick={handleSave} className="font-black uppercase tracking-widest text-[10px] px-8 h-10 shadow-lg gap-2">
-               <Save className="h-4 w-4" /> Salvar Configurações
-             </Button>
           </CardFooter>
         </Card>
 

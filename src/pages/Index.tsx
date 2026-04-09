@@ -22,8 +22,12 @@ import {
   Loader2,
   AlertCircle,
   Settings,
-  Calculator
+  Calculator,
+  Bell,
+  Zap
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import TimeRegistrationTab from "@/components/TimeRegistrationTab";
 import MealRequestTab from "@/components/MealRequestSystem";
 import FoodControlTab from "@/components/FoodControlTab";
@@ -31,7 +35,7 @@ import DiscountsTab from "@/components/DiscountsTab";
 import PaymentTab from "@/components/PaymentTab";
 import StatementTab from "@/components/StatementTab";
 import JobCostTab from "@/components/JobCostTab";
-import { SettingsTab } from "@/components/SettingsTab";
+import SettingsTab from "@/components/SettingsTab";
 import { useDatabase } from "@/hooks/use-database";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
@@ -78,9 +82,10 @@ const Index = () => {
   const [autoFillTravel, setAutoFillTravel] = useState(true);
   const [jobFilter, setJobFilter] = useState("all");
 
+  const today = new Date().getDate();
+
   // Reset filter when navigating away from certain pages to prevent sticky hidden filters
   useEffect(() => {
-    // Se não estamos mais em páginas onde o filtro faz sentido manter, limpa-o
     if (activePage !== "pagamento" && activePage !== "horas" && activePage !== "descontos" && activePage !== "controle") {
       setJobFilter("all");
     }
@@ -94,8 +99,6 @@ const Index = () => {
   const timeEntriesData = useMemo(() => timeEntries.data || [], [timeEntries.data]);
   const mealRequestsData = useMemo(() => mealRequests.data || [], [mealRequests.data]);
   const foodControlData = useMemo(() => foodControl.data || [], [foodControl.data]);
-  const discountConfirmationsData = useMemo(() => discountConfirmations.data || [], [discountConfirmations.data]);
-  const paymentConfirmationsData = useMemo(() => paymentConfirmations.data || [], [paymentConfirmations.data]);
   const manualAdjustmentsData = useMemo(() => manualAdjustments.data || [], [manualAdjustments.data]);
 
   const allConfirmations = useMemo(() => [
@@ -103,10 +106,13 @@ const Index = () => {
     ...(paymentConfirmations.data || [])
   ], [discountConfirmations.data, paymentConfirmations.data]);
 
-  // O sincronismo de Jobs agora é manual na aba de Configurações para evitar loops de loading.
-
-
-
+  const alertInfo = useMemo(() => {
+    if (!systemSettings.data) return null;
+    const s = systemSettings.data;
+    if (today === s.cltAlertDay || today === s.cltAlertDay2) return { type: "CLT", day: today };
+    if (today === s.pjAlertDay || today === s.pjAlertDay2) return { type: "PJ", day: today };
+    return null;
+  }, [systemSettings.data, today]);
 
   if (isLoading) {
     return (
@@ -147,6 +153,7 @@ const Index = () => {
             autoFillTravel={autoFillTravel}
             setAutoFillTravel={setAutoFillTravel}
             initialJobFilter={jobFilter}
+            systemSettings={systemSettings.data}
           />
         );
       case "refeicoes":
@@ -280,12 +287,15 @@ const Index = () => {
                   isActive={activePage === item.id} 
                   onClick={() => {
                     setActivePage(item.id);
-                    setJobFilter("all"); // Sempre força limpar o filtro ao clicar no menu lateral
+                    setJobFilter("all");
                   }}
                   className="transition-all duration-200"
                 >
                   <item.icon className={`h-4 w-4 ${activePage === item.id ? 'text-primary' : 'text-muted-foreground'}`} />
                   <span className={activePage === item.id ? 'font-semibold' : ''}>{item.label}</span>
+                  {alertInfo && (item.id === "pagamento" || item.id === "descontos") && (
+                    <div className="ml-auto flex h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+                  )}
                 </SidebarMenuButton>
               </SidebarMenuItem>
             ))}
@@ -294,6 +304,26 @@ const Index = () => {
       </Sidebar>
       <SidebarInset>
         <div className="flex min-h-screen flex-col bg-background">
+          {alertInfo && (
+            <div className="animate-in slide-in-from-top duration-700 w-full z-50">
+               <div className="bg-amber-500 text-white px-6 py-2 flex items-center justify-between border-b border-amber-600 shadow-lg relative">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-white/20 p-1.5 rounded-full animate-pulse">
+                      <Bell className="h-4 w-4 text-white" />
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-black uppercase tracking-[0.2em] leading-none opacity-80 block mb-0.5">Alerta de Pagamento {alertInfo.type}</span>
+                      <span className="text-xs font-bold leading-none">Hoje (Dia {alertInfo.day}) é o prazo limite para fechamento e confirmações!</span>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                     <Button variant="ghost" size="sm" className="h-7 text-[9px] font-black uppercase bg-white/10 hover:bg-white/20 text-white border border-white/20" onClick={() => setActivePage("pagamento")}>Ver Pagamentos</Button>
+                     <Button variant="ghost" size="sm" className="h-7 text-[9px] font-black uppercase bg-white/10 hover:bg-white/20 text-white border border-white/20" onClick={() => setActivePage("descontos")}>Ver Descontos</Button>
+                  </div>
+               </div>
+            </div>
+          )}
+          
           <header className="sticky top-0 z-20 flex shrink-0 items-center justify-between border-b border-border bg-background/80 px-6 py-4 backdrop-blur-sm print:hidden">
             <div className="flex items-center gap-4">
               <SidebarTrigger className="-ml-1" />
@@ -307,8 +337,32 @@ const Index = () => {
                 </p>
               </div>
             </div>
-            <div className="text-2xs text-white font-mono tabular-nums bg-green-600 px-2 py-1 rounded shadow-sm">
-              v1.6.0-stable
+
+            <div className="flex items-center gap-4">
+              {activePage === "horas" && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setAutoFillTravel(!autoFillTravel)}
+                  className={`text-[10px] font-bold uppercase ${autoFillTravel ? 'bg-primary/10 border-primary text-primary' : 'bg-muted/50'}`}
+                >
+                  Auto-Viagem: {autoFillTravel ? 'ON' : 'OFF'}
+                </Button>
+              )}
+              
+              {(activePage === "pagamento" || activePage === "horas" || activePage === "descontos" || activePage === "controle") && (
+                <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-lg border border-border">
+                  <SearchableSelect
+                    options={[{ value: "all", label: "TODOS OS JOBS" }, ...jobsData.map(j => ({ value: j.id, label: j.name }))]}
+                    value={jobFilter}
+                    onValueChange={setJobFilter}
+                    className="w-[250px] h-8 text-[10px] font-bold border-none bg-transparent"
+                  />
+                </div>
+              )}
+              <div className="text-2xs text-white font-mono tabular-nums bg-green-600 px-2 py-1 rounded shadow-sm">
+                v1.6.0-stable
+              </div>
             </div>
           </header>
 

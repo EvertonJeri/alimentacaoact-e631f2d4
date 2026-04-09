@@ -241,6 +241,13 @@ export const useDatabase = () => {
 
         if (!data) return { ...DEFAULT_SETTINGS, flashCardUsers: localFlash };
 
+        const localAlerts = (() => {
+          try {
+            const saved = localStorage.getItem("act_alert_days");
+            return saved ? JSON.parse(saved) : {};
+          } catch { return {}; }
+        })();
+
         return {
           teamsWebhookUrl: d.teams_webhook_url,
           managerWhatsApp: d.manager_whatsapp,
@@ -255,10 +262,10 @@ export const useDatabase = () => {
           hrEmails: d.hr_emails,
           discountAlertDate: d.discount_alert_date,
           discountAutoSend: d.discount_auto_send,
-          cltAlertDay: d.clt_alert_day || 5,
-          cltAlertDay2: d.clt_alert_day2 || 20,
-          pjAlertDay: d.pj_alert_day || 19,
-          pjAlertDay2: d.pj_alert_day2 || 4,
+          cltAlertDay: localAlerts.cltAlertDay || d.clt_alert_day || 5,
+          cltAlertDay2: localAlerts.cltAlertDay2 || d.clt_alert_day2 || 20,
+          pjAlertDay: localAlerts.pjAlertDay || d.pjAlertDay || 19,
+          pjAlertDay2: localAlerts.pjAlertDay2 || d.pjAlertDay2 || 4,
           cltPaymentDay: d.clt_payment_day || 5,
           cltAdvanceDay: d.clt_advance_day || 20,
           cltSheetCloseDay: d.clt_sheet_close_day || 20,
@@ -288,12 +295,19 @@ export const useDatabase = () => {
 
   const updateSystemSettings = useMutation({
     mutationFn: async (settings: SystemSettings) => {
-      // FALLBACK LOCAL: Sempre salva os Flash Users localmente para persistir independente do banco
+      // FALLBACK LOCAL: Sempre salva as Configurações localmente para persistir independente do banco
       try {
           if (settings.flashCardUsers) {
               localStorage.setItem("act_flash_card_users", JSON.stringify(settings.flashCardUsers));
           }
-      } catch(e) { console.error("Erro ao salvar cartões flash no localStorage", e); }
+          const alertDays = {
+            cltAlertDay: settings.cltAlertDay,
+            cltAlertDay2: settings.cltAlertDay2,
+            pjAlertDay: settings.pjAlertDay,
+            pjAlertDay2: settings.pjAlertDay2
+          };
+          localStorage.setItem("act_alert_days", JSON.stringify(alertDays));
+      } catch(e) { console.error("Erro ao salvar backups no localStorage", e); }
 
       // 1. TENTATIVA COMPLETA (Tudo o que o sistema suporta)
       const fullPayload: any = {
@@ -1076,7 +1090,7 @@ export const useDatabase = () => {
         console.warn("Erro ao buscar ajustes manuais com select(*), tentando colunas básicas...", error);
         const { data: dataBasic, error: errorBasic } = await supabase
           .from("manual_adjustments")
-          .select("id, person_id, amount, description, date, type")
+          .select("id, person_id, amount, description, date, type, created_at")
           .order("date", { ascending: false });
         if (errorBasic) throw errorBasic;
         baseData = dataBasic || [];
@@ -1103,6 +1117,7 @@ export const useDatabase = () => {
           description,
           date: a.date,
           type: a.type as "desconto" | "credito",
+          created_at: a.created_at || new Date().toISOString(),
         };
       });
 

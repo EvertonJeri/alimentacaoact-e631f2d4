@@ -92,6 +92,7 @@ interface TimeRegistrationTabProps {
   autoFillTravel?: boolean;
   setAutoFillTravel?: (v: boolean) => void;
   initialJobFilter?: string;
+  systemSettings?: any;
 }
 
 const TimeRegistrationTab = ({ 
@@ -104,7 +105,8 @@ const TimeRegistrationTab = ({
   requests,
   autoFillTravel,
   setAutoFillTravel,
-  initialJobFilter = "all"
+  initialJobFilter = "all",
+  systemSettings
 }: TimeRegistrationTabProps) => {
 
   const [selectedPerson, setSelectedPerson] = useState("");
@@ -600,7 +602,20 @@ const TimeRegistrationTab = ({
                 Data {sortOrder === 'asc' ? "↑" : "↓"}
             </Button>
         </div>
-        <div className="flex-1"></div>
+        <div className="flex-1 flex items-center gap-3">
+            {(() => {
+                if (!systemSettings) return null;
+                const d = new Date(selectedDate + "T12:00:00").getDate();
+                const isClt = d === systemSettings.cltAlertDay || d === systemSettings.cltAlertDay2;
+                const isPj = d === systemSettings.pjAlertDay || d === systemSettings.pjAlertDay2;
+                if (!isClt && !isPj) return null;
+                return (
+                    <Badge className="bg-amber-500 text-white animate-pulse text-[10px] font-black uppercase tracking-widest gap-1 border-none">
+                        <Zap className="h-3 w-3" /> Alerta de Pagamento ({isClt ? 'CLT' : 'PJ'})
+                    </Badge>
+                );
+            })()}
+        </div>
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           {/* Restauração removida por solicitação */}
           <Button onClick={exportToExcel} variant="outline" className="h-8 text-xs gap-1.5 shadow-sm w-full sm:w-auto">
@@ -682,6 +697,14 @@ const TimeRegistrationTab = ({
                       <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-2">
                           <span className="font-bold">{entry.date?.includes("-") ? entry.date.split("-").reverse().join("/") : entry.date || "—"}</span>
+                          {(() => {
+                              if (!systemSettings) return null;
+                              const d = new Date(entry.date + "T12:00:00").getDate();
+                              if (d === systemSettings.cltAlertDay || d === systemSettings.cltAlertDay2 || d === systemSettings.pjAlertDay || d === systemSettings.pjAlertDay2) {
+                                  return <Zap className="h-3 w-3 text-amber-500 animate-pulse fill-amber-500" />;
+                              }
+                              return null;
+                          })()}
                           {isOut && (
                             <span className="text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest bg-orange-200 text-orange-800 border border-orange-400 shadow-sm animate-pulse-subtle">
                               ✈️ IDA

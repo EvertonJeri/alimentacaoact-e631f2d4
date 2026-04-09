@@ -26,6 +26,13 @@ export const fetchSettingsFromDB = async (): Promise<SystemSettings> => {
 
     if (error || !data) return getStoredSettings();
 
+    const localAlerts = (() => {
+      try {
+        const saved = localStorage.getItem("act_alert_days");
+        return saved ? JSON.parse(saved) : {};
+      } catch { return {}; }
+    })();
+
     return {
       enableTeams: data.enable_teams,
       teamsWebhookUrl: data.teams_webhook_url,
@@ -40,10 +47,10 @@ export const fetchSettingsFromDB = async (): Promise<SystemSettings> => {
       hrEmails: data.hr_emails,
       discountAlertDate: data.discount_alert_date,
       discountAutoSend: data.discount_auto_send,
-      cltAlertDay: (data as any).clt_alert_day,
-      cltAlertDay2: (data as any).clt_alert_day2,
-      pjAlertDay: (data as any).pj_alert_day,
-      pjAlertDay2: (data as any).pj_alert_day2,
+      cltAlertDay: (data as any).clt_alert_day || localAlerts.cltAlertDay,
+      cltAlertDay2: (data as any).clt_alert_day2 || localAlerts.cltAlertDay2,
+      pjAlertDay: (data as any).pj_alert_day || localAlerts.pjAlertDay,
+      pjAlertDay2: (data as any).pj_alert_day2 || localAlerts.pjAlertDay2,
     };
   } catch {
     return getStoredSettings();
