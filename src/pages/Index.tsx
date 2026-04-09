@@ -223,6 +223,9 @@ const Index = () => {
             onUpdateConfirmation={(conf) => updateDiscountConfirmation.mutate(conf)}
             onUpdatePaymentConfirmation={(conf) => updatePaymentConfirmation.mutate(conf)}
             initialJobFilter={jobFilter}
+            manualAdjustments={manualAdjustmentsData}
+            onAddManualAdjustment={(adj) => updateManualAdjustment.mutate(adj)}
+            onDeleteManualAdjustment={(id) => deleteManualAdjustment.mutate(id)}
           />
         );
       case "fechamento":
