@@ -46,6 +46,7 @@ const Index = () => {
     foodControl,
     discountConfirmations,
     paymentConfirmations,
+    manualAdjustments,
     updateFoodControl,
     updateDiscountConfirmation,
     updatePaymentConfirmation,
@@ -54,6 +55,8 @@ const Index = () => {
     deleteMealRequest: removeMealRequest,
     deleteTimeEntry: removeTimeEntry,
     deletePaymentConfirmation: removePaymentConfirmation,
+    updateManualAdjustment,
+    deleteManualAdjustment,
     systemSettings,
     customHolidays,
   } = useDatabase();
