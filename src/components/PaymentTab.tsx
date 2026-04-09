@@ -40,6 +40,7 @@ interface PaymentTabProps {
   onUpdateManualMealRequest?: (req: MealRequest) => void;
   initialJobFilter?: string;
   systemSettings?: SystemSettings;
+  manualAdjustments?: ManualAdjustment[];
 }
 
 const PaymentTab = ({
