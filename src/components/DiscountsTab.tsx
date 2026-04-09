@@ -41,6 +41,9 @@ interface DiscountsTabProps {
   onUpdateConfirmation?: (conf: DiscountConfirmation) => void;
   onUpdatePaymentConfirmation?: (conf: PaymentConfirmation) => void;
   initialJobFilter?: string;
+  manualAdjustments?: ManualAdjustment[];
+  onAddManualAdjustment?: (adj: ManualAdjustment) => void;
+  onDeleteManualAdjustment?: (id: string) => void;
 }
 
 interface DiscountRow {
