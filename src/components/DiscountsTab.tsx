@@ -626,6 +626,164 @@ const DiscountsTab = ({
             </div>
           )}
         </TabsContent>
+
+        <TabsContent value="ajustes" className="mt-4">
+          <p className="text-xs text-muted-foreground mb-3">
+            Insira aqui ajustes retroativos de <strong>descontos</strong> ou <strong>créditos</strong> que já foram aplicados antes do sistema entrar em operação.
+            Esses valores serão considerados no cálculo de saldo em todas as abas.
+          </p>
+
+          {/* Formulário de novo ajuste */}
+          <div className="rounded-xl border border-blue-200 bg-blue-50/20 p-4 mb-4">
+            <h3 className="text-sm font-bold text-foreground mb-3 flex items-center gap-2">
+              <Plus className="h-4 w-4" /> Novo Ajuste Manual
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+              <div className="lg:col-span-2">
+                <label className="text-2xs text-muted-foreground font-medium mb-1 block">Pessoa</label>
+                <Select value={adjPersonId} onValueChange={setAdjPersonId}>
+                  <SelectTrigger className="h-9 text-xs">
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {people.filter(p => p.isActive !== false).sort((a, b) => a.name.localeCompare(b.name)).map(p => (
+                      <SelectItem key={p.id} value={p.id} className="text-xs">{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-2xs text-muted-foreground font-medium mb-1 block">Tipo</label>
+                <Select value={adjType} onValueChange={(v) => setAdjType(v as "desconto" | "credito")}>
+                  <SelectTrigger className="h-9 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="desconto" className="text-xs">✂️ Desconto</SelectItem>
+                    <SelectItem value="credito" className="text-xs">💰 Crédito</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-2xs text-muted-foreground font-medium mb-1 block">Valor (R$)</label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  className="h-9 text-xs"
+                  placeholder="0.00"
+                  value={adjAmount}
+                  onChange={e => setAdjAmount(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-2xs text-muted-foreground font-medium mb-1 block">Data Ref.</label>
+                <Input
+                  type="date"
+                  className="h-9 text-xs flex-row-reverse"
+                  value={adjDate}
+                  onChange={e => setAdjDate(e.target.value)}
+                />
+              </div>
+              <div className="flex items-end">
+                <Button
+                  size="sm"
+                  className="w-full h-9 gap-1.5"
+                  disabled={!adjPersonId || !adjAmount || Number(adjAmount) <= 0}
+                  onClick={() => {
+                    if (!adjPersonId || !adjAmount || Number(adjAmount) <= 0) return;
+                    onAddManualAdjustment?.({
+                      id: crypto.randomUUID(),
+                      personId: adjPersonId,
+                      amount: Number(adjAmount),
+                      description: adjDescription || (adjType === "desconto" ? "Desconto retroativo" : "Crédito retroativo"),
+                      date: adjDate,
+                      type: adjType,
+                    });
+                    setAdjAmount("");
+                    setAdjDescription("");
+                  }}
+                >
+                  <Plus className="h-3.5 w-3.5" /> Adicionar
+                </Button>
+              </div>
+            </div>
+            <div className="mt-2">
+              <label className="text-2xs text-muted-foreground font-medium mb-1 block">Descrição / Motivo</label>
+              <Input
+                className="h-9 text-xs"
+                placeholder="Ex: Desconto referente ao mês de Março/2026"
+                value={adjDescription}
+                onChange={e => setAdjDescription(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Lista de ajustes existentes */}
+          <div className="rounded-xl border border-border overflow-hidden shadow-card">
+            {manualAdjustments.length === 0 ? (
+              <div className="text-center py-10 text-sm text-muted-foreground">
+                Nenhum ajuste manual registrado. Use o formulário acima para adicionar.
+              </div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="bg-muted/30">
+                  <tr>
+                    <th className="text-left px-4 py-2 text-2xs uppercase tracking-wider font-medium text-muted-foreground">Pessoa</th>
+                    <th className="text-left px-4 py-2 text-2xs uppercase tracking-wider font-medium text-muted-foreground">Tipo</th>
+                    <th className="text-left px-4 py-2 text-2xs uppercase tracking-wider font-medium text-muted-foreground">Data</th>
+                    <th className="text-right px-4 py-2 text-2xs uppercase tracking-wider font-medium text-muted-foreground">Valor (R$)</th>
+                    <th className="text-left px-4 py-2 text-2xs uppercase tracking-wider font-medium text-muted-foreground">Descrição</th>
+                    <th className="text-right px-4 py-2 text-2xs uppercase tracking-wider font-medium text-muted-foreground">Ação</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/50">
+                  {manualAdjustments.map(adj => (
+                    <tr key={adj.id} className="hover:bg-muted/20 transition-colors">
+                      <td className="px-4 py-2 font-medium">{getPersonName(adj.personId)}</td>
+                      <td className="px-4 py-2">
+                        <Badge className={`text-2xs ${adj.type === "credito" ? "bg-green-100 text-green-700 border-green-200" : "bg-red-100 text-red-700 border-red-200"}`}>
+                          {adj.type === "credito" ? "💰 Crédito" : "✂️ Desconto"}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-2 tabular-nums text-muted-foreground">
+                        {adj.date?.includes("-") ? adj.date.split("-").reverse().join("/") : adj.date}
+                      </td>
+                      <td className={`px-4 py-2 text-right tabular-nums font-bold ${adj.type === "credito" ? "text-green-600" : "text-destructive"}`}>
+                        {adj.type === "credito" ? "+" : "-"}{Math.abs(adj.amount).toFixed(2)}
+                      </td>
+                      <td className="px-4 py-2 text-xs text-muted-foreground">{adj.description}</td>
+                      <td className="px-4 py-2 text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => onDeleteManualAdjustment?.(adj.id)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {manualAdjustments.length > 0 && (
+            <div className="flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50/30 px-4 py-3 mt-4">
+              <span className="text-sm font-semibold uppercase text-muted-foreground">Resumo Ajustes</span>
+              <div className="flex gap-4">
+                <span className="tabular-nums text-sm font-bold text-destructive">
+                  Descontos: -{manualAdjustments.filter(a => a.type === "desconto").reduce((s, a) => s + Math.abs(a.amount), 0).toFixed(2)}
+                </span>
+                <span className="tabular-nums text-sm font-bold text-green-600">
+                  Créditos: +{manualAdjustments.filter(a => a.type === "credito").reduce((s, a) => s + Math.abs(a.amount), 0).toFixed(2)}
+                </span>
+              </div>
+            </div>
+          )}
+        </TabsContent>
       </Tabs>
     </div>
   );
