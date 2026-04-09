@@ -130,6 +130,44 @@ export type Database = {
         }
         Relationships: []
       }
+      manual_adjustments: {
+        Row: {
+          amount: number
+          created_at: string | null
+          date: string
+          description: string
+          id: string
+          person_id: string
+          type: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string | null
+          date?: string
+          description?: string
+          id?: string
+          person_id: string
+          type?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          date?: string
+          description?: string
+          id?: string
+          person_id?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manual_adjustments_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meal_requests: {
         Row: {
           created_at: string | null
