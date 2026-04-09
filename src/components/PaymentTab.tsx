@@ -57,6 +57,7 @@ const PaymentTab = ({
   onUpdateManualMealRequest,
   initialJobFilter = "all",
   systemSettings,
+  manualAdjustments = [],
 }: PaymentTabProps) => {
 
   const [filterJob, setFilterJob] = useState(initialJobFilter);
