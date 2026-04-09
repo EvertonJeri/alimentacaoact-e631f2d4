@@ -498,6 +498,16 @@ export function calculatePersonBalance(
     }
   });
 
+  // Parte 4: Ajustes Manuais
+  if (manualAdjustments) {
+    const personAdj = manualAdjustments.filter(a => String(a.personId || "").toLowerCase() === pId);
+    personAdj.forEach(a => {
+      const val = a.type === "credito" ? Math.abs(a.amount) : -Math.abs(a.amount);
+      walletBalance += val;
+      adjustments.push({ date: a.date, amount: val, label: `[Manual] ${a.description}` });
+    });
+  }
+
   return { totalWallet: walletBalance, currentReqNet, retroBalance: walletBalance - currentReqNet, adjustments };
 }
 
