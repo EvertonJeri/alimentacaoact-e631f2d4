@@ -69,7 +69,10 @@ const DiscountsTab = ({
   setConfirmations,
   onUpdateConfirmation,
   onUpdatePaymentConfirmation,
-  initialJobFilter = "all"
+  initialJobFilter = "all",
+  manualAdjustments = [],
+  onAddManualAdjustment,
+  onDeleteManualAdjustment,
 }: DiscountsTabProps) => {
   const [expandedPersons, setExpandedPersons] = useState<Set<string>>(new Set());
   const [showAlertBanner, setShowAlertBanner] = useState(false);
