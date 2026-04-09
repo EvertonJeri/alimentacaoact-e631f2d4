@@ -8,6 +8,7 @@ import {
   type TimeEntry, 
   type FoodControlEntry, 
   type PaymentConfirmation, 
+  type ManualAdjustment,
   type SystemSettings,
   DEFAULT_SETTINGS
 } from "@/lib/types";
