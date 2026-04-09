@@ -551,9 +551,9 @@ const DiscountsTab = ({
       )}
 
       {/* Tabs Descontos / Saldo */}
-      <Tabs value={activeView} onValueChange={(v) => setActiveView(v as "descontos" | "saldo")} className="w-full">
+      <Tabs value={activeView} onValueChange={(v) => setActiveView(v as "descontos" | "saldo" | "ajustes")} className="w-full">
         <div className="flex items-center justify-between flex-wrap gap-2">
-          <TabsList className="grid grid-cols-2 w-auto">
+          <TabsList className="grid grid-cols-3 w-auto">
             <TabsTrigger value="descontos" className="gap-1.5 text-xs">
               ✂️ Descontos
               {discounts.length > 0 && <Badge variant="destructive" className="text-2xs ml-1 h-4 px-1">{discounts.length}</Badge>}
