@@ -131,6 +131,15 @@ export interface PaymentConfirmation {
   personId?: string; // ADICIONADO: Essencial para o saldo global
 }
 
+export interface ManualAdjustment {
+  id: string;
+  personId: string;
+  amount: number;
+  description: string;
+  date: string;
+  type: "desconto" | "credito";
+}
+
 
 
 export interface Job {
