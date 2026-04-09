@@ -566,7 +566,6 @@ const DiscountsTab = ({
               <Wrench className="h-3 w-3" /> Ajustes Manuais
               {manualAdjustments.length > 0 && <Badge className="text-2xs ml-1 h-4 px-1 bg-blue-100 text-blue-700">{manualAdjustments.length}</Badge>}
             </TabsTrigger>
-            </TabsTrigger>
           </TabsList>
           <div className="flex items-center gap-4">
               <label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-full ring-1 ring-border cursor-pointer hover:bg-muted transition-all">
