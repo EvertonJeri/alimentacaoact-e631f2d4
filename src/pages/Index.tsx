@@ -183,6 +183,7 @@ const Index = () => {
             onUpdateDiscountConfirmation={(conf) => updateDiscountConfirmation.mutate(conf)}
             initialJobFilter={jobFilter}
             systemSettings={systemSettings.data}
+            manualAdjustments={manualAdjustmentsData}
           />
         );
       case "extrato":
