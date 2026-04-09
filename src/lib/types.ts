@@ -385,7 +385,8 @@ export function calculatePersonBalance(
   confirmations: (DiscountConfirmation | PaymentConfirmation)[],
   people: Person[],
   timeEntries: TimeEntry[],
-  excludeRequestId?: string // ADICIONADO: Essencial para não zerar o PIX ao confirmar
+  excludeRequestId?: string,
+  manualAdjustments?: ManualAdjustment[]
 ): { totalWallet: number; currentReqNet: number; retroBalance: number; adjustments: any[] } {
   const person = people.find(p => p.id === personId);
   if (!person) return { totalWallet: 0, currentReqNet: 0, retroBalance: 0, adjustments: [] };
