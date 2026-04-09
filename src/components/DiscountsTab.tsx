@@ -77,9 +77,16 @@ const DiscountsTab = ({
   const [expandedPersons, setExpandedPersons] = useState<Set<string>>(new Set());
   const [showAlertBanner, setShowAlertBanner] = useState(false);
   const [filterJob, setFilterJob] = useState(initialJobFilter);
-  const [activeView, setActiveView] = useState<"descontos" | "saldo">("descontos");
+  const [activeView, setActiveView] = useState<"descontos" | "saldo" | "ajustes">("descontos");
   const [showHistory, setShowHistory] = useState(false);
   const [rowDates, setRowDates] = useState<Record<string, string>>({});
+  
+  // Manual adjustment form state
+  const [adjPersonId, setAdjPersonId] = useState("");
+  const [adjAmount, setAdjAmount] = useState("");
+  const [adjDescription, setAdjDescription] = useState("");
+  const [adjDate, setAdjDate] = useState(new Date().toISOString().split("T")[0]);
+  const [adjType, setAdjType] = useState<"desconto" | "credito">("desconto");
 
   useEffect(() => {
     if (initialJobFilter) setFilterJob(initialJobFilter);
