@@ -197,6 +197,7 @@ const Index = () => {
             confirmations={allConfirmations}
             onUpdatePaymentConfirmation={(conf) => updatePaymentConfirmation.mutate(conf)}
             systemSettings={systemSettings.data}
+            manualAdjustments={manualAdjustmentsData}
           />
         );
       case "controle":
