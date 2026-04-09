@@ -20,6 +20,7 @@ import {
   type FoodControlEntry,
   type DiscountConfirmation,
   type PaymentConfirmation,
+  type ManualAdjustment,
   MEAL_LABELS,
   MEAL_VALUES,
   getDatesInRange,
