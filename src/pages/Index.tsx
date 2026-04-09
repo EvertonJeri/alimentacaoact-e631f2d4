@@ -96,6 +96,7 @@ const Index = () => {
   const foodControlData = useMemo(() => foodControl.data || [], [foodControl.data]);
   const discountConfirmationsData = useMemo(() => discountConfirmations.data || [], [discountConfirmations.data]);
   const paymentConfirmationsData = useMemo(() => paymentConfirmations.data || [], [paymentConfirmations.data]);
+  const manualAdjustmentsData = useMemo(() => manualAdjustments.data || [], [manualAdjustments.data]);
 
   const allConfirmations = useMemo(() => [
     ...(discountConfirmations.data || []),
