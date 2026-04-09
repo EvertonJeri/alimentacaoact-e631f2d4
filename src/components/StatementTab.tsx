@@ -30,6 +30,7 @@ interface StatementTabProps {
   confirmations: (DiscountConfirmation | PaymentConfirmation)[];
   onUpdatePaymentConfirmation?: (conf: PaymentConfirmation) => void;
   systemSettings?: SystemSettings;
+  manualAdjustments?: ManualAdjustment[];
 }
 
 interface StatementDetail {
