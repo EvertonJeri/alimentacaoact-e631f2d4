@@ -1068,36 +1068,90 @@ export const useDatabase = () => {
 
   const manualAdjustments = useQuery({
     queryKey: ["manual_adjustments"],
-    queryFn: async () => {
+    queryFn: async (): Promise<ManualAdjustment[]> => {
       const { data, error } = await supabase.from("manual_adjustments").select("*").order("date", { ascending: false });
-      if (error) throw error;
-      return (data || []).map((a: any) => ({
-        id: a.id,
-        personId: a.person_id,
-        amount: Number(a.amount),
-        description: a.description,
-        date: a.date,
-        type: a.type,
-      })) as ManualAdjustment[];
+      
+      let baseData = data || [];
+      if (error) {
+        console.warn("Erro ao buscar ajustes manuais com select(*), tentando colunas básicas...", error);
+        const { data: dataBasic, error: errorBasic } = await supabase
+          .from("manual_adjustments")
+          .select("id, person_id, amount, description, date, type")
+          .order("date", { ascending: false });
+        if (errorBasic) throw errorBasic;
+        baseData = dataBasic || [];
+      }
+
+      const results = baseData.map((a: any) => {
+        let jobId = a.job_id;
+        let description = a.description || "";
+
+        // Fallback: Tenta extrair Job ID da descrição se não estiver na coluna
+        if (!jobId && description.includes("[JOB_ID:")) {
+          const match = description.match(/\[JOB_ID:([^\]]+)\]/);
+          if (match) {
+            jobId = match[1];
+            description = description.replace(/\[JOB_ID:[^\]]+\]\s*/, "");
+          }
+        }
+
+        return {
+          id: a.id,
+          personId: a.person_id,
+          jobId,
+          amount: Number(a.amount),
+          description,
+          date: a.date,
+          type: a.type as "desconto" | "credito",
+        };
+      });
+
+      return results as ManualAdjustment[];
     },
   });
 
   const updateManualAdjustment = useMutation({
     mutationFn: async (adj: ManualAdjustment) => {
-      const { error } = await supabase.from("manual_adjustments").upsert({
+      let finalDescription = adj.description;
+      
+      // Se tivermos um jobId, incluímos na descrição como fallback se a coluna falhar
+      if (adj.jobId) {
+        finalDescription = `[JOB_ID:${adj.jobId}] ${finalDescription}`;
+      }
+
+      const payload: any = {
         id: adj.id || undefined,
         person_id: adj.personId,
         amount: adj.amount,
-        description: adj.description,
+        description: finalDescription,
         date: adj.date,
         type: adj.type,
-      } as any, { onConflict: "id" });
-      if (error) throw error;
+      };
+
+      // Tenta setar a coluna job_id se ela existir no banco
+      if (adj.jobId) {
+        payload.job_id = adj.jobId;
+      }
+
+      console.log("[DATABASE] saving manual adjustment:", payload);
+      const { error } = await supabase.from("manual_adjustments").upsert(payload, { onConflict: "id" });
+      
+      if (error) {
+        console.error("Error saving with job_id, retrying with minimal payload...", error);
+        // Tenta sem a coluna job_id
+        const { job_id, ...minimalPayload } = payload;
+        const { error: error2 } = await supabase.from("manual_adjustments").upsert(minimalPayload, { onConflict: "id" });
+        if (error2) throw error2;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["manual_adjustments"] });
       toast.success("Ajuste manual salvo!");
     },
+    onError: (err: any) => {
+      console.error("Erro fatal ao salvar ajuste:", err);
+      toast.error("Erro ao salvar ajuste: " + (err.message || "Erro desconhecido"));
+    }
   });
 
   const deleteManualAdjustment = useMutation({

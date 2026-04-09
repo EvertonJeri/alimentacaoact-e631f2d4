@@ -84,6 +84,7 @@ const DiscountsTab = ({
   // Manual adjustment form state
   const [adjPersonId, setAdjPersonId] = useState("");
   const [adjAmount, setAdjAmount] = useState("");
+  const [adjJobId, setAdjJobId] = useState("");
   const [adjDescription, setAdjDescription] = useState("");
   const [adjDate, setAdjDate] = useState(new Date().toISOString().split("T")[0]);
   const [adjType, setAdjType] = useState<"desconto" | "credito">("desconto");
@@ -637,7 +638,7 @@ const DiscountsTab = ({
             <h3 className="text-sm font-bold text-foreground mb-3 flex items-center gap-2">
               <Plus className="h-4 w-4" /> Novo Ajuste Manual
             </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3">
               <div className="lg:col-span-2">
                 <label className="text-2xs text-muted-foreground font-medium mb-1 block">Pessoa</label>
                 <Select value={adjPersonId} onValueChange={setAdjPersonId}>
@@ -647,6 +648,20 @@ const DiscountsTab = ({
                   <SelectContent>
                     {people.filter(p => p.isActive !== false).sort((a, b) => a.name.localeCompare(b.name)).map(p => (
                       <SelectItem key={p.id} value={p.id} className="text-xs">{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="lg:col-span-2">
+                <label className="text-2xs text-muted-foreground font-medium mb-1 block">Job / Projeto (Opcional)</label>
+                <Select value={adjJobId} onValueChange={setAdjJobId}>
+                  <SelectTrigger className="h-9 text-xs">
+                    <SelectValue placeholder="Sem job específico" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none" className="text-xs text-muted-foreground italic">Sem job específico</SelectItem>
+                    {jobs.sort((a, b) => a.name.localeCompare(b.name)).map(j => (
+                      <SelectItem key={j.id} value={j.id} className="text-xs">{j.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -694,6 +709,7 @@ const DiscountsTab = ({
                     onAddManualAdjustment?.({
                       id: crypto.randomUUID(),
                       personId: adjPersonId,
+                      jobId: adjJobId && adjJobId !== "none" ? adjJobId : undefined,
                       amount: Number(adjAmount),
                       description: adjDescription || (adjType === "desconto" ? "Desconto retroativo" : "Crédito retroativo"),
                       date: adjDate,
@@ -701,6 +717,7 @@ const DiscountsTab = ({
                     });
                     setAdjAmount("");
                     setAdjDescription("");
+                    setAdjJobId("");
                   }}
                 >
                   <Plus className="h-3.5 w-3.5" /> Adicionar
@@ -729,6 +746,7 @@ const DiscountsTab = ({
                 <thead className="bg-muted/30">
                   <tr>
                     <th className="text-left px-4 py-2 text-2xs uppercase tracking-wider font-medium text-muted-foreground">Pessoa</th>
+                    <th className="text-left px-4 py-2 text-2xs uppercase tracking-wider font-medium text-muted-foreground">Job / Projeto</th>
                     <th className="text-left px-4 py-2 text-2xs uppercase tracking-wider font-medium text-muted-foreground">Tipo</th>
                     <th className="text-left px-4 py-2 text-2xs uppercase tracking-wider font-medium text-muted-foreground">Data</th>
                     <th className="text-right px-4 py-2 text-2xs uppercase tracking-wider font-medium text-muted-foreground">Valor (R$)</th>
@@ -740,8 +758,12 @@ const DiscountsTab = ({
                   {manualAdjustments.map(adj => (
                     <tr key={adj.id} className="hover:bg-muted/20 transition-colors">
                       <td className="px-4 py-2 font-medium">{getPersonName(adj.personId)}</td>
+                      <td className="px-4 py-2 text-xs text-muted-foreground">{adj.jobId ? getJobName(adj.jobId) : "—"}</td>
                       <td className="px-4 py-2">
-                        <Badge className={`text-2xs ${adj.type === "credito" ? "bg-green-100 text-green-700 border-green-200" : "bg-red-100 text-red-700 border-red-200"}`}>
+                        <Badge 
+                          variant={adj.type === "credito" ? "outline" : "outline"} 
+                          className={adj.type === "credito" ? "bg-green-50 text-green-700 border-green-200" : "bg-red-50 text-red-700 border-red-100"}
+                        >
                           {adj.type === "credito" ? "💰 Crédito" : "✂️ Desconto"}
                         </Badge>
                       </td>

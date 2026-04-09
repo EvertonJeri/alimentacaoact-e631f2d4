@@ -117,7 +117,7 @@ const PaymentTab = ({
     
     allPersonsIds.forEach(pid => {
        try {
-         const balanceObj = calculatePersonBalance(pid, requests, foodControl, confirmations, people, timeEntries, undefined, manualAdjustments);
+         const balanceObj = calculatePersonBalance(pid, requests, foodControl, confirmations, people, timeEntries, jobs, undefined, manualAdjustments);
          map.set(pid, balanceObj.totalWallet);
        } catch (e) {
          map.set(pid, 0);
@@ -126,19 +126,33 @@ const PaymentTab = ({
     return map;
   }, [requests, foodControl, confirmations, people, timeEntries]);
 
-  const filteredRequests = (filterJob === "all")
-    ? registeredRequests
-    : registeredRequests.filter((r) => r.jobId === filterJob);
+  const filteredRequests = useMemo(() => {
+    if (filterJob === "all") return registeredRequests;
+    
+    return registeredRequests.filter((r) => {
+      const rId = String(r.jobId || "").toLowerCase().trim();
+      const fId = String(filterJob || "").toLowerCase().trim();
+      return rId === fId || rId.startsWith(fId + " -") || fId.startsWith(rId + " -");
+    });
+  }, [registeredRequests, filterJob]);
 
   const groupedByJob = useMemo(() => {
     const map = new Map<string, typeof filteredRequests>();
     filteredRequests.forEach((req) => {
-      const arr = map.get(req.jobId) || [];
+      // Tenta encontrar o ID "mestre" do Job para agrupar tudo no mesmo lugar
+      const rId = String(req.jobId || "").toLowerCase().trim();
+      const job = jobs.find(j => {
+        const jId = String(j.id || "").toLowerCase().trim();
+        return rId === jId || rId.startsWith(jId + " -") || jId.startsWith(rId + " -");
+      });
+      
+      const groupId = job ? job.id : req.jobId;
+      const arr = map.get(groupId) || [];
       arr.push(req);
-      map.set(req.jobId, arr);
+      map.set(groupId, arr);
     });
     return map;
-  }, [filteredRequests]);
+  }, [filteredRequests, jobs]);
 
   const toggleRequest = (id: string) => {
     setExpandedRequests((prev) => {
@@ -296,12 +310,13 @@ const PaymentTab = ({
         const currentReqNet = currentReqBruto + currentReqDiscounts;
         
         // Pega o saldo da carteira ANTES deste pagamento
-        const balanceObj = calculatePersonBalance(req.personId, requests, foodControl, confirmations, people, timeEntries, req.id, manualAdjustments);
+        const balanceObj = calculatePersonBalance(req.personId, requests, foodControl, confirmations, people, timeEntries, jobs, req.id, manualAdjustments, req.jobId);
         const totalWallet = balanceObj.totalWallet || 0;
-        const retroBalance = totalWallet - currentReqNet;
+        const jobManualTotal = balanceObj.jobManualTotal || 0;
+        const retroBalance = totalWallet - currentReqNet - jobManualTotal; // Saldo de OUTROS projetos
         
-        // O valor do PIX é exatamente o que está na tela
-        const finalValue = shouldApply ? Math.max(0, currentReqNet + retroBalance) : currentReqBruto;
+        // O valor do PIX é neto + jobManualTotal + retroBalance
+        const finalValue = shouldApply ? Math.max(0, currentReqNet + jobManualTotal + retroBalance) : currentReqBruto;
         
         console.log(`[PAGAMENTO] Início da confirmação para ${req.id}:`, {
             bruto: currentReqBruto,
@@ -379,10 +394,11 @@ const PaymentTab = ({
           const bruto = calcRequestBruto(req) || 0;
           const disc = getRequestDiscounts(req) || 0;
           const neto = bruto + disc;
-          const balanceObj = calculatePersonBalance(req.personId, requests, foodControl, confirmations, people, timeEntries, req.id, manualAdjustments);
+          const balanceObj = calculatePersonBalance(req.personId, requests, foodControl, confirmations, people, timeEntries, jobs, req.id, manualAdjustments, req.jobId);
           const totalW = balanceObj.totalWallet || 0;
-          const retro = totalW - neto;
-          const reqFinalValue = shouldApply ? Math.max(0, neto + retro) : bruto;
+          const jmTotal = balanceObj.jobManualTotal || 0;
+          const retro = totalW - neto - jmTotal;
+          const reqFinalValue = shouldApply ? Math.max(0, neto + jmTotal + retro) : bruto;
 
           await onUpdateConfirmation({ 
               id: conf?.id || req.id, 
@@ -467,23 +483,35 @@ const PaymentTab = ({
       const isCurrentMonth = pDate && pDate.getMonth() === currentMonth && pDate.getFullYear() === currentYear;
 
       if (!isPaid) {
-        // Calcula o valor final estimado como a tela faz (com retroBalance)
         const shouldApply = (conf?.applyBalance !== false);
-        const balanceObj = calculatePersonBalance(req.personId, requests, foodControl, confirmations, people, timeEntries, req.id, manualAdjustments);
+        const balanceObj = calculatePersonBalance(req.personId, requests, foodControl, confirmations, people, timeEntries, jobs, req.id, manualAdjustments, req.jobId);
         const totalWallet = balanceObj.totalWallet || 0;
-        const retroBalance = totalWallet - neto;
-        const finalEst = shouldApply ? Math.max(0, neto + retroBalance) : bruto;
+        const jmTotal = balanceObj.jobManualTotal || 0;
+        const retroBalance = totalWallet - neto - jmTotal;
+        const finalEst = shouldApply ? Math.max(0, neto + jmTotal + retroBalance) : bruto;
         pendingBruto += bruto;
         pendingLiquido += finalEst;
       } else if (conf?.finalValue !== undefined && conf?.finalValue !== null) {
-        // usa valor congelado no banco
-        if (isCurrentMonth) { paidBruto += bruto; paidLiquido += conf.finalValue; }
+        if (isCurrentMonth) { 
+          paidBruto += bruto; 
+          paidLiquido += conf.finalValue; 
+        }
       } else if (isCurrentMonth) {
-        // fallback para pagamentos antigos sem finalValue
         const dbApplied = conf?.appliedBalance ?? 0;
         paidBruto += bruto;
         paidLiquido += Math.max(0, neto + dbApplied);
       }
+    });
+
+    // IMPORTANTE: Adiciona ajustes manuais que não estão vinculados a nenhuma solicitação processada
+    // para garantir que o saldo "Total Geral" esteja sempre correto
+    const processedPersonIds = new Set(registeredRequests.map(r => r.personId));
+    manualAdjustments.forEach(adj => {
+       if (!processedPersonIds.has(adj.personId)) {
+          const val = adj.type === 'credito' ? Math.abs(adj.amount) : -Math.abs(adj.amount);
+          // Para pessoas sem solicitações, o ajuste entra direto no líquido pendente
+          pendingLiquido += val;
+       }
     });
 
     return { pendingBruto, pendingLiquido, paidBruto, paidLiquido };
@@ -549,6 +577,55 @@ const PaymentTab = ({
                         <h3 className="font-bold text-sm text-foreground">{getJobName(jobId, jobReqs[0]?.personId)}</h3>
                         {isJobPaid && <Badge variant="secondary" className="bg-green-500/10 text-green-600 border-green-200 py-0.5">✓ Job 100% Pago</Badge>}
                       </div>
+                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-medium">
+                        {(() => {
+                          let jobBruto = 0;
+                          let jobLiquido = 0;
+                          
+                          // Buscamos TODOS os ajustes manuais vinculados a este Job para somar no "Solicitado"
+                          const allJobAdjustments = (manualAdjustments || []).filter(a => {
+                            const aId = String(a.jobId || "").toLowerCase().trim();
+                            const tId = String(jobId || "").toLowerCase().trim();
+                            return aId === tId || aId.startsWith(tId + " -") || tId.startsWith(aId + " -");
+                          });
+                          const adjTotal = allJobAdjustments.reduce((s, a) => s + (a.type === 'credito' ? Math.abs(a.amount) : -Math.abs(a.amount)), 0);
+
+                          jobReqs.forEach(req => {
+                            const bruto = calcRequestBruto(req);
+                            const disc = getRequestDiscounts(req);
+                            const conf = getConfirmation(req.id);
+                            const isPaid = conf?.confirmed;
+                            const shouldApply = conf?.applyBalance !== false;
+                            
+                            const balanceObj = calculatePersonBalance(req.personId, requests, foodControl, confirmations, people, timeEntries, jobs, req.id, manualAdjustments, req.jobId);
+                            const jmTotal = balanceObj.jobManualTotal || 0;
+                            const currentReqNet = bruto + disc;
+                            
+                            let retroTransfer = 0;
+                            if (isPaid && conf?.appliedBalance !== undefined) {
+                              retroTransfer = conf.appliedBalance;
+                            } else {
+                              retroTransfer = balanceObj.totalWallet - currentReqNet - jmTotal;
+                            }
+                            
+                            const liquidVal = shouldApply ? Math.max(0, currentReqNet + jmTotal + retroTransfer) : bruto;
+                            
+                            jobBruto += bruto;
+                            jobLiquido += liquidVal;
+                          });
+
+                          // O valor solicitado FINAL para o Job deve considerar os ajustes manuais do job
+                          const finalSolicitado = jobBruto + adjTotal;
+
+                          return (
+                            <>
+                              <span>Solicitado: <strong className="text-foreground">R$ {finalSolicitado.toFixed(2)}</strong></span>
+                              <span className="opacity-30">|</span>
+                              <span>Total PIX: <strong className="text-blue-600">R$ {jobLiquido.toFixed(2)}</strong></span>
+                            </>
+                          );
+                        })()}
+                      </div>
                     </div>
                   </div>
                 {!isJobPaid ? (
@@ -577,24 +654,24 @@ const PaymentTab = ({
                       const currentReqDiscounts = getRequestDiscounts(req) || 0; 
                       const currentReqNet = currentReqBruto + currentReqDiscounts;
                       
-                      const balanceObj = calculatePersonBalance(req.personId, requests, foodControl, confirmations, people, timeEntries, req.id, manualAdjustments);
+                      const balanceObj = calculatePersonBalance(req.personId, requests, foodControl, confirmations, people, timeEntries, jobs, req.id, manualAdjustments, req.jobId);
                       const totalWallet = balanceObj.totalWallet || 0;
-                      const retroBalance = totalWallet - currentReqNet;
+                      const jobManualTotal = balanceObj.jobManualTotal || 0;
+                      const retroBalance = totalWallet - currentReqNet - jobManualTotal;
                       const adjustmentsFromBalance = balanceObj.adjustments || [];
 
                       let finalTotal: number;
                       let displayAdjustment: number;
                       
-                      if (isPaid && conf?.finalValue !== undefined && conf?.finalValue !== null) {
-                        finalTotal = conf.finalValue;
-                        displayAdjustment = conf.appliedBalance || 0;
-                      } else if (isPaid) {
-                        const dbAppliedBalance = conf?.appliedBalance ?? retroBalance;
-                        finalTotal = frozenApply ? Math.max(0, currentReqNet + dbAppliedBalance) : currentReqBruto;
-                        displayAdjustment = dbAppliedBalance;
+                      const currentProjectAmount = currentReqNet + jobManualTotal;
+                      
+                      if (isPaid) {
+                        const storedAppliedBalance = conf?.appliedBalance ?? 0;
+                        finalTotal = frozenApply ? Math.max(0, currentProjectAmount + storedAppliedBalance) : currentReqBruto;
+                        displayAdjustment = isPaid && conf?.appliedBalance !== undefined ? conf.appliedBalance : (retroBalance + jobManualTotal);
                       } else {
-                        finalTotal = frozenApply ? Math.max(0, currentReqNet + retroBalance) : currentReqBruto;
-                        displayAdjustment = frozenApply ? (currentReqDiscounts + retroBalance) : 0;
+                        finalTotal = frozenApply ? Math.max(0, currentProjectAmount + retroBalance) : currentReqBruto;
+                        displayAdjustment = frozenApply ? (currentReqDiscounts + jobManualTotal + retroBalance) : 0;
                       }
                       
                       const currentDiscounts = Math.abs(currentReqDiscounts);
@@ -674,9 +751,15 @@ const PaymentTab = ({
                                     Bruto: R$ {currentReqBruto.toFixed(2)}
                                   </span>
 
-                                  {currentDiscounts > 0 && (
+                                   {currentDiscounts > 0 && (
                                     <span className={`text-[10px] font-bold ${frozenApply ? 'text-destructive' : 'text-muted-foreground/40 line-through'}`}>
                                       {currentReqDiscounts > 0 ? '+' : ''}{currentReqDiscounts.toFixed(2)} [DESCONTOS PROJETO]
+                                    </span>
+                                  )}
+
+                                  {Math.abs(jobManualTotal) > 0.01 && (
+                                    <span className={`text-[10px] font-bold ${frozenApply ? (jobManualTotal < 0 ? 'text-destructive' : 'text-blue-600') : 'text-muted-foreground/40 line-through'}`}>
+                                      {jobManualTotal > 0 ? '+' : ''}R$ {jobManualTotal.toFixed(2)} [AJUSTE MANUAL PROJETO]
                                     </span>
                                   )}
                                   

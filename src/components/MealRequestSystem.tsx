@@ -30,6 +30,7 @@ import {
   type DiscountConfirmation,
   type PaymentConfirmation,
   type SystemSettings,
+  type ManualAdjustment,
 } from "@/lib/types";
 
 import {
@@ -56,6 +57,7 @@ interface MealRequestSystemProps {
   autoFillTravel?: boolean;
   setAutoFillTravel?: (v: boolean) => void;
   systemSettings?: SystemSettings;
+  manualAdjustments?: ManualAdjustment[];
 }
 
 const MealRequestSystem = ({
@@ -72,6 +74,7 @@ const MealRequestSystem = ({
   autoFillTravel = true,
   setAutoFillTravel,
   systemSettings,
+  manualAdjustments = [],
 }: MealRequestSystemProps) => {
   const [selectedJob, setSelectedJob] = useState("");
   const [location, setLocation] = useState("");
@@ -96,63 +99,25 @@ const MealRequestSystem = ({
   }, [location, personId, isLocal, people]);
 
   const balance = useMemo(() => {
-    if (!personId || !people || !requests) return 0;
-    
-    // Cópia EXATA da lógica da aba de Descontos/Saldo
-    const allActivityDates = new Set<string>();
-    const strPid = String(personId);
-    requests.forEach(r => {
-      if (String(r.personId) === strPid) {
-        getDatesInRange(r.startDate, r.endDate).forEach(d => allActivityDates.add(d));
-      }
-    });
-    timeEntries.forEach(e => {
-      if (String(e.personId) === strPid) allActivityDates.add(e.date);
-    });
-    foodControl.forEach(f => {
-      if (String(f.personId) === strPid) allActivityDates.add(f.date);
-    });
-
-    const isDiscountDone = (pid: string, reqId: string | undefined, date: string) => {
-      const discountId = reqId ? `discount-${reqId}-${date}` : `orphan-${pid}-${date}`;
-      return (confirmations || []).find(c => 'id' in c && c.id === discountId)?.confirmed || false;
-    };
-
-    const todayStr = new Date().toLocaleDateString('en-CA');
-    const processedDays = new Set<string>();
-    let netSaldo = 0;
-
-    Array.from(allActivityDates).forEach(date => {
-      if (date >= todayStr) return; // Só descontos/créditos até ontem
-
-      const req = requests.find(r => String(r.personId) === strPid && date >= r.startDate && date <= r.endDate);
-      const dayKey = `${strPid}-${req?.jobId || 'orphan'}-${date}`;
-      
-      if (processedDays.has(dayKey)) return;
-      processedDays.add(dayKey);
-
-      const entries = timeEntries.filter(e => String(e.personId) === strPid && e.date === date);
-      const entry = entries.find(e => e.isTravelOut || e.isTravelReturn) || entries[0];
-      const fc = foodControl.find(f => String(f.personId) === strPid && f.date === date);
-
-      const jobId = req?.jobId || fc?.jobId || entry?.jobId || 'unknown';
-
-      const dayCalc = calculateDayDiscount(
-        req || { id: `orphan-${strPid}-${date}`, personId: strPid, jobId, startDate: date, endDate: date, meals: [] } as MealRequest, 
-        date, entry || undefined, fc, people
+    if (!personId) return 0;
+    try {
+      const balanceObj = calculatePersonBalance(
+        personId, 
+        requests, 
+        foodControl, 
+        confirmations, 
+        people, 
+        timeEntries, 
+        jobs,
+        undefined, 
+        manualAdjustments
       );
-
-      if (dayCalc.total !== 0) {
-        const done = isDiscountDone(strPid, req?.id, date);
-        if (!done) {
-           // Crédito (+) ou Débito (-)
-           netSaldo += dayCalc.total;
-        }
-      }
-    });
-
-    return netSaldo;
-  }, [personId, requests, foodControl, confirmations, people, timeEntries]);
+      return balanceObj.totalWallet;
+    } catch (e) {
+      console.error("Erro ao calcular saldo em MealRequestSystem:", e);
+      return 0;
+    }
+  }, [personId, requests, foodControl, confirmations, people, timeEntries, jobs, manualAdjustments]);
 
   const filtered = useMemo(() => {
     if (!selectedJob) return [];

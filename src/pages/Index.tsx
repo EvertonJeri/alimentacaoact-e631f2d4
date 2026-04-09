@@ -158,6 +158,7 @@ const Index = () => {
             timeEntries={timeEntriesData}
             foodControl={foodControlData}
             confirmations={allConfirmations}
+            manualAdjustments={manualAdjustmentsData}
             onUpdateRequest={(req) => updateMealRequest.mutate(req)}
             onRemoveRequest={(id) => removeMealRequest.mutate(id)}
             onUpdateTimeEntry={(entry) => updateTimeEntry.mutate(entry)}
@@ -239,6 +240,7 @@ const Index = () => {
             timeEntries={timeEntriesData}
             foodControl={foodControlData}
             confirmations={allConfirmations}
+            manualAdjustments={manualAdjustmentsData}
             onUpdatePaymentConfirmation={(conf) => updatePaymentConfirmation.mutate(conf)}
             onJobClick={(jobId) => {
               setJobFilter(jobId);

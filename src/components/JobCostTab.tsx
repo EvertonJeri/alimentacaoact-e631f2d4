@@ -9,6 +9,7 @@ import {
   FoodControlEntry, 
   PaymentConfirmation, 
   DiscountConfirmation,
+  ManualAdjustment,
   getDatesInRange,
   getMealValue,
   calculateDayDiscount
@@ -26,6 +27,7 @@ interface JobCostTabProps {
   confirmations: (DiscountConfirmation | PaymentConfirmation)[];
   onUpdatePaymentConfirmation?: (conf: PaymentConfirmation) => void;
   onJobClick?: (jobId: string) => void;
+  manualAdjustments?: ManualAdjustment[];
 }
 
 const JobCostTab = ({
@@ -36,7 +38,8 @@ const JobCostTab = ({
   foodControl,
   confirmations,
   onUpdatePaymentConfirmation,
-  onJobClick
+  onJobClick,
+  manualAdjustments = []
 }: JobCostTabProps) => {
 
   const getJobStatus = (jobId: string) => {
@@ -44,7 +47,11 @@ const JobCostTab = ({
   };
 
   const calculateJobCost = (jobId: string) => {
-    const jobRequests = requests.filter(r => r.jobId === jobId);
+    const jobRequests = requests.filter(r => {
+      const rId = String(r.jobId || "").toLowerCase().trim();
+      const targetId = String(jobId || "").toLowerCase().trim();
+      return rId === targetId || rId.startsWith(targetId + " -") || targetId.startsWith(rId + " -");
+    });
     let totalPaid = 0;
     let totalPlanned = 0;
     let totalDiscount = 0;
@@ -83,8 +90,14 @@ const JobCostTab = ({
       allPersonJobReqs.forEach(pReq => {
         const dates = getDatesInRange(pReq.startDate, pReq.endDate);
         dates.forEach(date => {
-            const entry = timeEntries.find(e => e.personId === personId && e.jobId === jobId && e.date === date);
-            const fc = foodControl.find(f => f.personId === personId && f.jobId === jobId && f.date === date);
+            const isJobMatch = (id1: string, id2: string) => {
+              const v1 = String(id1 || "").toLowerCase().trim();
+              const v2 = String(id2 || "").toLowerCase().trim();
+              return v1 === v2 || v1.startsWith(v2 + " -") || v2.startsWith(v1 + " -");
+            };
+            
+            const entry = timeEntries.find(e => e.personId === personId && isJobMatch(e.jobId, jobId) && e.date === date);
+            const fc = foodControl.find(f => f.personId === personId && isJobMatch(f.jobId, jobId) && f.date === date);
             
             if (entry) {
                 const dayCalc = calculateDayDiscount(pReq, date, entry, fc, people);
@@ -95,6 +108,21 @@ const JobCostTab = ({
             }
         });
       });
+    });
+    
+    // Parte 3: Ajustes Manuais vinculados a este Job
+    const jobAdjustments = manualAdjustments.filter(a => {
+      const aId = String(a.jobId || "").toLowerCase().trim();
+      const targetId = String(jobId || "").toLowerCase().trim();
+      return aId === targetId || aId.startsWith(targetId + " -") || targetId.startsWith(aId + " -");
+    });
+    
+    jobAdjustments.forEach(adj => {
+      const val = adj.type === "credito" ? Math.abs(adj.amount) : -Math.abs(adj.amount);
+      totalPaid += val;
+      totalPlanned += val;
+      // Os ajustes manuais agora entram diretamente no valor solicitado/pago do job,
+      // não mais na coluna de descontos automáticos.
     });
 
     return { 

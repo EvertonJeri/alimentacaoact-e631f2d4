@@ -134,6 +134,7 @@ export interface PaymentConfirmation {
 export interface ManualAdjustment {
   id: string;
   personId: string;
+  jobId?: string; // Vinculo opcional com um job específico
   amount: number;
   description: string;
   date: string;
@@ -385,11 +386,20 @@ export function calculatePersonBalance(
   confirmations: (DiscountConfirmation | PaymentConfirmation)[],
   people: Person[],
   timeEntries: TimeEntry[],
+  jobs: Job[],
   excludeRequestId?: string,
-  manualAdjustments?: ManualAdjustment[]
-): { totalWallet: number; currentReqNet: number; retroBalance: number; adjustments: any[] } {
+  manualAdjustments?: ManualAdjustment[],
+  jobIdFilter?: string
+): { 
+  totalWallet: number; 
+  currentReqNet: number; 
+  retroBalance: number; 
+  jobManualTotal: number;
+  otherManualTotal: number;
+  adjustments: any[] 
+} {
   const person = people.find(p => p.id === personId);
-  if (!person) return { totalWallet: 0, currentReqNet: 0, retroBalance: 0, adjustments: [] };
+  if (!person) return { totalWallet: 0, currentReqNet: 0, retroBalance: 0, jobManualTotal: 0, otherManualTotal: 0, adjustments: [] };
 
   const pId = String(personId || "").toLowerCase();
   const excludeId = String(excludeRequestId || "").toLowerCase();
@@ -403,6 +413,8 @@ export function calculatePersonBalance(
   });
 
   let walletBalance = 0;
+  let jobManualTotal = 0;
+  let otherManualTotal = 0;
   const adjustments: any[] = [];
 
   // Parte 1: Créditos (O que a pessoa ganha por solicitação)
@@ -504,11 +516,43 @@ export function calculatePersonBalance(
     personAdj.forEach(a => {
       const val = a.type === "credito" ? Math.abs(a.amount) : -Math.abs(a.amount);
       walletBalance += val;
-      adjustments.push({ date: a.date, amount: val, label: `[Manual] ${a.description}` });
+      
+      const aJobId = String(a.jobId || "").toLowerCase().trim();
+      const filterId = String(jobIdFilter || "").toLowerCase().trim();
+      
+      const isJobMatch = jobIdFilter && (
+        aJobId === filterId || 
+        aJobId.startsWith(filterId + " -") || 
+        filterId.startsWith(aJobId + " -")
+      );
+
+      if (isJobMatch) {
+        jobManualTotal += val;
+      } else {
+        otherManualTotal += val;
+      }
+      
+      let label = `[Manual] ${a.description}`;
+      if (a.jobId) {
+        const job = jobs.find(j => j.id === a.jobId);
+        if (job) label = `[Manual ${job.name}] ${a.description}`;
+      }
+      
+      adjustments.push({ date: a.date, amount: val, label });
     });
   }
 
-  return { totalWallet: walletBalance, currentReqNet, retroBalance: walletBalance - currentReqNet, adjustments };
+  const totalWallet = walletBalance;
+  const retroBalance = totalWallet - currentReqNet;
+
+  return { 
+    totalWallet, 
+    currentReqNet, 
+    retroBalance, 
+    jobManualTotal,
+    otherManualTotal,
+    adjustments 
+  };
 }
 
 export function determineMealsUsed(
