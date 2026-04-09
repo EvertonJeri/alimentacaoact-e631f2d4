@@ -14,6 +14,7 @@ import {
   type MealRequest,
   type TimeEntry,
   type PaymentConfirmation,
+  type ManualAdjustment,
   MEAL_LABELS,
   getDatesInRange,
   getMealValue,
