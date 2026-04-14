@@ -349,16 +349,18 @@ export function calculateDayDiscount(
   }
 
   // 4. Aplica os descontos (Faltas) ou Créditos (Extras)
-  // ABSENCE (Tinha direito mas não usou) = NEGATIVO
-  // EXTRA (Não tinha direito mas usou) = POSITIVO
+  // ABSENCE (Tinha direito mas não usou) = NEGATIVO -> Apenas se for passado!
+  // EXTRA (Não tinha direito mas usou) = POSITIVO -> Sempre (crédito)
   
-  if (dayMeals.includes("cafe") && !usedCafe) discountCafe = -refCafe;
+  const canCalculateAbsence = isPast; // Somente datas passadas podem gerar desconto por falta
+
+  if (dayMeals.includes("cafe") && !usedCafe) discountCafe = canCalculateAbsence ? -refCafe : 0;
   else if (!dayMeals.includes("cafe") && usedCafe) discountCafe = refCafe;
 
-  if (dayMeals.includes("almoco") && !usedAlmoco) discountAlmoco = -refAlmoco;
+  if (dayMeals.includes("almoco") && !usedAlmoco) discountAlmoco = canCalculateAbsence ? -refAlmoco : 0;
   else if (!dayMeals.includes("almoco") && usedAlmoco) discountAlmoco = refAlmoco;
 
-  if (dayMeals.includes("janta") && !usedJanta) discountJanta = -refJanta;
+  if (dayMeals.includes("janta") && !usedJanta) discountJanta = canCalculateAbsence ? -refJanta : 0;
   else if (!dayMeals.includes("janta") && usedJanta) discountJanta = refJanta;
 
   // 5. Define a justificativa
