@@ -24,7 +24,8 @@ import {
   Settings,
   Calculator,
   Bell,
-  Zap
+  Zap,
+  BarChart3
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SearchableSelect } from "@/components/ui/searchable-select";
@@ -35,6 +36,7 @@ import DiscountsTab from "@/components/DiscountsTab";
 import PaymentTab from "@/components/PaymentTab";
 import StatementTab from "@/components/StatementTab";
 import JobCostTab from "@/components/JobCostTab";
+import ReportsTab from "@/components/ReportsTab";
 import SettingsTab from "@/components/SettingsTab";
 import { useDatabase } from "@/hooks/use-database";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -255,6 +257,16 @@ const Index = () => {
             }}
           />
         );
+      case "relatorio":
+        return (
+          <ReportsTab 
+            people={peopleData}
+            jobs={jobsData}
+            requests={mealRequestsData}
+            timeEntries={timeEntriesData}
+            foodControl={foodControlData}
+          />
+        );
       case "configuracoes":
         return <SettingsTab />;
       default:
@@ -269,6 +281,7 @@ const Index = () => {
     { id: "controle", label: "Controle Alimentar", icon: UtensilsCrossed },
     { id: "descontos", label: "Descontos / Saldo", icon: AlertTriangle },
     { id: "fechamento", label: "Fechamento de Jobs", icon: Calculator },
+    { id: "relatorio", label: "Relatório de Controle", icon: BarChart3 },
     { id: "extrato", label: "Extrato Geral", icon: FileText },
     { id: "configuracoes", label: "Configurações do Sistema", icon: Settings },
   ];
