@@ -248,14 +248,17 @@ export function getActiveMeals(req: MealRequest, dateStr: string, person?: Perso
   const isLocal = req.location === "Dentro SP";
   const isCLT = person?.isRegistered || (person as any)?.is_registered;
 
-  // 2. Se for Local (Dentro SP), Café e Janta são TERMINANTEMENTE proibidos
+  // 2. Se for Local (Dentro SP)
   if (isLocal) {
-    meals = meals.filter(m => m === "almoco");
+    // Se for montagem noturna explicitamente ou se a janta for o único item solicitado em SP
+    const isNightIntent = req.nightAssembly || (meals.includes("janta") && meals.length === 1);
     
-    // Se for CLT local em dia útil/fds, garantir o almoço (respeitando a regra de dias liquidados)
-    if (isCLT && !isWeekendOrHoliday(dateStr) && !meals.includes("almoco")) {
-        // Opção por não adicionar automaticamente se não houver no request base, 
-        // mas aqui mantemos coerência com a regra CLT de almoço garantido.
+    if (isNightIntent) {
+      // Regra: Montagem Noturna em SP só tem Janta
+      meals = ["janta"];
+    } else {
+      // Regra Normal em SP: Só tem Almoço
+      meals = ["almoco"];
     }
   } else if (isCLT) {
     // 3. Regra CLT para Fora SP (mantém o almoço automático)

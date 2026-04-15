@@ -87,6 +87,8 @@ export const useDatabase = () => {
           meals: r.meals,
           location: r.location,
           dailyOverrides: r.daily_overrides,
+          nightAssembly: r.night_assembly || false,
+          isDisplacement: r.is_displacement || false,
         };
       }) as MealRequest[];
     },
@@ -580,9 +582,24 @@ export const useDatabase = () => {
 
   const updateMealRequest = useMutation({
     mutationFn: async (req: MealRequest) => {
-      const { error } = await supabase
-        .from("meal_requests")
-        .upsert({
+      const fullPayload = {
+        id: req.id,
+        person_id: req.personId,
+        job_id: req.jobId,
+        start_date: req.startDate,
+        end_date: req.endDate,
+        meals: req.meals,
+        location: req.location,
+        daily_overrides: req.dailyOverrides,
+        night_assembly: req.nightAssembly,
+        is_displacement: req.isDisplacement,
+      };
+
+      const { error } = await supabase.from("meal_requests").upsert(fullPayload as any, { onConflict: "id" });
+      
+      if (error) {
+        console.warn("Retrying minimal meal request upsert due to error:", error);
+        const { error: error2 } = await supabase.from("meal_requests").upsert({
           id: req.id,
           person_id: req.personId,
           job_id: req.jobId,
@@ -592,7 +609,9 @@ export const useDatabase = () => {
           location: req.location,
           daily_overrides: req.dailyOverrides,
         } as any, { onConflict: "id" });
-      if (error) throw error;
+        
+        if (error2) throw error2;
+      }
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["meal_requests"] }),
   });
@@ -600,9 +619,24 @@ export const useDatabase = () => {
   const updateMealRequests = useMutation({
     mutationFn: async (reqs: MealRequest[]) => {
       for (const req of reqs) {
-        const { error } = await supabase
-          .from("meal_requests")
-          .upsert({
+        const fullPayload = {
+          id: req.id,
+          person_id: req.personId,
+          job_id: req.jobId,
+          start_date: req.startDate,
+          end_date: req.endDate,
+          meals: req.meals,
+          location: req.location,
+          daily_overrides: req.dailyOverrides,
+          night_assembly: req.nightAssembly,
+          is_displacement: req.isDisplacement,
+        };
+
+        const { error } = await supabase.from("meal_requests").upsert(fullPayload as any, { onConflict: "id" });
+        
+        if (error) {
+          console.warn("Retrying minimal meal requests upsert due to error:", error);
+          const { error: error2 } = await supabase.from("meal_requests").upsert({
             id: req.id,
             person_id: req.personId,
             job_id: req.jobId,
@@ -612,7 +646,9 @@ export const useDatabase = () => {
             location: req.location,
             daily_overrides: req.dailyOverrides,
           } as any, { onConflict: "id" });
-        if (error) throw error;
+          
+          if (error2) throw error2;
+        }
       }
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["meal_requests"] }),

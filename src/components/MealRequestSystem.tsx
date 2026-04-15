@@ -92,13 +92,21 @@ const MealRequestSystem = ({
   const [showFinanceDialog, setShowFinanceDialog] = useState(false);
 
   React.useEffect(() => {
-    if (personId && location === "Dentro SP" && isLocal === true) {
-      const isCLT = people.find(p => p.id === personId)?.isRegistered;
-      if (isCLT) {
-        setMeals(prev => prev.filter(m => m !== "cafe"));
+    if (location === "Dentro SP") {
+      if (nightAssembly) {
+        setMeals(["janta"]);
+      } else if (isLocal === true) {
+        setMeals(["almoco"]);
+      } else if (isLocal === false) {
+        // Não-local em SP pode ter café, almoço e janta? 
+        // Normalmente SP só tem Almoço, mas se for Não-Local talvez mude.
+        // O usuário não especificou para Não-Local, mas disse "sendo clt ou não".
+        const isCLT = people.find(p => p.id === personId)?.isRegistered;
+        if (isCLT) setMeals(["cafe", "janta"]);
+        else setMeals(["cafe", "almoco", "janta"]);
       }
     }
-  }, [location, personId, isLocal, people]);
+  }, [location, nightAssembly, isLocal, personId, people]);
 
   const balance = useMemo(() => {
     if (!personId) return 0;
@@ -212,8 +220,10 @@ const MealRequestSystem = ({
     }
 
     if (isLocal === undefined || isLocal === null) {
-      toast.error("Informe se a pessoa é do local (Sim ou Não).", { duration: 4000 });
-      return;
+      if (location === "Fora SP") {
+        toast.error("Informe se a pessoa é do local (Sim ou Não).", { duration: 4000 });
+        return;
+      }
     }
     const dates = getDatesInRange(startDate, endDate);
 
@@ -308,7 +318,7 @@ const MealRequestSystem = ({
       location: location as LocationType,
       transportType: isDisplacement ? transportType : undefined,
       travelTime: (isDisplacement && travelTime) ? travelTime : undefined,
-      isLocal,
+      isLocal: location === "Dentro SP" ? true : isLocal,
       nightAssembly,
       isDisplacement
     };
@@ -582,47 +592,49 @@ const MealRequestSystem = ({
                     setMeals(isLocal === true ? ["almoco"] : ["cafe", "almoco", "janta"]);
                   }
                 }}
-                placeholder="Selecione o profissional..."
               />
-              <div className="p-3 rounded-lg border-2 border-primary/20 bg-primary/5">
-                <Label className="text-xs font-black uppercase tracking-widest text-primary mb-2 block">
-                  Pessoa do Local? <span className="text-destructive">*</span>
-                </Label>
-                <div className="flex gap-4">
-                  <Button
-                    type="button"
-                    variant={isLocal === true ? "default" : "outline"}
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => {
-                      const isCLT = people.find(p => p.id === personId)?.isRegistered;
-                      setIsLocal(true);
-                      // Regra SP: CLT, Local, Dentro SP não pode ter Café da manhã marcado
-                      if (isCLT) {
-                         setMeals(location === "Dentro SP" ? [] : ["cafe"]);
-                      } else {
-                         setMeals(["almoco"]);
-                      }
-                    }}
-                  >
-                    ✅ Sim (só almoço)
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={isLocal === false ? "default" : "outline"}
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => {
-                      const isCLT = people.find(p => p.id === personId)?.isRegistered;
-                      setIsLocal(false);
-                      // CLT não-local: sem almoço (só em fds/feriado depois)
-                      setMeals(isCLT ? ["cafe", "janta"] : ["cafe", "almoco", "janta"]);
-                    }}
-                  >
-                    ❌ Não
-                  </Button>
+
+              {location === "Fora SP" && (
+                <div className="p-3 rounded-lg border-2 border-primary/20 bg-primary/5">
+                  <Label className="text-xs font-black uppercase tracking-widest text-primary mb-2 block">
+                    Pessoa do Local? <span className="text-destructive">*</span>
+                  </Label>
+                  <div className="flex gap-4">
+                    <Button
+                      type="button"
+                      variant={isLocal === true ? "default" : "outline"}
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => {
+                        const isCLT = people.find(p => p.id === personId)?.isRegistered;
+                        setIsLocal(true);
+                        // Regra SP: CLT, Local, Dentro SP não pode ter Café da manhã marcado
+                        if (isCLT) {
+                           setMeals(location === "Dentro SP" ? ["almoco"] : ["cafe", "almoco"]);
+                        } else {
+                           setMeals(["almoco"]);
+                        }
+                      }}
+                    >
+                      ✅ Sim (só almoço)
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={isLocal === false ? "default" : "outline"}
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => {
+                        const isCLT = people.find(p => p.id === personId)?.isRegistered;
+                        setIsLocal(false);
+                        // CLT não-local: sem almoço (só em fds/feriado depois)
+                        setMeals(isCLT ? ["cafe", "janta"] : ["cafe", "almoco", "janta"]);
+                      }}
+                    >
+                      ❌ Não
+                    </Button>
+                  </div>
                 </div>
-              </div>
+              )}
               {personId && balance !== 0 && (
                 <div className={`p-3 rounded-lg border text-xs flex items-center justify-between gap-2 shadow-inner transition-all ${balance < 0 ? 'bg-destructive/5 border-destructive/20 text-destructive' : 'bg-primary/5 border-primary/20 text-primary'}`}>
                   <div className="flex items-center gap-2">
@@ -636,10 +648,45 @@ const MealRequestSystem = ({
               )}
             </div>
 
+            <div className="space-y-3">
+              <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Regimes de Refeição</Label>
+              <div className="flex gap-6 p-3 border rounded-xl bg-background/60 backdrop-blur-sm">
+                {(["cafe", "almoco", "janta"] as MealType[]).map(m => {
+                  const isCLT = people.find(p => p.id === personId)?.isRegistered;
+                  
+                  let isBlocked = false;
+                  if (location === "Dentro SP") {
+                    if (nightAssembly) {
+                      isBlocked = m !== "janta";
+                    } else if (isLocal === true) {
+                      isBlocked = m !== "almoco";
+                    } else if (isCLT && m === "cafe") {
+                      // Regra histórica de SP para CLT
+                      isBlocked = true;
+                    }
+                  }
+                  
+                  return (
+                    <div key={m} className={`flex items-center gap-3 ${isBlocked ? 'opacity-50' : ''}`}>
+                      <Checkbox
+                        id={`meal-${m}`}
+                        checked={meals.includes(m)}
+                        disabled={isBlocked}
+                        onCheckedChange={(checked) => {
+                          if (checked) setMeals([...meals, m]);
+                          else setMeals(meals.filter(x => x !== m));
+                        }}
+                      />
+                      <Label htmlFor={`meal-${m}`} className={`text-xs font-bold select-none ${isBlocked ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+                        {MEAL_LABELS[m]}
+                      </Label>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-3 md:col-span-2">
               <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Configurações Adicionais</Label>
               <div className="grid grid-cols-2 gap-3">
                 <Button

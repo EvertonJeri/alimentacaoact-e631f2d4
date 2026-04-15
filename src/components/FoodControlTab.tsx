@@ -303,7 +303,7 @@ const FoodControlTab = ({
                   <td className="text-center px-1 py-2">
                     {isPersonRegistered(row.personId) && !isWeekendOrHoliday(row.date) ? (
                       <Badge className="text-[10px] bg-primary/10 text-primary hover:bg-primary/20 border-primary/20" title="Garantido por Regra CLT">✓*</Badge>
-                    ) : (row.requestedAlmoco || (isPersonRegistered(row.personId) && isWeekendOrHoliday(row.date))) ? (
+                    ) : row.requestedAlmoco ? (
                       <Badge className="text-2xs opacity-60">✓</Badge>
                     ) : (
                       <span className="text-muted-foreground/30">—</span>
