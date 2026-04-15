@@ -80,6 +80,8 @@ const MealRequestSystem = ({
   const [location, setLocation] = useState("");
   const [transportType, setTransportType] = useState<"onibus" | "aviao">("onibus");
   const [travelTime, setTravelTime] = useState("");
+  const [nightAssembly, setNightAssembly] = useState(false);
+  const [isDisplacement, setIsDisplacement] = useState(false);
   const [personId, setPersonId] = useState("");
   const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0]);
   const [endDate, setEndDate] = useState(new Date().toISOString().split("T")[0]);
@@ -203,6 +205,12 @@ const MealRequestSystem = ({
 
   const handleAdd = () => {
     if (!selectedJob || !personId || !startDate || !endDate || !location) return;
+    
+    if (isDisplacement && (!transportType || !travelTime)) {
+      toast.error("Informe o transporte e o horário da viagem quando 'Deslocamento' estiver marcado.");
+      return;
+    }
+
     if (isLocal === undefined || isLocal === null) {
       toast.error("Informe se a pessoa é do local (Sim ou Não).", { duration: 4000 });
       return;
@@ -298,9 +306,11 @@ const MealRequestSystem = ({
       meals,
       dailyOverrides: hasOverride ? overrides : {},
       location: location as LocationType,
-      transportType,
-      travelTime: travelTime || undefined,
-      isLocal
+      transportType: isDisplacement ? transportType : undefined,
+      travelTime: (isDisplacement && travelTime) ? travelTime : undefined,
+      isLocal,
+      nightAssembly,
+      isDisplacement
     };
 
     // Regra SP: CLT, Local e Dentro de SP não tem Café da Manhã
@@ -326,11 +336,17 @@ const MealRequestSystem = ({
           // Dia útil: CLT não tem almoço coberto pela empresa
           finalOverrides[d] = dayMeals.filter(m => m !== 'almoco');
         } else {
-          // Fds/feriado: CLT tem direito a almoço, então forçamos a inclusão oficial se não tiver
-          if (!dayMeals.includes('almoco')) {
-            finalOverrides[d] = [...dayMeals, 'almoco'];
-          } else {
+          // Fds/feriado: CLT tem direito a almoço, EXCETO se for montagem noturna e desmarcado
+          if (nightAssembly) {
+            // Se for montagem noturna, respeita a decisão do usuário em 'meals'
             finalOverrides[d] = dayMeals;
+          } else {
+            // Senão, força o almoço
+            if (!dayMeals.includes('almoco')) {
+              finalOverrides[d] = [...dayMeals, 'almoco'];
+            } else {
+              finalOverrides[d] = dayMeals;
+            }
           }
         }
       });
@@ -338,6 +354,9 @@ const MealRequestSystem = ({
     }
     onUpdateRequest(newRequest);
     setPersonId("");
+    setNightAssembly(false);
+    setIsDisplacement(false);
+    setTravelTime("");
     toast.success("Solicitação adicionada!", { duration: 5000 });
   };
 
@@ -617,35 +636,44 @@ const MealRequestSystem = ({
               )}
             </div>
 
+              </div>
+            </div>
+
             <div className="space-y-3">
-              <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Regimes de Refeição</Label>
-              <div className="flex gap-6 p-3 border rounded-xl bg-background/60 backdrop-blur-sm">
-                {(["cafe", "almoco", "janta"] as MealType[]).map(m => {
-                  const isCLT = people.find(p => p.id === personId)?.isRegistered;
-                  const isBlockedCafe = isCLT && isLocal === true && location === "Dentro SP" && m === "cafe";
-                  
-                  return (
-                    <div key={m} className={`flex items-center gap-3 ${isBlockedCafe ? 'opacity-50' : ''}`}>
-                      <Checkbox
-                        id={`meal-${m}`}
-                        checked={meals.includes(m)}
-                        disabled={isBlockedCafe}
-                        onCheckedChange={(checked) => {
-                          if (checked) setMeals([...meals, m]);
-                          else setMeals(meals.filter(x => x !== m));
-                        }}
-                      />
-                      <Label htmlFor={`meal-${m}`} className={`text-xs font-bold select-none ${isBlockedCafe ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
-                        {MEAL_LABELS[m]}
-                      </Label>
-                    </div>
-                  );
-                })}
+              <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Configurações Adicionais</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <Button
+                  type="button"
+                  variant={nightAssembly ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setNightAssembly(!nightAssembly)}
+                  className={`flex items-center gap-2 justify-start px-4 h-11 ${nightAssembly ? 'bg-indigo-600 hover:bg-indigo-700' : ''}`}
+                >
+                  <Calendar className="h-4 w-4" />
+                  <div className="flex flex-col items-start leading-tight">
+                    <span className="text-[10px] uppercase font-black">Montagem Noturna</span>
+                    <span className="text-[9px] opacity-70 font-medium">Permite desmarcar almoço CLT fds</span>
+                  </div>
+                </Button>
+
+                <Button
+                  type="button"
+                  variant={isDisplacement ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setIsDisplacement(!isDisplacement)}
+                  className={`flex items-center gap-2 justify-start px-4 h-11 ${isDisplacement ? 'bg-orange-600 hover:bg-orange-700' : ''}`}
+                >
+                  <Send className="h-4 w-4" />
+                  <div className="flex flex-col items-start leading-tight">
+                    <span className="text-[10px] uppercase font-black">Deslocamento</span>
+                    <span className="text-[9px] opacity-70 font-medium">Viagem / Transporte</span>
+                  </div>
+                </Button>
               </div>
             </div>
           </div>
 
-          <div className={`grid grid-cols-1 gap-4 items-end pt-2 ${activeSubTab === "complement" ? "md:grid-cols-2" : "md:grid-cols-5"}`}>
+          <div className={`grid grid-cols-1 gap-4 items-end pt-2 ${activeSubTab === "complement" ? "md:grid-cols-2" : (isDisplacement ? "md:grid-cols-5" : "md:grid-cols-3")}`}>
             <div className="space-y-2">
               <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{activeSubTab === "complement" ? "Data do Complemento" : "Data Início"}</Label>
               <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="h-11 bg-background" />
@@ -656,10 +684,10 @@ const MealRequestSystem = ({
                 <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="h-11 bg-background" />
               </div>
             )}
-            {activeSubTab !== "complement" && (
+            {activeSubTab !== "complement" && isDisplacement && (
               <>
                 <div className="space-y-2">
-                  <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Transporte</Label>
+                  <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Transporte <span className="text-destructive">*</span></Label>
                   <Select value={transportType} onValueChange={(v) => setTransportType(v as "onibus" | "aviao")}>
                     <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -669,7 +697,7 @@ const MealRequestSystem = ({
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Hora Viagem</Label>
+                  <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Hora Viagem <span className="text-destructive">*</span></Label>
                   <Input type="time" value={travelTime} onChange={e => setTravelTime(e.target.value)} className="h-11 bg-background" />
                 </div>
               </>
@@ -806,6 +834,16 @@ const MealRequestSystem = ({
                         {fDate(req.startDate)} <span className="mx-1 text-muted-foreground/30">→</span> {fDate(req.endDate)}
                       </div>
                       <div className="flex gap-1.5 flex-wrap hidden md:flex">
+                        {req.nightAssembly && (
+                          <span className="px-2 py-0.5 rounded-md border border-indigo-200 text-[9px] uppercase font-black bg-indigo-50 text-indigo-700 tracking-tighter flex items-center gap-1">
+                            <Calendar className="h-2 w-2" /> Noturna
+                          </span>
+                        )}
+                        {req.isDisplacement && (
+                          <span className="px-2 py-0.5 rounded-md border border-orange-200 text-[9px] uppercase font-black bg-orange-50 text-orange-700 tracking-tighter flex items-center gap-1">
+                            <Send className="h-2 w-2" /> Deslocamento
+                          </span>
+                        )}
                         {(req.meals || []).map(m => (
                           <span key={m} className="px-2 py-0.5 rounded-md border border-border text-[9px] uppercase font-black bg-muted text-foreground tracking-tighter">
                             {MEAL_LABELS[m] || m}

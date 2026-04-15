@@ -42,6 +42,8 @@ export interface MealRequest {
   travelTime?: string; // HH:mm
   dailyOverrides?: Record<string, MealType[]>;
   isLocal?: boolean; // Se verdadeiro, regra simplificada (almoço 08-18h)
+  nightAssembly?: boolean; // Montagem noturna
+  isDisplacement?: boolean; // Deslocamento
 }
 
 export interface SystemSettings {
@@ -258,9 +260,14 @@ export function getActiveMeals(req: MealRequest, dateStr: string, person?: Perso
   } else if (isCLT) {
     // 3. Regra CLT para Fora SP (mantém o almoço automático)
     const isWkndOrHol = isWeekendOrHoliday(dateStr);
-    if (isWkndOrHol && !meals.includes("almoco")) {
+    
+    // Se for fds/feriado e NÃO for montagem noturna, garante almoço
+    if (isWkndOrHol && !req.nightAssembly && !meals.includes("almoco")) {
       meals.push("almoco");
+    } else if (isWkndOrHol && req.nightAssembly) {
+      // Se for montagem noturna no fds, respeita o que o usuário escolheu (permite desmarcar)
     } else if (!isWkndOrHol && meals.includes("almoco")) {
+      // Em dias úteis, CLT nunca tem almoço pago pela empresa (exceto se houver override manual muito específico, mas aqui removemos)
       meals = meals.filter(m => m !== "almoco");
     }
   }
