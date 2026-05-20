@@ -385,11 +385,7 @@ const DiscountsTab = ({
                     <Badge className="text-2xs bg-green-100 text-green-700 hover:bg-green-100 border-green-200">
                       💰 Saldo a Pagar
                     </Badge>
-                  ) : confirmed ? (
-                    <Badge className="text-2xs bg-orange-100 text-orange-700 hover:bg-orange-100 border-orange-200">
-                      ✂️ {paymentDate?.includes("-") ? `Descontado em ${paymentDate.split("-").reverse().join("/")}` : "Descontado"}
-                    </Badge>
-                  ) : (
+                  ) : confirmed ? null : (
                     <Badge className="text-2xs bg-destructive text-destructive-foreground">
                       Pendente
                     </Badge>

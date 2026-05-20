@@ -229,24 +229,23 @@ const MealRequestSystem = ({
 
     if (activeSubTab === "complement") {
       // MODO COMPLEMENTO: Busca a solicitação existente para este profissional neste job
-      const existing = requests.find(r => r.personId === personId && r.jobId === selectedJob && startDate >= r.startDate && startDate <= r.endDate);
+      const existing = requests.find(r => 
+        r.personId === personId && 
+        r.jobId === selectedJob && 
+        dates.some(d => getDatesInRange(r.startDate, r.endDate).includes(d))
+      );
+      
       if (existing) {
-        const currentOverrides = { ...(existing.dailyOverrides || {}) };
-        const baseDayMeals = Array.isArray(currentOverrides[startDate])
-          ? (currentOverrides[startDate] as MealType[])
-          : [...existing.meals];
-
         const selectedPerson = people.find(p => p.id === personId);
-        // Ensure "almoco" cannot be added if CLT, or if they already have it
+        
+        // Ensure "almoco" cannot be added if CLT
         const finalComplementMeals = meals.filter(m => {
           if (m === "almoco" && selectedPerson?.isRegistered) return false;
-          return !baseDayMeals.includes(m);
+          return true;
         });
 
-        // Add only the new meals for that specific day
-        // Add only the new meals for that specific day
         if (finalComplementMeals.length === 0) {
-          toast.error("O profissional já possui todas as refeições selecionadas neste dia.", { duration: 5000 });
+          toast.error("Selecione refeições válidas para o complemento.", { duration: 5000 });
           return;
         }
 
@@ -264,7 +263,7 @@ const MealRequestSystem = ({
 
         onUpdateRequest(newComplementRequest);
         setPersonId("");
-        toast.success(`Complemento adicionado para ${selectedPerson?.name} no dia ${startDate.split("-").reverse().join("/")}!`);
+        toast.success(`Complemento adicionado para ${selectedPerson?.name} no período de ${startDate.split("-").reverse().join("/")} a ${endDate.split("-").reverse().join("/")}!`);
         return;
       } else {
         toast.error("Nenhuma solicitação base encontrada para este profissional neste período.", { duration: 5000 });
@@ -720,17 +719,15 @@ const MealRequestSystem = ({
             </div>
           </div>
 
-          <div className={`grid grid-cols-1 gap-4 items-end pt-2 ${activeSubTab === "complement" ? "md:grid-cols-2" : (isDisplacement ? "md:grid-cols-5" : "md:grid-cols-3")}`}>
+          <div className={`grid grid-cols-1 gap-4 items-end pt-2 ${activeSubTab === "complement" ? "md:grid-cols-3" : (isDisplacement ? "md:grid-cols-5" : "md:grid-cols-3")}`}>
             <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{activeSubTab === "complement" ? "Data do Complemento" : "Data Início"}</Label>
+              <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Data Início</Label>
               <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="h-11 bg-background" />
             </div>
-            {activeSubTab !== "complement" && (
-              <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Data Término</Label>
-                <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="h-11 bg-background" />
-              </div>
-            )}
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Data Término</Label>
+              <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="h-11 bg-background" />
+            </div>
             {activeSubTab !== "complement" && isDisplacement && (
               <>
                 <div className="space-y-2">
